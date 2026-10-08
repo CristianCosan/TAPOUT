@@ -30,6 +30,7 @@ export function App() {
   return (
     <TitleScreen
       canContinue={session.hasSave()}
+      history={session.history()}
       onContinue={() => session.continueRun()}
       onNewRun={() => setScreen('draft')}
     />

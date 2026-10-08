@@ -68,7 +68,8 @@ describe('the location screens', () => {
     const usedAtCamp = campActions.filter((a) => used.has(a));
     expect(usedAtCamp.length).toBeGreaterThan(campActions.length * 0.4);
     expect(results).toBeGreaterThan(50);
-  });
+    // Four whole runs: about 2 s here, but CI runners are slower than the 5 s default allows.
+  }, 60_000);
 });
 
 describe('fishing spots', () => {

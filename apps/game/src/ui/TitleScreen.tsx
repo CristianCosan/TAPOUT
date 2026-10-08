@@ -1,6 +1,7 @@
 import { P1, SHOW } from '@tapout/content';
+import type { RunRecord } from '../session.ts';
 
-export function TitleScreen(props: { canContinue: boolean; onContinue: () => void; onNewRun: () => void }) {
+export function TitleScreen(props: { canContinue: boolean; history: RunRecord[]; onContinue: () => void; onNewRun: () => void }) {
   return (
     <div className="title-card">
       <div className="micro">The Boreal North</div>
@@ -20,8 +21,20 @@ export function TitleScreen(props: { canContinue: boolean; onContinue: () => voi
           New run
         </button>
       </div>
+      {props.history.length > 0 && (
+        <div className="history">
+          <h4>Past runs</h4>
+          {props.history.slice(0, 6).map((run) => (
+            <div key={run.endedAt} className="history-row">
+              <b>{run.title || 'Run over'}</b>
+              <span>Day {run.day}</span>
+              <span className="cause">{run.cause}</span>
+            </div>
+          ))}
+        </div>
+      )}
       <p className="build">
-        Grey-box build · the full v12 rules, plain screens · you are {P1.fullName}
+        Grey-box build 0.0.2 · placeholder shapes, no art or sound yet · you are {P1.fullName}
       </p>
     </div>
   );
