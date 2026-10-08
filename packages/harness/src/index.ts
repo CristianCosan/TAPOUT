@@ -1,2 +1,3 @@
-// Legacy runner, parity runner and balance harness arrive in M1 and M7.
-export const HARNESS_VERSION = 0;
+export * from './legacy/dom-stub.ts';
+export * from './legacy/legacy-game.ts';
+export * from './legacy/script-run.ts';

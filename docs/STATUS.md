@@ -1,7 +1,8 @@
 # Status
 
-**Current milestone:** M0 — repository reset and toolchain. **Done.**
-**Next:** M1 — run the untouched v12 file headless in Node and write `docs/spec/LEGACY_INDEX.md`.
+**Current milestone:** M1 — legacy harness and legacy index. **Done.**
+**Next:** M2 — port the core foundations (state, clock, photoperiod, temperature, weather, body,
+the cost engine, travel) with parity tests against the legacy harness.
 
 ## Done
 
@@ -18,9 +19,21 @@
 - `npm run check` (lint, typecheck, 10 tests) green; lint forbids `Math.random`, `Date.now`,
   timers and DOM globals inside the core.
 
+### M1
+
+- `legacy/tap-out-v12.html` runs unmodified in Node: its script is evaluated in a VM context
+  with a DOM stub and a seeded `Math.random`. See `docs/spec/LEGACY_HARNESS.md`.
+- `playDays()` drives scripted runs, recording a snapshot after every call and returning the
+  replayable call list the port will be driven through from M2.
+- Determinism proven: the same seed gives byte-identical snapshot streams; different seeds
+  diverge.
+- `docs/spec/LEGACY_INDEX.md` generated: 29 sections, 432 top-level definitions, each with its
+  line range and the module that will own it.
+- `npm run legacy:run -- --days 3 --seed demo` prints a scripted run.
+
 ## Not started
 
-Everything from M1 on. No v12 rule has been ported yet.
+Everything from M2 on. No v12 rule has been ported yet.
 
 ## Open questions for Sir
 
