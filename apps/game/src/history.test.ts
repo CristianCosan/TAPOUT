@@ -45,3 +45,43 @@ describe('run history', () => {
     expect(session.hasSave()).toBe(false);
   });
 });
+
+describe('saves through the session', () => {
+  const kit = ['axe', 'saw', 'ferro', 'pot', 'knife', 'sleeping', 'tarp', 'line', 'snare', 'bow'];
+
+  it('continues from a backup when the save is damaged, and says so', () => {
+    const storage = new MemoryStorage() as unknown as Storage;
+    const first = new Session(storage);
+    first.newRun(kit, 'restore');
+    first.click("goTo('shore')");
+    while ((first.getView() as View).modal) first.click('hideModal()');
+    storage.setItem('tapout.run', '{"format":"tapout-save"');
+    const second = new Session(storage);
+    expect(second.continueRun()).toBe(true);
+    const view = second.getView() as View;
+    expect(view.state.loc).toBe('camp');
+    expect(view.result?.lines[0]?.msg).toMatch(/went back one step/);
+  });
+
+  it('archives an abandoned run as "Left the field"', () => {
+    const storage = new MemoryStorage() as unknown as Storage;
+    const session = new Session(storage);
+    session.newRun(kit, 'abandon');
+    session.leaveRun();
+    session.abandonRun();
+    expect(session.hasSave()).toBe(false);
+    expect(session.history()[0]).toMatchObject({ title: 'Left the field', day: 1 });
+  });
+
+  it('reads a save written by build 0.0.2', () => {
+    const storage = new MemoryStorage() as unknown as Storage;
+    const writer = new Session(storage);
+    writer.newRun(kit, 'legacy');
+    // Rewrite the current save in the 0.0.2 shape: the body fields at the top level, version 1.
+    const envelope = JSON.parse(storage.getItem('tapout.run')!) as { body: object };
+    storage.setItem('tapout.run', JSON.stringify({ format: 'tapout-save', version: 1, savedAt: 't', ...envelope.body }));
+    const reader = new Session(storage);
+    expect(reader.continueRun()).toBe(true);
+    expect((reader.getView() as View).state.day).toBe(1);
+  });
+});
