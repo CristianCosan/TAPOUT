@@ -1,6 +1,6 @@
 {
   "name": "tap-out",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "description": "TAP / OUT - a wilderness survival competition game for Windows.",

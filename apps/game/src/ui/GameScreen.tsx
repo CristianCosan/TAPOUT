@@ -250,6 +250,35 @@ function ResultCard({ result }: { result: ActionResult }) {
   );
 }
 
+// ---- the night: what you are going to bed with
+
+/** Facts about the night ahead, straight from the HUD. No advice: you decide whether to sleep. */
+function NightPreview({ view, offer, onSleep, onCancel }: { view: View; offer: Offer; onSleep: () => void; onCancel: () => void }) {
+  const { hud } = view;
+  const facts = ['pillWx', 'pillTemp', 'chip-fire', 'chip-shelter', 'chip-wet', 'chip-injury'].filter((id) => !hud.get(id)?.hidden && hudText(hud, id));
+  return (
+    <div className="overlay" onClick={onCancel}>
+      <div className="night-preview" onClick={(e) => e.stopPropagation()}>
+        <h3>{offer.label}</h3>
+        {offer.detail && <p>{offer.detail}</p>}
+        <div className="night-facts">
+          {facts.map((id) => (
+            <Html key={id} className="chip" html={hudText(hud, id)} />
+          ))}
+        </div>
+        <div className="night-buttons">
+          <button className="big-btn primary" onClick={onSleep}>
+            Sleep
+          </button>
+          <button className="big-btn" onClick={onCancel}>
+            Not yet
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---- journal, modal, end screen
 
 const PAGE = 12;
@@ -370,6 +399,14 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [debug, setDebug] = useState(!!guide);
   const [journal, setJournal] = useState(false);
   const [map, setMap] = useState(false);
+  const [night, setNight] = useState<Offer | null>(null);
+  // A new day starts behind a curtain: the night passes, then the dawn report.
+  const [curtain, setCurtain] = useState<number | null>(null);
+  const lastDay = useRef<number>(S.day);
+  useEffect(() => {
+    if (S.day > lastDay.current) setCurtain(S.day);
+    lastDay.current = S.day;
+  }, [S.day]);
 
   // A new location starts with nothing open.
   useEffect(() => setSelected(null), [loc]);
@@ -427,6 +464,11 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const station = selected ? layout.stations.find((s) => s.id === selected) : null;
 
   const act = (offer: Offer) => {
+    if ((offer.key === 'sleep' || offer.key === 'turnInEarly') && offer.enabled) {
+      setSelected(null);
+      setNight(offer);
+      return;
+    }
     if (offer.ui === 'map') {
       setSelected(null);
       setMap(true);
@@ -451,6 +493,20 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <BottomBar view={view} onJournal={() => setJournal(true)} />
           {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} />}
           {view.result && !view.modal && <ResultCard result={view.result} />}
+          {night && (
+            <NightPreview
+              view={view}
+              offer={night}
+              onCancel={() => setNight(null)}
+              onSleep={() => {
+                setNight(null);
+                session.click(night.handler);
+              }}
+            />
+          )}
+          {curtain !== null && (
+            <div className="night-curtain" key={curtain} onAnimationEnd={() => setCurtain(null)} />
+          )}
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
           <Modal view={view} />

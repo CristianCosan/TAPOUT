@@ -224,3 +224,21 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .map-spot em { font-size: 13px; color: var(--blood); font-style: normal; }
 .map-spot.dead span { color: var(--dim); }
 .map-spot .hud-btn { font-size: 13px; padding: 4px 10px; }
+
+/* past runs on the title */
+.history { margin-top: 30px; width: 900px; display: flex; flex-direction: column; gap: 6px; }
+.history h4 { margin: 0 0 4px; letter-spacing: 0.3em; text-transform: uppercase; font-size: 16px; color: var(--sage); font-weight: 400; }
+.history-row { display: grid; grid-template-columns: 260px 90px 1fr; gap: 14px; font-size: 18px; padding: 6px 12px; border-bottom: 1px solid var(--lichen); }
+.history-row b { font-family: var(--serif); font-weight: 400; color: var(--bone); }
+.history-row span { color: var(--sage); }
+.history-row .cause { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the night */
+.night-preview { position: absolute; left: 610px; top: 260px; width: 700px; background: #0d1420f4; border: 1px solid #34465c; border-radius: 16px; padding: 26px 30px; box-shadow: 0 14px 50px #000c; display: flex; flex-direction: column; gap: 14px; }
+.night-preview h3 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 30px; letter-spacing: 0.08em; }
+.night-preview p { margin: 0; color: var(--sage); font-size: 18px; }
+.night-facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.night-facts .chip { font-size: 17px; }
+.night-buttons { display: flex; gap: 16px; margin-top: 6px; }
+.night-curtain { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; pointer-events: none; background: #05080d; color: #c9d3e0; font-family: var(--serif); font-size: 64px; letter-spacing: 0.3em; text-transform: uppercase; animation: curtain 2.2s ease-in-out forwards; }
+@keyframes curtain { 0% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }

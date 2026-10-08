@@ -70,9 +70,18 @@ paged journal. Placeholder shapes stand in for the art. The three layout guides
 - Each fishing spot sets its line right there. Travel fades in with the place name; arrival news
   shows on the result card. The animal and game-trail stations take the name of what you found.
 
+### M12 — night, dawn, endings (waiting on Sir's playtest)
+- Sleep and turning in early open a night preview: weather, temperature, fire, shelter, wet.
+  Facts only, no advice. The night passes behind a dark curtain, then v12's dawn report.
+- Cards, panic, the wolverine, the sat phone and all endings are v12's own modals, unchanged.
+- Past runs (ending, day, cause) on the title screen; a test plays a tap-out to the end screen
+  and checks it is recorded once and the save is gone.
+- Build 0.0.2 is the grey-box playtest build. Interaction design locks after Sir plays it.
+- Known: an early bedtime can wake you at 22:00 (LEG-007, deferred in D-021).
+
 ## Not started
 
-M12 onwards: the painted locations, art, audio, narrative pass, Steam.
+M13 onwards: the painted locations, art, audio, narrative pass, Steam.
 
 ## Open questions for Sir
 

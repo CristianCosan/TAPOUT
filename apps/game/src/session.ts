@@ -69,6 +69,16 @@ interface SaveFile {
 }
 
 const SAVE_KEY = 'tapout.run';
+const HISTORY_KEY = 'tapout.history';
+const HISTORY_MAX = 30;
+
+/** One finished run, for the title screen's list of past runs. */
+export interface RunRecord {
+  endedAt: string;
+  day: number;
+  title: string;
+  cause: string;
+}
 // Elements v12 expects to start hidden, as they do in its page markup.
 const STARTS_HIDDEN = new Set(['endScreen', 'endStats']);
 
@@ -84,6 +94,8 @@ export class Session {
   private view: View | null = null;
   private version = 0;
   private baseline: Baseline | null = null;
+  /** The finished run has been written to the history. */
+  private recorded = false;
   private result: ActionResult | null = null;
   /** Layout-guide runs are never saved. */
   private throwaway = false;
@@ -233,6 +245,7 @@ export class Session {
 
   private reset(): void {
     this.run = null;
+    this.recorded = false;
     this.baseline = null;
     this.result = null;
     this.modal = null;
@@ -292,6 +305,30 @@ export class Session {
   private afterChange(): void {
     this.autosave();
     this.emit();
+    if (this.view?.endScreen && !this.recorded) this.record();
+  }
+
+  /** Past runs, newest first. */
+  history(): RunRecord[] {
+    try {
+      const raw = this.storage?.getItem(HISTORY_KEY);
+      const list = raw ? (JSON.parse(raw) as RunRecord[]) : [];
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private record(): void {
+    this.recorded = true;
+    if (!this.storage || this.throwaway || !this.run) return;
+    const text = (id: string) => (this.elements.get(id)?.textContent ?? '').trim();
+    const entry: RunRecord = { endedAt: new Date().toISOString(), day: this.run.state.day, title: text('endTitle'), cause: text('endCause') };
+    try {
+      this.storage.setItem(HISTORY_KEY, JSON.stringify([entry, ...this.history()].slice(0, HISTORY_MAX)));
+    } catch (error) {
+      console.error('Could not record the run', error);
+    }
   }
 
   private emit(): void {
