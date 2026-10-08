@@ -11,6 +11,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/coverage/**',
       'legacy/**',
+      'scripts/**',
       'docs/**',
     ],
   },
@@ -34,6 +35,23 @@ export default tseslint.config(
       ],
       'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'setTimeout', 'setInterval'],
     },
+  },
+  {
+    // v12's own code, moved over as it was. Its style is JavaScript's, not ours; the rules that
+    // still apply to it are the determinism ones above.
+    files: ['packages/core/src/v12/**/*.ts', 'packages/core/src/game.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+      'prefer-const': 'off',
+      // False positive: v12 chains `rand() < p` checks, which are different draws each time.
+      'no-dupe-else-if': 'off',
+    },
+  },
+  {
+    files: ['packages/harness/**/*.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
   },
   {
     files: ['apps/desktop/**/*.cjs'],

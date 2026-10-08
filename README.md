@@ -11,6 +11,15 @@ the behavioural authority; the simulation here is a faithful port of it, verifie
 - Every choice made so far: `docs/DECISIONS.md`
 - How to work in this repository: `CLAUDE.md`
 
+## Playing the current build on Windows
+
+Every push builds `TAP-OUT-windows` in GitHub Actions: open the repository's **Actions** tab,
+pick the latest green **CI** run, and download the artifact at the bottom. Unzip it and run the
+portable `.exe`. The game saves as you play; Continue on the title screen picks up where you
+closed it.
+
+## Development
+
 ```
 npm install
 npm run dev        # play in a browser

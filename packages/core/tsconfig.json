@@ -1,4 +1,18 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src"]
+  "compilerOptions": {
+    // The v12 transplant is JavaScript-shaped (untyped state, optional arguments), so the core
+    // compiles leniently for now. Consumers see only the emitted declarations, which keeps
+    // their own builds strict. Types are tightened system by system as the port is refactored.
+    "strict": false,
+    "noImplicitAny": false,
+    "noUncheckedIndexedAccess": false,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist-types",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }

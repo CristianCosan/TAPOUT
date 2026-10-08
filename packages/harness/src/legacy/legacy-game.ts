@@ -42,6 +42,18 @@ export const DEFAULT_KIT = [
   'bow',
 ] as const;
 
+export function resolveRunOptions(options: LegacyStartOptions) {
+  return {
+    seed: options.seed,
+    kit: [...(options.kit ?? DEFAULT_KIT)],
+    backstory: options.backstory ?? { who: 'partner', fear: 'failing' },
+    name: options.name ?? 'Jack',
+    heightCm: options.heightCm ?? 178,
+    startWeightKg: options.startWeightKg ?? 88,
+    sex: options.sex ?? 'man',
+  } as const;
+}
+
 export interface LegacyGame {
   /** The live `S` object the game mutates. Read it; never write to it. */
   readonly state: Record<string, unknown>;
@@ -49,6 +61,10 @@ export interface LegacyGame {
   call: <T = unknown>(fn: string, ...args: unknown[]) => T;
   /** Evaluates an expression against the game's own scope, e.g. `read('TUNING.energy.startArrival')`. */
   read: <T = unknown>(expression: string) => T;
+  /** Runs a statement in the game's scope, e.g. an inline button handler. */
+  run: (code: string) => void;
+  /** The modal v12 is showing, or null. Tracked by replacing its two presentation functions. */
+  modal: () => string | null;
   /** A structural snapshot of `S`, safe to compare and to store. */
   snapshot: () => unknown;
   readonly rng: RngState;
@@ -69,9 +85,13 @@ export function plain(value: unknown, seen = new WeakSet<object>()): unknown {
   }
   if (seen.has(value as object)) return '[circular]';
   seen.add(value as object);
-  if (value instanceof Set) return { __set: [...value].map((item) => plain(item, seen)).sort() };
-  if (value instanceof Map) {
-    return { __map: [...value.entries()].map(([k, v]) => [plain(k, seen), plain(v, seen)]) };
+  // Tag checks, not instanceof: values created inside the VM context come from another realm.
+  const tag = Object.prototype.toString.call(value);
+  if (tag === '[object Set]') {
+    return { __set: [...(value as Set<unknown>)].map((item) => plain(item, seen)).sort() };
+  }
+  if (tag === '[object Map]') {
+    return { __map: [...(value as Map<unknown, unknown>).entries()].map(([k, v]) => [plain(k, seen), plain(v, seen)]) };
   }
   if (Array.isArray(value)) return value.map((item) => plain(item, seen));
   const out: Record<string, unknown> = {};
@@ -121,22 +141,29 @@ export function loadLegacyGame(options: LegacyStartOptions): LegacyGame {
     return vm.runInContext(`${fn}(...__args)`, context, { filename: 'legacy-call' }) as T;
   };
 
-  // Drive the setup screen the way a player would, then start the run.
-  const backstory = options.backstory ?? { who: 'partner', fear: 'failing' };
-  dom.setValue('bsWho', backstory.who);
-  dom.setValue('bsFear', backstory.fear);
-  dom.setValue('bsHeight', String(options.heightCm ?? 178));
-  dom.setValue('bsWeight', String(options.startWeightKg ?? 88));
-  dom.setValue('bsSex', options.sex ?? 'man');
-  dom.setValue('playerName', options.name ?? 'Jack');
-  dom.window._draftPicked = [...(options.kit ?? DEFAULT_KIT)];
-  call('startGame');
+  // showModal/hideModal only paint; swapping them for recorders leaves the rules untouched and
+  // lets a driver see which choices v12 is offering.
+  vm.runInContext(
+    `var __modal = null;
+     showModal = function(html){ __modal = html; };
+     hideModal = function(){ __modal = null; };`,
+    context,
+  );
+
+  // Start the run the way startGame() does, minus its two presentation calls: the rain and
+  // snow particle builder spends 144 random draws on decoration, and audio is absent anyway.
+  const run = resolveRunOptions(options);
+  call('newGame', run.backstory, run.startWeightKg, run.name, run.heightCm, run.sex, new Set(run.kit));
 
   const state = read<Record<string, unknown>>('S');
   return {
     state,
     call,
     read,
+    run: (code: string) => {
+      vm.runInContext(code, context, { filename: 'legacy-handler' });
+    },
+    modal: () => read<string | null>('__modal'),
     snapshot: () => plain(read('S')),
     rng,
     dom,
