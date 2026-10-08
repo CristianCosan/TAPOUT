@@ -17,7 +17,8 @@ import {
   type Run,
   type RunSnapshot,
 } from '@tapout/core';
-import { CAST, P1 } from '@tapout/content';
+import { CAST, GAME_VERSION, P1 } from '@tapout/content';
+import { RESTORED_FROM, RUN_KEY, SaveStore } from './saves.ts';
 
 export interface PageElement {
   id: string;
@@ -59,16 +60,12 @@ interface Baseline {
 
 const RESULT_BARS = ['energy', 'health', 'hunger', 'thirst', 'warmth', 'morale', 'stress'] as const;
 
-interface SaveFile {
-  format: 'tapout-save';
-  version: 1;
-  savedAt: string;
+/** What a save holds: the run, and whatever v12 had on screen when it was taken. */
+interface SaveBody {
   run: RunSnapshot;
   modal: string | null;
   elements: Array<[string, Omit<PageElement, 'classes'> & { classes: string[] }]>;
 }
-
-const SAVE_KEY = 'tapout.run';
 const HISTORY_KEY = 'tapout.history';
 const HISTORY_MAX = 30;
 
@@ -100,7 +97,10 @@ export class Session {
   /** Layout-guide runs are never saved. */
   private throwaway = false;
 
+  private readonly saves: SaveStore<SaveBody>;
+
   constructor(private readonly storage: Storage | null) {
+    this.saves = new SaveStore<SaveBody>(storage, GAME_VERSION);
     setPresenter({
       showModal: (html) => {
         this.modal = html;
@@ -147,14 +147,27 @@ export class Session {
   }
 
   continueRun(): boolean {
-    const save = this.readSave();
-    if (!save) return false;
+    const found = this.readSave();
+    if (!found) return false;
+    const save = found.body;
     this.reset();
     this.run = restoreRun(save.run);
     this.modal = save.modal;
     for (const [id, el] of save.elements) this.elements.set(id, { ...el, classes: new Set(el.classes) });
+    // A damaged save was replaced by an older copy: say so, once, on the result card.
+    if (found.source !== 'save') this.result = { id: -1, lines: [{ msg: RESTORED_FROM[found.source], cls: 'warn' }], bars: {}, stores: {}, minutes: 0 };
     this.afterChange();
     return true;
+  }
+
+  /** New Run while a run is going: the old one is archived as "left the field" (plan §10.1). */
+  abandonRun(): void {
+    const found = this.readSave();
+    if (found && !this.throwaway) {
+      const state = found.body.run.state as { day?: number };
+      this.addHistory({ endedAt: new Date().toISOString(), day: state.day ?? 1, title: 'Left the field', cause: 'You started a new run instead.' });
+    }
+    this.saves.clear();
   }
 
   leaveRun(): void {
@@ -321,9 +334,13 @@ export class Session {
 
   private record(): void {
     this.recorded = true;
-    if (!this.storage || this.throwaway || !this.run) return;
+    if (this.throwaway || !this.run) return;
     const text = (id: string) => (this.elements.get(id)?.textContent ?? '').trim();
-    const entry: RunRecord = { endedAt: new Date().toISOString(), day: this.run.state.day, title: text('endTitle'), cause: text('endCause') };
+    this.addHistory({ endedAt: new Date().toISOString(), day: this.run.state.day, title: text('endTitle'), cause: text('endCause') });
+  }
+
+  private addHistory(entry: RunRecord): void {
+    if (!this.storage) return;
     try {
       this.storage.setItem(HISTORY_KEY, JSON.stringify([entry, ...this.history()].slice(0, HISTORY_MAX)));
     } catch (error) {
@@ -353,40 +370,77 @@ export class Session {
     try {
       // One save per run: a run that has ended cannot be continued.
       if (this.run.state.over) {
-        this.storage.removeItem(SAVE_KEY);
+        this.saves.clear();
         return;
       }
-      const save: SaveFile = {
-        format: 'tapout-save',
-        version: 1,
-        savedAt: new Date().toISOString(),
+      const body: SaveBody = {
         run: snapshotRun(this.run),
         modal: this.modal,
         elements: [...this.elements].map(([id, el]) => [id, { ...el, classes: [...el.classes] }]),
       };
-      this.storage.setItem(SAVE_KEY, JSON.stringify(save));
+      this.saves.write(body, this.run.state.day, new Date().toISOString());
     } catch (error) {
       console.error('Autosave failed', error);
     }
   }
 
-  private readSave(): SaveFile | null {
+  private readSave() {
+    this.migrateV1();
+    return this.saves.read((body) => !(body.run.state as { over?: boolean }).over);
+  }
+
+  /** Build 0.0.2 and earlier wrote the run bare, without the envelope: wrap it once. */
+  private migrateV1(): void {
     try {
-      const raw = this.storage?.getItem(SAVE_KEY);
-      if (!raw) return null;
-      const save = JSON.parse(raw) as SaveFile;
-      if (save.format !== 'tapout-save' || save.version !== 1) return null;
-      if ((save.run.state as { over?: boolean }).over) return null;
-      return save;
+      const raw = this.storage?.getItem(RUN_KEY);
+      if (!raw) return;
+      const old = JSON.parse(raw) as { format?: string; version?: number } & SaveBody;
+      if (old.format !== 'tapout-save' || old.version !== 1) return;
+      this.storage!.removeItem(RUN_KEY);
+      this.saves.write({ run: old.run, modal: old.modal, elements: old.elements }, (old.run.state as { day: number }).day, new Date().toISOString());
     } catch {
-      return null;
+      // Not a v1 save; the save store decides what to do with it.
     }
   }
 }
 
+interface DesktopStore {
+  get(key: string): string | null;
+  set(key: string, value: string): boolean;
+  remove(key: string): boolean;
+}
+
+/** The desktop shell's files, shaped like localStorage (only the parts the game uses). */
+function fileStorage(store: DesktopStore): Storage {
+  const failed = (key: string) => {
+    throw new Error(`Could not write ${key}`);
+  };
+  return {
+    getItem: (key: string) => store.get(key),
+    setItem: (key: string, value: string) => void (store.set(key, value) || failed(key)),
+    removeItem: (key: string) => void store.remove(key),
+    clear: () => {},
+    key: () => null,
+    length: 0,
+  };
+}
+
 function safeStorage(): Storage | null {
   try {
-    return window.localStorage;
+    const desktop = (window as { tapoutDesktop?: { store?: DesktopStore } }).tapoutDesktop?.store;
+    if (!desktop) return window.localStorage;
+    const files = fileStorage(desktop);
+    // Builds up to 0.0.2 kept the run in the window's localStorage: move it to files once.
+    for (const key of ['tapout.run', 'tapout.history']) {
+      try {
+        const old = window.localStorage.getItem(key);
+        if (old && files.getItem(key) === null) files.setItem(key, old);
+        if (old) window.localStorage.removeItem(key);
+      } catch (error) {
+        console.error('Could not move an old save', error);
+      }
+    }
+    return files;
   } catch {
     return null;
   }

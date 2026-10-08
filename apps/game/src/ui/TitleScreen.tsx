@@ -1,4 +1,4 @@
-import { P1, SHOW } from '@tapout/content';
+import { GAME_VERSION, P1, SHOW } from '@tapout/content';
 import type { RunRecord } from '../session.ts';
 
 export function TitleScreen(props: { canContinue: boolean; history: RunRecord[]; onContinue: () => void; onNewRun: () => void }) {
@@ -34,7 +34,7 @@ export function TitleScreen(props: { canContinue: boolean; history: RunRecord[];
         </div>
       )}
       <p className="build">
-        Grey-box build 0.0.2 · placeholder shapes, no art or sound yet · you are {P1.fullName}
+        Grey-box build {GAME_VERSION} · placeholder shapes, no art or sound yet · you are {P1.fullName}
       </p>
     </div>
   );

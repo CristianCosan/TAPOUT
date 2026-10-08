@@ -19,6 +19,7 @@
     "files": [
       "main.cjs",
       "preload.cjs",
+      "store.cjs",
       "renderer/**"
     ],
     "win": {

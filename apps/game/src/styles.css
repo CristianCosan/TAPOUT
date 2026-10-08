@@ -242,3 +242,4 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .night-buttons { display: flex; gap: 16px; margin-top: 6px; }
 .night-curtain { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; pointer-events: none; background: #05080d; color: #c9d3e0; font-family: var(--serif); font-size: 64px; letter-spacing: 0.3em; text-transform: uppercase; animation: curtain 2.2s ease-in-out forwards; }
 @keyframes curtain { 0% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
+.confirm-title { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 64px; letter-spacing: 0.06em; }

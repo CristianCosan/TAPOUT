@@ -79,9 +79,18 @@ paged journal. Placeholder shapes stand in for the art. The three layout guides
 - Build 0.0.2 is the grey-box playtest build. Interaction design locks after Sir plays it.
 - Known: an early bedtime can wake you at 22:00 (LEG-007, deferred in D-021).
 
+### M13 — saves to files
+- Desktop: one JSON file per key under `%APPDATA%\TAP OUT` (`apps/desktop/store.cjs`), atomic
+  write by temp file and rename; the browser build keeps localStorage behind the same API.
+- `apps/game/src/saves.ts`: envelope with checksum, three rotating backups, a dawn copy, recovery
+  in that order with a plain message; build 0.0.2 saves are read and rewrapped.
+- New Run with a run going asks first and archives it as "Left the field".
+- Tests: save suite (round trip, truncation, bad checksum, all-backups-bad, clear), desktop file
+  store, 0.0.2 migration. The settings screen moved to M20 (D-028).
+
 ## Not started
 
-M13 onwards: the painted locations, art, audio, narrative pass, Steam.
+M14 onwards: the painted locations, art, audio, narrative pass, Steam.
 
 ## Open questions for Sir
 
