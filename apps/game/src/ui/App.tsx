@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { session } from '../session.ts';
 import { GameScreen } from './GameScreen.tsx';
 import { KitDraft } from './KitDraft.tsx';
@@ -9,8 +9,13 @@ type Screen = 'title' | 'draft';
 export function App() {
   const view = useSyncExternalStore(session.subscribe, session.getView);
   const [screen, setScreen] = useState<Screen>('title');
+  const guide = /^#guide-(camp|shore|woods)$/.exec(window.location.hash)?.[1];
 
-  if (view) return <GameScreen view={view} />;
+  useEffect(() => {
+    if (guide) session.startGuide(guide);
+  }, [guide]);
+
+  if (view) return <GameScreen view={view} guide={!!guide} />;
   if (screen === 'draft') {
     return (
       <KitDraft

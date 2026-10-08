@@ -166,4 +166,4 @@ export { ambientTempC } from './v12/cost.ts';
 export { fireCap } from './v12/camp.ts';
 export { waterCap, computeBMI } from './v12/setup.ts';
 export { meatCount, berryCount } from './v12/food.ts';
-export { roundDisplay, hh } from './v12/helpers.ts';
+export { roundDisplay, hh, duskHour, dawnHour } from './v12/helpers.ts';

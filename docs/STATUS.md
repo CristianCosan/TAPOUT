@@ -4,8 +4,12 @@
 identical to the untouched v12 file, and the deliberate changes to it are in behind rule flags
 (`docs/reports/M8_CHANGES.md`). A plain but complete playable build exists.
 
-**Next:** Phase 2 proper, starting with M9: the real 16:9 location screens with every station
-laid out, for Sir to approve before the art prompts are written.
+**M9 is built and waiting on Sir:** Camp, Shore and Woods are real 16:9 screens (Phaser) with
+every v12 action placed on a clickable spot, a context panel, rails for body and stores, and a
+paged journal. Placeholder shapes stand in for the art. The three layout guides
+(`docs/layouts/`) need Sir's OK before the art prompts are written against them.
+
+**Next:** the full art prompt pack once the layouts are approved; meanwhile M10 onwards.
 
 ## Done
 
@@ -46,9 +50,16 @@ laid out, for Sir to approve before the art prompts are written.
 - `npm run balance` compares outcomes under v12's rules and TAP / OUT's on the same seeds.
 - Change report: `docs/reports/M8_CHANGES.md`. LEG-007 is deferred (D-021).
 
+### M9 — location screens (awaiting layout approval)
+- `packages/content/src/locations/`: one layout per location; a test proves every v12 action
+  has exactly one station, hotspots stay in the safe area and exits connect the three places.
+- `apps/game/src/scene/LocationScene.ts`: the Phaser tableau, depth-sorted, hover, selection,
+  night darkening, F3 debug overlay. `#guide-camp` (and shore, woods) shows the layout guide.
+- Robot-played through a full run by clicking the canvas and the context panel: no errors.
+
 ## Not started
 
-M9 onwards: the painted locations, art, audio, narrative pass, Steam.
+M10 onwards: the painted locations, art, audio, narrative pass, Steam.
 
 ## Open questions for Sir
 

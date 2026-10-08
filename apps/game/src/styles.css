@@ -147,3 +147,47 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .endSect h4 { margin: 0 0 6px; font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ember); }
 .endSect .row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #223225; font-size: 17px; }
 .endSect .row:last-child { border-bottom: none; }
+
+/* ---- M9: the tableau screen (plan §5.2). The painting is full bleed; the rails sit over it. */
+.game2 { position: absolute; inset: 0; overflow: hidden; }
+.tableau { position: absolute; inset: 0; }
+.tableau canvas { display: block; }
+.hud-top { position: absolute; left: 0; right: 0; top: 0; height: 64px; display: flex; align-items: center; gap: 20px; padding: 0 24px; background: linear-gradient(#0b100ce6, #0b100cb0); border-bottom: 1px solid #2a3a2c; z-index: 5; }
+.hud-top .pills { margin-left: auto; }
+.hud-top .pill { font-size: 18px; padding: 6px 14px; }
+.hud-btn { padding: 8px 16px; border-radius: 10px; border: 1px solid var(--lichen); background: var(--moss2); color: var(--bone); font-size: 18px; cursor: pointer; }
+.hud-btn:disabled { opacity: 0.45; cursor: default; }
+.hud-btn:not(:disabled):hover { border-color: var(--ember); }
+.hud-btn.phone { border-color: #4a2a28; color: #d9a39b; }
+.rail { position: absolute; top: 64px; bottom: 72px; padding: 14px 14px; background: #0b100cc4; z-index: 4; overflow: hidden; }
+.rail-left { left: 0; width: 160px; border-right: 1px solid #2a3a2c; }
+.rail-right { right: 0; width: 200px; border-left: 1px solid #2a3a2c; font-size: 16px; }
+.rail h4 { margin: 8px 0 6px; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+.rail-bar { margin-bottom: 10px; }
+.rail-bar-head { display: flex; justify-content: space-between; font-size: 15px; color: var(--sage); margin-bottom: 3px; }
+.rail-bar-head b { color: var(--bone); font-variant-numeric: tabular-nums; }
+.rail-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.rail-chips .chip { font-size: 13px; padding: 3px 8px; }
+.rail-right .store { font-size: 15px; }
+.rail-right .eat { grid-template-columns: 1fr; gap: 6px; }
+.rail-right .chip-btn { font-size: 14px; padding: 7px 9px; }
+.hud-bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 72px; display: flex; align-items: center; gap: 22px; padding: 0 24px; background: linear-gradient(#0b100cb0, #0b100ce6); border-top: 1px solid #2a3a2c; z-index: 5; cursor: pointer; }
+.hud-bottom .here { font-family: var(--serif); font-size: 24px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ember); }
+.hud-bottom .signs { margin: 0; font-size: 16px; max-width: 420px; }
+.hud-bottom .latest { flex: 1; min-width: 0; }
+.hud-bottom .ln { padding: 1px 0; border: none; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-bottom .ln .t { display: inline; }
+.context { position: absolute; z-index: 6; background: #101812f2; border: 1px solid var(--lichen); border-radius: 14px; padding: 16px 18px; box-shadow: 0 12px 40px #000a; display: flex; flex-direction: column; gap: 8px; }
+.context-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.context-head h3 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 26px; letter-spacing: 0.12em; text-transform: uppercase; }
+.context-head p { margin: 4px 0 0; color: var(--sage); font-size: 16px; }
+.context .close { background: none; border: none; color: var(--sage); font-size: 30px; cursor: pointer; line-height: 1; }
+.context-stores { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 16px; color: var(--sage); }
+.context-stores b { color: var(--bone); }
+.context-empty { color: var(--dim); margin: 6px 0; }
+.context-act { text-align: left; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--lichen); background: var(--moss); color: var(--bone); cursor: pointer; display: flex; flex-direction: column; gap: 3px; }
+.context-act:not(:disabled):hover { border-color: var(--ember); background: var(--moss2); }
+.context-act:disabled { opacity: 0.45; cursor: default; }
+.journal-book { width: 900px; height: 820px; background: var(--moss); border: 1px solid var(--lichen); border-radius: 18px; padding: 24px 30px; display: flex; flex-direction: column; }
+.journal-page { flex: 1; overflow: hidden; }
+.journal-nav { display: flex; justify-content: space-between; align-items: center; color: var(--sage); }

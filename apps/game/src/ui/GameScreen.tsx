@@ -1,12 +1,9 @@
-import { useLayoutEffect, useRef, type MouseEvent } from 'react';
-import { rationsLeft, roundDisplay, type HudElement, type PanelEntry } from '@tapout/core';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { dawnHour, duskHour, rationsLeft, roundDisplay, type HudElement, type PanelEntry } from '@tapout/core';
+import { LOCATIONS, STAGE, type LocationId, type SpecialAction, type Station } from '@tapout/content';
 import { session, type View } from '../session.ts';
-
-const LOCATIONS = [
-  { id: 'camp', label: 'Camp' },
-  { id: 'shore', label: 'Shore' },
-  { id: 'woods', label: 'Woods' },
-] as const;
+import { TableauHost } from '../scene/TableauHost.tsx';
+import type { SceneInput } from '../scene/LocationScene.ts';
 
 const BARS = [
   ['health', 'Health'],
@@ -16,6 +13,26 @@ const BARS = [
   ['morale', 'Morale'],
   ['stress', 'Stress'],
 ] as const;
+
+const STORES = [
+  ['inv-meat', 'Raw meat'],
+  ['inv-arrows', 'Arrows'],
+  ['inv-raw', 'Raw water'],
+  ['inv-tinder', 'Tinder'],
+  ['inv-wood', 'Logs'],
+  ['inv-firewood', 'Firewood'],
+  ['inv-moss', 'Moss'],
+  ['inv-rocks', 'Rocks'],
+  ['inv-clay', 'Clay'],
+] as const;
+
+/** What a station shows about your stores when you open it. */
+const STATION_STORES: Record<string, ReadonlyArray<readonly [string, string]>> = {
+  woodpile: [['inv-firewood', 'Firewood'], ['inv-wood', 'Logs']],
+  stock: [['inv-rocks', 'Rocks'], ['inv-moss', 'Moss'], ['inv-clay', 'Clay'], ['inv-tinder', 'Tinder']],
+  food: [['inv-meat', 'Raw meat']],
+  water: [['inv-raw', 'Raw water']],
+};
 
 function Html({ html, className }: { html: string; className?: string }) {
   return <span className={className} dangerouslySetInnerHTML={{ __html: inertHandlers(html) }} />;
@@ -41,10 +58,73 @@ function onHandlerClick(event: MouseEvent) {
   session.click(target.getAttribute('data-handler') ?? '');
 }
 
-function TopBar({ view }: { view: View }) {
+// ---- what a station offers right now
+
+interface Offer {
+  key: string;
+  label: string;
+  detail: string;
+  enabled: boolean;
+  handler: string;
+}
+
+function specialOffer(kind: SpecialAction, hud: ReadonlyMap<string, HudElement>): Offer | null {
+  // v12's chips read "🍲 3 · eat"; out of context a name says more.
+  const chip = (id: string, handler: string, name: string): Offer => ({
+    key: kind,
+    label: `${name} (${(hudText(hud, id).replace(/<[^>]+>/g, '').match(/\d+/) ?? ['0'])[0]})`,
+    detail: '',
+    enabled: !hud.get(id)?.disabled,
+    handler,
+  });
+  switch (kind) {
+    case 'sleep':
+      return { key: kind, label: '🌙 Sleep · 6 hours', detail: hudText(hud, 'sleep-sub'), enabled: !hud.get('sleepBtn')?.disabled, handler: 'actSleep()' };
+    case 'turnInEarly':
+      return hud.get('earlyBtn')?.hidden
+        ? null
+        : { key: kind, label: hudText(hud, 'early-label'), detail: hudText(hud, 'early-sub'), enabled: true, handler: 'actTurnInEarly()' };
+    case 'drink':
+      return chip('drinkBtn', 'actDrink()', '💧 Drink clean water');
+    case 'eatBerries':
+      return chip('eatBerriesBtn', 'eatBerries()', '🫐 Eat berries');
+    case 'eatCooked':
+      return chip('eatCookedBtn', 'eatCooked()', '🍲 Eat a cooked meal');
+    case 'eatSmoked':
+      return chip('eatSmokedBtn', 'eatSmoked()', '🥩 Eat smoked meat');
+    case 'eatRation': {
+      const left = rationsLeft();
+      return left > 0 ? { key: kind, label: `🥫 Eat a ration (${left} left)`, detail: '+20 hunger', enabled: true, handler: 'eatRation()' } : null;
+    }
+  }
+}
+
+function offersFor(station: Station, view: View): Offer[] {
+  const { hud } = view;
+  if (station.exitTo) {
+    const to = station.exitTo;
+    return [{ key: `go-${to}`, label: `Walk to ${LOCATIONS[to].label}`, detail: hudText(hud, `tt-${to}`), enabled: !hud.get(`tab-${to}`)?.disabled, handler: `goTo('${to}')` }];
+  }
+  const panel = new Map(view.panel.map((e) => [e.id, e]));
+  const offers: Offer[] = [];
+  for (const id of station.actions) {
+    const entry: PanelEntry | undefined = panel.get(id);
+    if (!entry || !entry.visible) continue;
+    offers.push({ key: id, label: entry.label, detail: entry.detail, enabled: entry.enabled, handler: entry.onclick });
+  }
+  for (const kind of station.special ?? []) {
+    const offer = specialOffer(kind, hud);
+    if (offer) offers.push(offer);
+  }
+  return offers;
+}
+
+// ---- rails and bars
+
+function TopBar({ view, onJournal }: { view: View; onJournal: () => void }) {
   const { hud } = view;
   return (
-    <header className="topbar">
+    <header className="hud-top">
       <div className="logo">
         TAP <span className="slash">/</span> OUT
       </div>
@@ -53,83 +133,70 @@ function TopBar({ view }: { view: View }) {
           <Html key={id} className="pill" html={hudText(hud, id)} />
         ))}
       </div>
+      <button className="hud-btn" onClick={onJournal} title="Journal (J)">
+        Journal
+      </button>
+      <button className="hud-btn phone" disabled={hud.get('tapBtn')?.disabled} onClick={() => session.click('confirmTapOut()')}>
+        📞 Sat phone
+      </button>
     </header>
   );
 }
 
-function Body({ view }: { view: View }) {
+function BodyRail({ view }: { view: View }) {
   const S = view.state;
   const { hud } = view;
-  const energyPct = Math.max(0, Math.min(100, (S.energy / Math.max(1, S.maxEnergy)) * 100));
-  return (
-    <aside className="body-panel">
-      <h3>You</h3>
-      <div className="bar-row">
-        <span className="bar-label">Energy</span>
-        <div className="bar">
-          <div className={`bar-fill energy${S.energy / S.maxEnergy < 0.22 ? ' crit' : ''}`} style={{ width: `${energyPct}%` }} />
-        </div>
-        <span className="bar-val">
-          {roundDisplay(S.energy)}/{S.maxEnergy}
-        </span>
+  const bar = (key: string, label: string, value: number, max: number, crit: boolean) => (
+    <div className="rail-bar" key={key}>
+      <div className="rail-bar-head">
+        <span>{label}</span>
+        <b>{max === 100 ? roundDisplay(value) : `${roundDisplay(value)}/${max}`}</b>
       </div>
+      <div className="bar">
+        <div className={`bar-fill ${key}${crit ? ' crit' : ''}`} style={{ width: `${Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100))}%` }} />
+      </div>
+    </div>
+  );
+  return (
+    <aside className="rail rail-left">
+      {bar('energy', 'Energy', S.energy, S.maxEnergy, S.energy / S.maxEnergy < 0.22)}
       {BARS.map(([key, label]) => {
         const value = S[key] as number;
-        const crit = key === 'stress' ? value > 78 : value < 22;
-        return (
-          <div className="bar-row" key={key}>
-            <span className="bar-label">{label}</span>
-            <div className="bar">
-              <div className={`bar-fill ${key}${crit ? ' crit' : ''}`} style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
-            </div>
-            <span className="bar-val">{roundDisplay(value)}</span>
-          </div>
-        );
+        return bar(key, label, value, 100, key === 'stress' ? value > 78 : value < 22);
       })}
-      <div className="chips">
+      <div className="rail-chips">
         {['chip-fire', 'chip-shelter', 'chip-wet', 'chip-injury', 'chip-wolf'].map((id) =>
           hud.get(id)?.hidden ? null : <Html key={id} className="chip" html={hudText(hud, id)} />,
         )}
         <Html html={hudText(hud, 'conditionChips')} />
       </div>
-      <h3>Eat &amp; drink</h3>
+    </aside>
+  );
+}
+
+function StoresRail({ view }: { view: View }) {
+  const { hud } = view;
+  return (
+    <aside className="rail rail-right">
+      <h4>Stores</h4>
+      {STORES.map(([id, label]) => (
+        <div className="store" key={id}>
+          <span>{label}</span>
+          <b>{hudText(hud, id)}</b>
+        </div>
+      ))}
+      <h4>Eat and drink</h4>
       <div className="eat">
-        {[
-          ['eatBerriesBtn', 'eatBerries()'],
-          ['eatCookedBtn', 'eatCooked()'],
-          ['eatSmokedBtn', 'eatSmoked()'],
-          ['drinkBtn', 'actDrink()'],
-        ].map(([id, handler]) => (
-          <button key={id} className="chip-btn" onClick={() => session.click(handler!)} disabled={hud.get(id!)?.disabled}>
-            <Html html={hudText(hud, id!)} />
-          </button>
-        ))}
-        {rationsLeft() > 0 && (
-          <button className="chip-btn" onClick={() => session.click('eatRation()')}>
-            🥫 Ration ({rationsLeft()})
-          </button>
-        )}
+        {(['drink', 'eatBerries', 'eatCooked', 'eatSmoked', 'eatRation'] as const).map((kind) => {
+          const offer = specialOffer(kind, hud);
+          return offer ? (
+            <button key={kind} className="chip-btn" disabled={!offer.enabled} onClick={() => session.click(offer.handler)}>
+              {offer.label}
+            </button>
+          ) : null;
+        })}
       </div>
-      <h3>Stores</h3>
-      <div className="stores">
-        {[
-          ['inv-meat', '🍖 Raw meat'],
-          ['inv-arrows', '🏹 Arrows'],
-          ['inv-raw', '🪣 Raw water'],
-          ['inv-tinder', '🌾 Tinder'],
-          ['inv-wood', '🪵 Logs'],
-          ['inv-firewood', '🔥 Firewood'],
-          ['inv-moss', '🌿 Moss'],
-          ['inv-rocks', '🪨 Rocks'],
-          ['inv-clay', '🧱 Clay'],
-        ].map(([id, label]) => (
-          <div className="store" key={id}>
-            <span>{label}</span>
-            <b>{hudText(hud, id!)}</b>
-          </div>
-        ))}
-      </div>
-      <div className="chips">
+      <div className="rail-chips">
         <Html html={hudText(hud, 'carryChips')} />
         <Html html={hudText(hud, 'gearChips')} />
       </div>
@@ -137,96 +204,108 @@ function Body({ view }: { view: View }) {
   );
 }
 
-function ActionButton({ entry }: { entry: PanelEntry }) {
-  return (
-    <button className="act" disabled={!entry.enabled} onClick={() => session.click(entry.onclick)} title={entry.detail}>
-      <span className="act-name">{entry.label}</span>
-      <span className="act-detail">{entry.detail}</span>
-    </button>
-  );
-}
-
-function Actions({ view }: { view: View }) {
-  const S = view.state;
-  const { hud } = view;
-  const here = view.panel.filter((e) => e.visible && e.loc === S.loc);
-  const anywhere = view.panel.filter((e) => e.visible && e.loc === 'all');
-  return (
-    <main className="actions-panel">
-      <nav className="tabs">
-        {LOCATIONS.map((loc) => {
-          const tab = hud.get(`tab-${loc.id}`);
-          const isHere = S.loc === loc.id;
-          return (
-            <button
-              key={loc.id}
-              className={`tab${isHere ? ' here' : ''}`}
-              disabled={!isHere && tab?.disabled}
-              onClick={() => !isHere && session.click(`goTo('${loc.id}')`)}
-            >
-              <span className="tab-name">{loc.label}</span>
-              <span className="tab-detail">{hudText(hud, `tt-${loc.id}`)}</span>
-            </button>
-          );
-        })}
-      </nav>
-      <p className="signs">{hudText(hud, 'signsLine')}</p>
-      <div className="act-grid">
-        {here.map((entry) => (
-          <ActionButton key={entry.id} entry={entry} />
-        ))}
-      </div>
-      {anywhere.length > 0 && (
-        <>
-          <h4 className="act-section">Anywhere</h4>
-          <div className="act-grid">
-            {anywhere.map((entry) => (
-              <ActionButton key={entry.id} entry={entry} />
-            ))}
-          </div>
-        </>
-      )}
-    </main>
-  );
-}
-
-function Journal({ view }: { view: View }) {
+function BottomBar({ view, onJournal }: { view: View; onJournal: () => void }) {
   const log = view.state.log as Array<{ msg: string; cls: string; t: string }>;
+  const latest = log.slice(0, 2);
   return (
-    <aside className="journal">
-      <h3>Journal</h3>
-      <div className="journal-list">
-        {log.map((line, i) => (
+    <footer className="hud-bottom" onClick={onJournal} title="Open the journal (J)">
+      <span className="here">{LOCATIONS[view.state.loc as LocationId].label}</span>
+      <span className="signs">{hudText(view.hud, 'signsLine')}</span>
+      <div className="latest">
+        {latest.map((line, i) => (
           <div key={`${view.version}-${i}`} className={`ln ${line.cls}`}>
-            <span className="t">{line.t}</span>
-            <Html html={line.msg} />
+            <span className="t">{line.t}</span> <Html html={line.msg} />
           </div>
         ))}
       </div>
-    </aside>
+    </footer>
   );
 }
 
-function BottomBar({ view }: { view: View }) {
-  const { hud } = view;
-  const early = hud.get('earlyBtn');
+// ---- the context panel, next to the station you clicked
+
+function ContextPanel({ station, view, onClose, onAct }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void }) {
+  const offers = offersFor(station, view);
+  const stores = STATION_STORES[station.id] ?? [];
+  const xs = station.id === 'you' ? [1000] : station.hotspot.map((p) => p.x);
+  const right = Math.max(...xs);
+  const left = Math.min(...xs);
+  const width = 520;
+  const x = right + 24 + width < 1700 ? right + 24 : Math.max(180, left - 24 - width);
+  const y = Math.max(90, Math.min(STAGE.height - 120 - (110 + offers.length * 78), (station.id === 'you' ? 700 : Math.min(...station.hotspot.map((p) => p.y))) - 20));
   return (
-    <footer className="bottombar">
-      <button className="sleep" disabled={hud.get('sleepBtn')?.disabled} onClick={() => session.click('actSleep()')}>
-        🌙 Sleep · 6 hours
-        <span className="sub">{hudText(hud, 'sleep-sub')}</span>
-      </button>
-      {!early?.hidden && (
-        <button className="early" onClick={() => session.click('actTurnInEarly()')}>
-          {hudText(hud, 'early-label')}
-          <span className="sub">{hudText(hud, 'early-sub')}</span>
+    <div className="context" style={{ left: x, top: y, width }} onClick={(e) => e.stopPropagation()}>
+      <div className="context-head">
+        <div>
+          <h3>{station.label}</h3>
+          <p>{station.blurb}</p>
+        </div>
+        <button className="close" onClick={onClose} aria-label="Close">
+          ×
         </button>
+      </div>
+      {stores.length > 0 && (
+        <div className="context-stores">
+          {stores.map(([id, label]) => (
+            <span key={id}>
+              {label} <b>{hudText(view.hud, id)}</b>
+            </span>
+          ))}
+        </div>
       )}
-      <div className="spacer" />
-      <button className="phone" disabled={hud.get('tapBtn')?.disabled} onClick={() => session.click('confirmTapOut()')}>
-        📞 Pick up the sat phone…
-      </button>
-    </footer>
+      {offers.length === 0 ? (
+        <p className="context-empty">Nothing to do here right now.</p>
+      ) : (
+        offers.map((offer) => (
+          <button key={offer.key} className="context-act" disabled={!offer.enabled} onClick={() => onAct(offer)}>
+            <span className="act-name">{offer.label}</span>
+            {offer.detail && <span className="act-detail">{offer.detail}</span>}
+          </button>
+        ))
+      )}
+    </div>
+  );
+}
+
+// ---- journal, modal, end screen
+
+const PAGE = 12;
+
+function Journal({ view, onClose }: { view: View; onClose: () => void }) {
+  const log = view.state.log as Array<{ msg: string; cls: string; t: string }>;
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(log.length / PAGE));
+  const lines = log.slice(page * PAGE, page * PAGE + PAGE);
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="journal-book" onClick={(e) => e.stopPropagation()}>
+        <div className="context-head">
+          <h3>Journal</h3>
+          <button className="close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
+        <div className="journal-page">
+          {lines.map((line, i) => (
+            <div key={`${view.version}-${page}-${i}`} className={`ln ${line.cls}`}>
+              <span className="t">{line.t}</span>
+              <Html html={line.msg} />
+            </div>
+          ))}
+        </div>
+        <div className="journal-nav">
+          <button className="hud-btn" disabled={page === 0} onClick={() => setPage(page - 1)}>
+            ← Newer
+          </button>
+          <span>
+            Page {page + 1} of {pages}
+          </span>
+          <button className="hud-btn" disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>
+            Older →
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -269,18 +348,98 @@ function EndScreen({ view }: { view: View }) {
   );
 }
 
-export function GameScreen({ view }: { view: View }) {
+// ---- the screen
+
+function darkness(hour: number): number {
+  const h = ((hour % 24) + 24) % 24;
+  const dusk = duskHour();
+  const dawn = dawnHour();
+  if (h >= dawn + 1 && h <= dusk - 1) return 0;
+  if (h > dusk - 1 && h < dusk + 1) return (h - (dusk - 1)) / 2;
+  if (h > dawn - 1 && h < dawn + 1) return 1 - (h - (dawn - 1)) / 2;
+  return 1;
+}
+
+export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
+  const S = view.state;
+  const loc = S.loc as LocationId;
+  const layout = LOCATIONS[loc];
+  const [selected, setSelected] = useState<string | null>(null);
+  const [standAt, setStandAt] = useState<Record<string, string>>({});
+  const [labels, setLabels] = useState(false);
+  const [debug, setDebug] = useState(!!guide);
+  const [journal, setJournal] = useState(false);
+
+  // A new location starts with nothing open.
+  useEffect(() => setSelected(null), [loc]);
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') {
+        e.preventDefault();
+        setLabels(true);
+      } else if (e.key === 'Escape') {
+        setSelected(null);
+        setJournal(false);
+      } else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
+      else if (e.key === 'F3') {
+        e.preventDefault();
+        setDebug((on) => !on);
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') setLabels(false);
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+  }, []);
+
+  const { hidden, idle } = useMemo(() => {
+    const hiddenIds = new Set<string>();
+    const idleIds = new Set<string>();
+    for (const station of layout.stations) {
+      const offers = offersFor(station, view);
+      // Conditional stations exist only while v12 offers something there.
+      if (station.when && offers.length === 0 && !guide) hiddenIds.add(station.id);
+      if (!offers.some((o) => o.enabled)) idleIds.add(station.id);
+    }
+    return { hidden: hiddenIds, idle: idleIds };
+  }, [layout, view, guide]);
+
+  const input: SceneInput = useMemo(
+    () => ({ layout, hidden, idle, standAt: standAt[loc] ?? 'you', selected, dark: guide ? 0 : darkness(S.hour) * 0.85, labels: labels || !!guide, debug }),
+    [layout, hidden, idle, standAt, loc, selected, S.hour, labels, guide, debug],
+  );
+  const select = useCallback((id: string) => setSelected((current) => (current === id ? null : id)), []);
+  const events = useMemo(() => ({ select }), [select]);
+
   if (view.endScreen && !view.modal) return <EndScreen view={view} />;
+  const station = selected ? layout.stations.find((s) => s.id === selected) : null;
+
+  const act = (offer: Offer) => {
+    if (station && !station.exitTo && station.id !== 'you') setStandAt((at) => ({ ...at, [loc]: station.id }));
+    if (station?.exitTo) setSelected(null);
+    session.click(offer.handler);
+  };
+
   return (
-    <div className="game">
-      <TopBar view={view} />
-      <div className="columns">
-        <Body view={view} />
-        <Actions view={view} />
-        <Journal view={view} />
-      </div>
-      <BottomBar view={view} />
-      <Modal view={view} />
+    <div className="game2">
+      <TableauHost input={input} events={events} />
+      {!guide && (
+        <>
+          <TopBar view={view} onJournal={() => setJournal(true)} />
+          <BodyRail view={view} />
+          <StoresRail view={view} />
+          <BottomBar view={view} onJournal={() => setJournal(true)} />
+          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} />}
+          {journal && <Journal view={view} onClose={() => setJournal(false)} />}
+          <Modal view={view} />
+        </>
+      )}
     </div>
   );
 }
