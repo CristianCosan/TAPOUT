@@ -26,13 +26,11 @@
       "target": [
         "portable",
         "zip"
-      ]
+      ],
+      "artifactName": "TAP-OUT-${version}-win.${ext}"
     },
     "portable": {
       "artifactName": "TAP-OUT-${version}-portable.exe"
-    },
-    "zip": {
-      "artifactName": "TAP-OUT-${version}-win.zip"
     },
     "electronVersion": "44.7.0",
     "npmRebuild": false
