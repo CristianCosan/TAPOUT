@@ -63,6 +63,8 @@ export class Session {
   private listeners = new Set<() => void>();
   private view: View | null = null;
   private version = 0;
+  /** Layout-guide runs are never saved. */
+  private throwaway = false;
 
   constructor(private readonly storage: Storage | null) {
     setPresenter({
@@ -87,8 +89,16 @@ export class Session {
     return this.readSave() !== null;
   }
 
-  newRun(kit: readonly string[], seed: string = String(Date.now())): void {
+  /** A run that only exists to show a location's layout guide (`#guide-camp`). */
+  startGuide(loc: string): void {
+    this.newRun(['axe', 'saw', 'ferro', 'pot', 'knife', 'sleeping', 'tarp', 'line', 'snare', 'bow'], 'layout-guide', true);
+    this.run!.state.loc = loc;
+    this.emit();
+  }
+
+  newRun(kit: readonly string[], seed: string = String(Date.now()), throwaway = false): void {
     this.reset();
+    this.throwaway = throwaway;
     this.run = startRun({
       seed,
       kit,
@@ -226,7 +236,7 @@ export class Session {
   }
 
   private autosave(): void {
-    if (!this.storage || !this.run) return;
+    if (!this.storage || !this.run || this.throwaway) return;
     try {
       // One save per run: a run that has ended cannot be continued.
       if (this.run.state.over) {
