@@ -7,3 +7,4 @@ export * from './layout.ts';
 export { CAMP, SHORE, WOODS };
 
 export const LOCATIONS: Readonly<Record<LocationId, LocationLayout>> = { camp: CAMP, shore: SHORE, woods: WOODS };
+export * from './map.ts';

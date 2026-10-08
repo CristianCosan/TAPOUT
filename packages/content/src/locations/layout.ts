@@ -21,7 +21,8 @@ export type SpecialAction =
   | 'eatBerries'
   | 'eatCooked'
   | 'eatSmoked'
-  | 'eatRation';
+  | 'eatRation'
+  | 'map';
 
 export interface Station {
   id: string;
@@ -39,6 +40,8 @@ export interface Station {
   special?: readonly SpecialAction[];
   /** Travel exits name the location they lead to. */
   exitTo?: LocationId;
+  /** A v12 fishing or trapline spot this station stands for: actions there target it directly. */
+  spot?: string;
   /** Only shown when the run has something here (a kill site, a spotted animal, winter ice). */
   when?: 'killSite' | 'hunt' | 'winter' | 'jay';
 }

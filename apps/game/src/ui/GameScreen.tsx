@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { dawnHour, duskHour, roundDisplay } from '@tapout/core';
-import { LOCATIONS, STAGE, type LocationId, type Station } from '@tapout/content';
+import { GAME, dawnHour, duskHour, roundDisplay } from '@tapout/core';
+import { HUNT_TRAIL_LABELS, LOCATIONS, STAGE, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
 import { TableauHost } from '../scene/TableauHost.tsx';
@@ -56,7 +57,7 @@ function onHandlerClick(event: MouseEvent) {
 
 // ---- rails and bars
 
-function TopBar({ view, onJournal }: { view: View; onJournal: () => void }) {
+function TopBar({ view, onJournal, onMap }: { view: View; onJournal: () => void; onMap: () => void }) {
   const { hud } = view;
   return (
     <header className="hud-top">
@@ -68,6 +69,9 @@ function TopBar({ view, onJournal }: { view: View; onJournal: () => void }) {
           <Html key={id} className="pill" html={hudText(hud, id)} />
         ))}
       </div>
+      <button className="hud-btn" onClick={onMap} title="Map (M)">
+        Map
+      </button>
       <button className="hud-btn" onClick={onJournal} title="Journal (J)">
         Journal
       </button>
@@ -329,6 +333,22 @@ function EndScreen({ view }: { view: View }) {
 
 // ---- the screen
 
+/** Stations whose name follows the run: the animal you spotted, the trail you are on. */
+function liveLayout(layout: LocationLayout, S: View['state']): LocationLayout {
+  const hunt = S.hunt as { state: string; species?: string; wounded?: boolean } | undefined;
+  if (!hunt || hunt.state === 'none') return layout;
+  const animal = hunt.species ? (GAME[hunt.species]?.label as string | undefined) : undefined;
+  const trail = HUNT_TRAIL_LABELS[hunt.state === 'trailing' && hunt.wounded ? 'trailingWounded' : hunt.state];
+  return {
+    ...layout,
+    stations: layout.stations.map((st) => {
+      if (st.id === 'animal' && animal) return { ...st, label: animal[0]!.toUpperCase() + animal.slice(1) };
+      if (st.id === 'tracks' && trail) return { ...st, label: trail };
+      return st;
+    }),
+  };
+}
+
 function darkness(hour: number): number {
   const h = ((hour % 24) + 24) % 24;
   const dusk = duskHour();
@@ -342,12 +362,14 @@ function darkness(hour: number): number {
 export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const S = view.state;
   const loc = S.loc as LocationId;
-  const layout = LOCATIONS[loc];
+  // v12 mutates its state in place; the view version marks a change.
+  const layout = useMemo(() => liveLayout(LOCATIONS[loc], S), [loc, S, view.version]);
   const [selected, setSelected] = useState<string | null>(null);
   const [standAt, setStandAt] = useState<Record<string, string>>({});
   const [labels, setLabels] = useState(false);
   const [debug, setDebug] = useState(!!guide);
   const [journal, setJournal] = useState(false);
+  const [map, setMap] = useState(false);
 
   // A new location starts with nothing open.
   useEffect(() => setSelected(null), [loc]);
@@ -360,7 +382,9 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       } else if (e.key === 'Escape') {
         setSelected(null);
         setJournal(false);
+        setMap(false);
       } else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
+      else if (e.key === 'm' || e.key === 'M') setMap((open) => !open);
       else if (e.key === 'F3') {
         e.preventDefault();
         setDebug((on) => !on);
@@ -403,6 +427,11 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const station = selected ? layout.stations.find((s) => s.id === selected) : null;
 
   const act = (offer: Offer) => {
+    if (offer.ui === 'map') {
+      setSelected(null);
+      setMap(true);
+      return;
+    }
     if (station && !station.exitTo && station.id !== 'you') setStandAt((at) => ({ ...at, [loc]: station.id }));
     if (station?.exitTo) setSelected(null);
     session.click(offer.handler);
@@ -413,12 +442,16 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       <TableauHost input={input} events={events} />
       {!guide && (
         <>
-          <TopBar view={view} onJournal={() => setJournal(true)} />
+          <div className="travel-fade" key={loc}>
+            {layout.label}
+          </div>
+          <TopBar view={view} onJournal={() => setJournal(true)} onMap={() => setMap(true)} />
           <BodyRail view={view} />
           <StoresRail view={view} />
           <BottomBar view={view} onJournal={() => setJournal(true)} />
           {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} />}
           {view.result && !view.modal && <ResultCard result={view.result} />}
+          {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
           <Modal view={view} />
         </>

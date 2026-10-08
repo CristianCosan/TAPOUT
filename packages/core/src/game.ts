@@ -161,7 +161,7 @@ export { forcedTapCause } from './v12/threads.ts';
  * Read-only v12 values and helpers the presentation shows. None of them changes state or draws
  * a random number; the UI uses them to describe the run, never to decide anything.
  */
-export { KIT_POOL, WEATHER, SHELTERS, BUILD_NEED, CARRY_CAP } from './v12/tuning.ts';
+export { KIT_POOL, WEATHER, SHELTERS, BUILD_NEED, CARRY_CAP, GAME, MAX_SNARES_PER_SPOT, MAX_LINES_TOTAL } from './v12/tuning.ts';
 export { ambientTempC } from './v12/cost.ts';
 export { fireCap } from './v12/camp.ts';
 export { waterCap, computeBMI } from './v12/setup.ts';
