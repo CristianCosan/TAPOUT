@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-electron/
+release/
+apps/desktop/renderer/
+coverage/
+*.tsbuildinfo
+test-results/
+playwright-report/
+reports/tmp/
+.DS_Store

@@ -1,0 +1,38 @@
+{
+  "name": "@tapout/desktop",
+  "version": "0.0.1",
+  "private": true,
+  "description": "TAP / OUT desktop shell",
+  "author": "TAP / OUT",
+  "main": "main.cjs",
+  "scripts": {
+    "copy-renderer": "node scripts/copy-renderer.cjs",
+    "start": "npm run copy-renderer && electron .",
+    "package:win": "npm run copy-renderer && electron-builder --win portable zip --publish never"
+  },
+  "build": {
+    "appId": "com.tapout.game",
+    "productName": "TAP OUT",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "renderer/**"
+    ],
+    "win": {
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "TAP-OUT-${version}-portable.exe"
+    },
+    "zip": {
+      "artifactName": "TAP-OUT-${version}-win.zip"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  }
+}
