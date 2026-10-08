@@ -33,7 +33,7 @@ npm install
 npm run dev          # the game in a browser at :5173
 npm run build        # bundle apps/game
 npm run desktop      # build, then open the Electron window
-npm run package:win  # Windows portable .exe + zip into apps/desktop/release
+npm run package:win  # Windows portable .exe into apps/desktop/release
 npm run check        # lint + typecheck + tests (run before every commit)
 ```
 
