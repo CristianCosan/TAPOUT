@@ -10,6 +10,7 @@ import { clamp, duskHour } from './helpers.ts';
 import { pushModifier, removeModifier } from './modifiers.ts';
 import { resolveDelta } from './resolve.ts';
 import { curfewCapForLoc, log, sensitivityMul } from './setup.ts';
+import { RULES } from './rules.ts';
 import { S } from './state.ts';
 import { TUNING, WEATHER } from './tuning.ts';
 import { render, showModal, toastRefusal, typewriterInto } from './ui.ts';
@@ -30,7 +31,8 @@ export function showForcedTapoutCinematic(){
   S.forcedTapout = true;
   S.deathSource = null;
   const who = WHO_LABEL[S.backstory.who] || 'no one in particular';
-  const text = `You don't remember deciding. The phone is just in your hand, and your thumb is already moving. Day ${S.day}. ${S.rivals} rival${S.rivals===1?'':'s'} still out there, and you're not one of the ones who's going to find out how it ends. You think of ${who}, and the line rings, and you find you're relieved. That's the part nobody tells you - how much it feels like relief.`;
+  const thought = RULES.content || RULES.partnerRule ? `You think of ${forcedTapCause()}` : `You think of ${who}`;
+  const text = `You don't remember deciding. The phone is just in your hand, and your thumb is already moving. Day ${S.day}. ${S.rivals} rival${S.rivals===1?'':'s'} still out there, and you're not one of the ones who's going to find out how it ends. ${thought}, and the line rings, and you find you're relieved. That's the part nobody tells you - how much it feels like relief.`;
   showModal(`
     <h3>Day ${S.day}</h3>
     <div class="wsub">Something in you already decided.</div>
@@ -221,3 +223,13 @@ export function afterAction(act?){
   render();
 }
 
+
+// TAP / OUT (plan §8.4): a forced tap-out names what actually broke you, never who is waiting.
+export function forcedTapCause(){
+  if (S.injury || S.medicalArc) return 'the injury, and how many more days you would have to drag it through';
+  const fear = S.predatorFixation || S.conditions.bearDread.active || S.conditions.raiderSiege.active;
+  if (S.warmth < 30 || S.conditions.coldSnap.active || S.soakedThrough) return 'the cold, and another night of it';
+  if (S.hunger < 30 || S.hungerStreakDays > 2) return 'how long it has been since a full meal';
+  if (fear) return 'whatever has been circling camp in the dark';
+  return 'how much is left of this, and how little of you';
+}

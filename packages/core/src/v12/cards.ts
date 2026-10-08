@@ -11,6 +11,7 @@ import { pushModifier } from './modifiers.ts';
 import { takeSmoked } from './person.ts';
 import { resolveDelta } from './resolve.ts';
 import { hasKit, log } from './setup.ts';
+import { say } from './rules.ts';
 import { S } from './state.ts';
 import { applyTagDeltas } from './tags.ts';
 import { isNightNow, maybeSlip } from './threads.ts';
@@ -333,7 +334,7 @@ export function resolveCardChoice(cardId?, choiceIdx?){
     return;
   }
   if (outcome.next === 'panicSequence'){
-    S.cardHistory.push({id:card.id, day:S.day, choice:choice.label, text:'Talked himself down from the edge of it.'});
+    S.cardHistory.push({id:card.id, day:S.day, choice:choice.label, text:say('Talked himself down from the edge of it.', 'Talked yourself down from the edge of it.')});
     S._panicRights = 0;
     showPanicStep(0);
     return;

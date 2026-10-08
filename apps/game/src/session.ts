@@ -17,7 +17,7 @@ import {
   type Run,
   type RunSnapshot,
 } from '@tapout/core';
-import { P1 } from '@tapout/content';
+import { CAST, P1 } from '@tapout/content';
 
 export interface PageElement {
   id: string;
@@ -97,6 +97,7 @@ export class Session {
       heightCm: P1.heightCm,
       startWeightKg: P1.startWeightKg,
       sex: 'man',
+      cast: CAST,
     });
     this.afterChange();
   }

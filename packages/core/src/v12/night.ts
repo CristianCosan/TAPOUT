@@ -19,6 +19,7 @@ import { crowNamingTick, jayDailyTick, maybeCallbackLine, maybeWriteLetter, smok
 import { recordDailySnapshot } from './recorder.ts';
 import { checkBreakingPoint, checkPromise, maybeGeneratePromise, resolveDelta } from './resolve.ts';
 import { computeBMI, hasKit, log, rollPredatorNext, rollWeather, sensitivityMul, tempFor } from './setup.ts';
+import { RULES, say } from './rules.ts';
 import { S, SETTINGS } from './state.ts';
 import { checkThreads, showForcedTapoutCinematic, tickDryingAtFire, tickShiverClear } from './threads.ts';
 import { queueLocNews } from './travel.ts';
@@ -115,7 +116,18 @@ export function actSleep(early?){
     S.lowestMoment = {day:S.day, cause, health:S.health};
   }
   S.minHealth = Math.min(S.minHealth, S.health);
-  if (S.health <= 0){ S.deathSource = 'collapse'; endGame('dead'); return; }
+  if (S.health <= 0){
+    // TAP / OUT (plan §2.12 #1): on a medical-check night the medics' check comes before the death
+    // verdict, so a one-night crash ends in a pull, not a body. v12 checked death first.
+    const checkDay = S.day + 1;
+    if (RULES.medCheckBeforeDeath && checkDay % 4 === 0 && !(checkDay === 4 && TUNING.medic.day7WarningOnly)){
+      S.health = 1; S.minHealth = Math.min(S.minHealth, S.health);
+      notes.forEach(n=>log(n,'event'));
+      log('🩺 The med team comes in for the check at first light and finds you barely responsive by the cold fire. They don\'t ask how you\'re holding up. This is the end of the run.', 'bad');
+      endGame('med'); return;
+    }
+    S.deathSource = 'collapse'; endGame('dead'); return;
+  }
 
   // v12 §6.2: the break sequence - broken ankle AND any of warmth/thirst/hunger hitting 0 triggers the
   // thorough-breakdown card (queued the same way as regular cards/breakdown choices, post-night-modal).
@@ -141,10 +153,18 @@ export function actSleep(early?){
   S._loneEnergy = 0;
   const pLone = 0.15 + (S.hunger < 40 ? 0.10 : 0) + (S.stress > 60 ? 0.05 : 0);
   if (rand() < pLone){
-    const hit = Math.round((10 + Math.floor(rand()*7)) * sensitivityMul());
+    let hit = Math.round((10 + Math.floor(rand()*7)) * sensitivityMul());
+    const line = pick(LONELY_LINES);
+    // §8.3: the missing-someone-at-home line is the partner's. Under the partner rule it costs half
+    // and steadies you a little; it can never be what breaks you.
+    const partner = line === LONELY_LINES[3];
+    if (partner && RULES.partnerRule) hit = Math.round(hit/2);
+    const energy = partner && RULES.partnerRule ? 4 : 8;
     S.morale = clamp(S.morale - hit);
-    S._loneEnergy = 8;
-    notes.push(`💭 ${pick(LONELY_LINES)} −${hit} morale, −8 energy`);
+    S._loneEnergy = energy;
+    const text = partner && RULES.content && S.cast ? pick(partnerLonelyLines(S.cast.partner)) : line;
+    notes.push(`💭 ${text} −${hit} morale, −${energy} energy`);
+    if (partner && RULES.partnerRule) resolveDelta(1, notes);
   }
 
   if (rand() < 0.16){
@@ -380,7 +400,7 @@ export function finishNight(notes?){
     console.error(`[anti-freeze] wake hour reached ${S.hour.toFixed(3)} - clamping into the legal window.`);
     S.hour = TUNING.night.hardCapHour - 0.5;
   }
-  if (!treeMarkedYesterday && (S.resolveState === 'Wavering' || S.resolveState === 'Cracking') && S.day > 2){
+  if (!RULES.noTreeMarkPenalty && !treeMarkedYesterday && (S.resolveState === 'Wavering' || S.resolveState === 'Cracking') && S.day > 2){
     notes.push('📍 You didn\'t mark the post yesterday. First time in a while. You noticed the gap more than you expected to.');
     resolveDelta(-1, notes);
   }
@@ -482,6 +502,7 @@ export function finishNight(notes?){
     notes.push('⛈ THE BIG STORM - the sky finally breaks open, and it doesn\'t look like it plans to let up for a while.');
   } else {
     S.weather = rollWeather();
+    if (RULES.directorFront && S.weatherFront){ S.weatherFront = false; S.weather = worseWeather(S.weather, rollWeather()); }
   }
   if (S.weather === 'storm') S.tot.storms++;
   // v12 §3.2: winter onset triggers off the first settled snowfall after the zero-cross day - snow
@@ -658,7 +679,7 @@ export function finishNight(notes?){
   medicalArcDailyTick(notes);
   maybeEnvironmentalArc(notes);
 
-  if (S.day > 10){
+  if (S.day > 10 && !RULES.noCameraNag){
     S.daysSinceConfess = (S.daysSinceConfess||0) + 1;
     if (S.daysSinceConfess >= 3){
       S.stress = clamp(S.stress + 2);
@@ -765,7 +786,7 @@ export function maybeAweEvent(notes?){
   S.aweSeen.push(key); S.aweLastDay = S.day;
   S.morale = clamp(S.morale + 14);
   resolveDelta(8);
-  notes.push(AWE_TEXT[key]);
+  notes.push(key === 'orcas' ? say(AWE_TEXT.orcas, AWE_MOOSE_SWIM) : AWE_TEXT[key]);
   maybeWriteLetter('awe', notes);
 }
 export const SNOW_BEAUTY_POOL: any = [
@@ -820,3 +841,19 @@ export function morningEvent(notes?){
   pick(opts)();
 }
 
+
+// ---- TAP / OUT content (M8)
+
+// Orcas don't swim in a freshwater lake. The awe moment keeps its key, so runs and stats line up.
+export const AWE_MOOSE_SWIM = '🫎 At first light a cow moose swims the narrows off the point - just her head and the wake behind it, unhurried, close enough to hear her breathe. +14 morale';
+
+export function partnerLonelyLines(partner?){
+  return [
+    `You catch yourself saving up small things to tell ${partner} - the loon, the way the ice talks at night. She'd want all of it.`,
+    `You wonder what ${partner} is doing right now. Probably telling someone you're fine. You'd like to be the one who proves her right.`,
+  ];
+}
+
+// Order of severity for the director's weather front: the front keeps the worse of two rolls.
+const WEATHER_SEVERITY: any = {clear:0, overcast:1, cold:2, rain:3, snow:3, storm:4};
+export function worseWeather(a?, b?){ return WEATHER_SEVERITY[b] > WEATHER_SEVERITY[a] ? b : a; }

@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import { createRngState, randomFn, type RngState } from '@tapout/core';
+import { createRngState, randomFn, V12_RULES, type RngState } from '@tapout/core';
 import { createDomStub, type DomStub } from './dom-stub.ts';
 
 export const LEGACY_PATH = fileURLToPath(new URL('../../../../legacy/tap-out-v12.html', import.meta.url));
@@ -51,6 +51,8 @@ export function resolveRunOptions(options: LegacyStartOptions) {
     heightCm: options.heightCm ?? 178,
     startWeightKg: options.startWeightKg ?? 88,
     sex: options.sex ?? 'man',
+    // Parity is always against the untouched v12 rules.
+    rules: V12_RULES,
   } as const;
 }
 

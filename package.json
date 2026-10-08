@@ -19,7 +19,8 @@
     "check": "npm run lint && npm run typecheck && npm run test",
     "legacy:index": "tsx packages/harness/src/tools/legacy-index.cli.ts",
     "legacy:run": "tsx packages/harness/src/tools/legacy-run.cli.ts",
-    "parity": "tsx packages/harness/src/tools/parity.cli.ts"
+    "parity": "tsx packages/harness/src/tools/parity.cli.ts",
+    "balance": "tsx packages/harness/src/tools/balance.cli.ts"
   },
   "engines": {
     "node": ">=22"

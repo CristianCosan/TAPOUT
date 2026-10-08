@@ -10,9 +10,10 @@ import { applyPoulticeDose, triggerMedicalArc } from './medical.ts';
 import { takeSmoked } from './person.ts';
 import { resolveDelta } from './resolve.ts';
 import { hasKit, log, registerWasteDiscard, waterCap } from './setup.ts';
+import { RULES, say } from './rules.ts';
 import { S } from './state.ts';
 import { afterAction, spend, spendOrDebt, tickShiverClear } from './threads.ts';
-import { BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_COST, DUGOUT_NEED, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
+import { BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_COST, DUGOUT_NEED, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
 import { render, sfxBuild, sfxCooking, sfxDrink, sfxEat, sfxFireLight, showModal } from './ui.ts';
 import { triggerBearDread } from './worry.ts';
 // ============================== actions: camp ==============================
@@ -282,7 +283,7 @@ export function actPoultice(){
   if (!S.medicalArc || S.medicalArc.stage!=='treatment') return;
   if (!spend(6,1,false,'h')) return;
   applyPoulticeDose();
-  afterAction('poultice');
+  if (!RULES.poulticeOnce) afterAction('poultice'); // LEG-005: the dose already resolved the action
 }
 export function actShelter(){
   if (S.structure >= 3) return;
@@ -425,6 +426,11 @@ export function actMusic(){
 }
 export const FEAR_LABEL: any = {dark:'the dark', injury:'getting hurt out here', failing:'failing', empty:'going home with nothing'};
 export const WHO_LABEL: any = {partner:'my partner', kid:'my kid', parent:'my mom', nobody:'anyone, really'};
+/** Who is waiting at home, by name when the run has an authored cast (TAP / OUT text). */
+export function whoLabel(fallback?){
+  if (RULES.content && S.cast && S.backstory.who === 'partner') return S.cast.partner;
+  return WHO_LABEL[S.backstory.who] || fallback;
+}
 export function actConfess(){
   if (S.over || S.confessedToday) return;
   if (!spend(2,0.5,false)) return;
@@ -441,7 +447,7 @@ export function actConfess(){
   if (S.tot.raids > 0 && rand()<0.3) stateLines.push(`${S.martenNamed} is getting bolder. I half-respect it at this point.`);
   if (!stateLines.length) stateLines.push(`Nothing dramatic today. Just the work.`);
   const closers = [
-    `Doing this for ${WHO_LABEL[S.backstory.who]||'anyone, really'}, when it comes down to it.`,
+    `Doing this for ${whoLabel('anyone, really')}, when it comes down to it.`,
     `Some days ${FEAR_LABEL[S.backstory.fear]||'the fear'} feels closer than others. Today it was close.`,
   ];
   const text = `${pick(openers)} ${pick(stateLines)} ${pick(closers)}`;
@@ -558,7 +564,7 @@ export function actSitWatch(){
   } else {
     const gain = hasTrait('restless') ? 0 : 1;
     S.morale = clamp(S.morale + gain);
-    msg = pick(SIT_WATCH_POOL) + (gain ? ' +1 morale' : ' (not really his thing)');
+    msg = pick(SIT_WATCH_POOL) + (gain ? ' +1 morale' : say(' (not really his thing)', ' (not really your thing)'));
     if (rand() < 0.15){
       if (S.loc === 'shore' && S.shoreSpots.length){
         const sp = pick(S.shoreSpots); sp.noLuck = Math.max(0, sp.noLuck - 2);
@@ -635,6 +641,24 @@ export function doEatBerries(){
   S.consecutiveSmokedOnlyDays = 0;
   clearTeethProgress();
   log(pick(EAT_BERRIES) + ' +10 hunger', 'good');
+  S.mealsToday++; S.tot.meals++;
+  sfxEat();
+  render();
+}
+// LEG-002: v12 drafts 'Rations (8 uses)' but never implemented them. Each use: +20 hunger and a
+// small morale tick, as the draft card promises. They don't spoil.
+export function rationsLeft(){
+  if (!RULES.rations || !hasKit('rations')) return 0;
+  return S.rations ?? RATIONS.uses;
+}
+export function eatRation(){
+  if (S.over || rationsLeft() <= 0) return;
+  S.rations = rationsLeft() - 1;
+  S.hunger = clamp(S.hunger + RATIONS.hunger); S.energy = clamp(S.energy+RATIONS.energy,0,S.maxEnergy); S.morale = clamp(S.morale+RATIONS.morale);
+  S.kcal += RATIONS.kcal; S.kcalIntake += RATIONS.kcal;
+  S.consecutiveSmokedOnlyDays = 0;
+  clearTeethProgress();
+  log(`🥫 You tear open a ration pack and make it last. ${S.rations} left. +${RATIONS.hunger} hunger`, 'good');
   S.mealsToday++; S.tot.meals++;
   sfxEat();
   render();

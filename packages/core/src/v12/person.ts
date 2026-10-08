@@ -9,6 +9,7 @@ import { hasTrait } from './interior.ts';
 import { pushModifier } from './modifiers.ts';
 import { resolveDelta } from './resolve.ts';
 import { log } from './setup.ts';
+import { RULES } from './rules.ts';
 import { S } from './state.ts';
 import { afterAction } from './threads.ts';
 // ============================== v7 §5: the person layer ==============================
@@ -55,7 +56,7 @@ export function maybeWriteLetter(trigger?, notes?){
   if (!pool) return;
   const text = pick(pool);
   S.letters.push({day: S.day, trigger, text});
-  notes.push(`✉️ Something in you writes a letter it'll never send. <span class="equote">"${text}"</span>`);
+  notes.push(`✉️ Something in you writes a letter${RULES.content && S.cast ? ` to ${S.cast.partner}` : ''} it'll never send. <span class="equote">"${text}"</span>`);
   resolveDelta(hasTrait('haunted') ? 6 : 3, notes);
 }
 export function crowNamingTick(notes?){
