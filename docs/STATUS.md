@@ -57,9 +57,15 @@ paged journal. Placeholder shapes stand in for the art. The three layout guides
   night darkening, F3 debug overlay. `#guide-camp` (and shore, woods) shows the layout guide.
 - Robot-played through a full run by clicking the canvas and the context panel: no errors.
 
+### M10 — camp playable with the mouse
+- What a station offers lives in `apps/game/src/ui/offers.ts`; `offers.test.ts` plays four whole
+  runs through those offers only, checking at every step that each action v12 shows has a station.
+- Result card after each action: time taken, the new journal lines, and what moved (stores, body).
+- Clicks on panels no longer fall through to the station underneath.
+
 ## Not started
 
-M10 onwards: the painted locations, art, audio, narrative pass, Steam.
+M11 onwards: the painted locations, art, audio, narrative pass, Steam.
 
 ## Open questions for Sir
 

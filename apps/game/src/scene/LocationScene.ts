@@ -64,6 +64,14 @@ export class LocationScene extends Phaser.Scene {
     if (this.layer) this.draw();
   }
 
+  /**
+   * Phaser hears the mouse on the whole window, so a click on a panel above the canvas would
+   * also select whatever station lies underneath it. Only the canvas itself counts.
+   */
+  private onCanvas(pointer: Phaser.Input.Pointer): boolean {
+    return pointer.event?.target === this.game.canvas;
+  }
+
   private draw(): void {
     const input = this.input0;
     if (!input) return;
@@ -127,9 +135,9 @@ export class LocationScene extends Phaser.Scene {
     const poly = new Phaser.Geom.Polygon(station.hotspot as unknown as Phaser.Math.Vector2[]);
     g.setInteractive(poly, Phaser.Geom.Polygon.Contains);
     if (g.input) g.input.cursor = 'pointer';
-    g.on('pointerover', () => this.hover(station.id));
+    g.on('pointerover', (p: Phaser.Input.Pointer) => this.onCanvas(p) && this.hover(station.id));
     g.on('pointerout', () => this.hover(null));
-    g.on('pointerdown', () => this.events0?.select(station.id));
+    g.on('pointerdown', (p: Phaser.Input.Pointer) => this.onCanvas(p) && this.events0?.select(station.id));
     this.layer.add(g);
 
     {
@@ -185,9 +193,9 @@ export class LocationScene extends Phaser.Scene {
     const hit = new Phaser.Geom.Rectangle(feet.x - w / 2 - 10, feet.y - h - 10, w + 20, h + 20);
     g.setInteractive(hit, Phaser.Geom.Rectangle.Contains);
     if (g.input) g.input.cursor = 'pointer';
-    g.on('pointerover', () => this.hover('you'));
+    g.on('pointerover', (p: Phaser.Input.Pointer) => this.onCanvas(p) && this.hover('you'));
     g.on('pointerout', () => this.hover(null));
-    g.on('pointerdown', () => this.events0?.select('you'));
+    g.on('pointerdown', (p: Phaser.Input.Pointer) => this.onCanvas(p) && this.events0?.select('you'));
     this.layer.add(g);
     if (input.labels) {
       this.layer.add(

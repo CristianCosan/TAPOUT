@@ -36,8 +36,28 @@ export interface View {
   modal: string | null;
   elements: ReadonlyMap<string, PageElement>;
   endScreen: boolean;
+  /** What the last action did, once it has finished (no modal left open). */
+  result: ActionResult | null;
   version: number;
 }
+
+/** A plain before/after diff of one action, for the result card. No rules: just numbers that moved. */
+export interface ActionResult {
+  id: number;
+  lines: Array<{ msg: string; cls: string }>;
+  bars: Record<string, number>;
+  stores: Record<string, number>;
+  minutes: number;
+}
+
+interface Baseline {
+  bars: Record<string, number>;
+  stores: Record<string, number>;
+  hours: number;
+  topLine: unknown;
+}
+
+const RESULT_BARS = ['energy', 'health', 'hunger', 'thirst', 'warmth', 'morale', 'stress'] as const;
 
 interface SaveFile {
   format: 'tapout-save';
@@ -63,6 +83,8 @@ export class Session {
   private listeners = new Set<() => void>();
   private view: View | null = null;
   private version = 0;
+  private baseline: Baseline | null = null;
+  private result: ActionResult | null = null;
   /** Layout-guide runs are never saved. */
   private throwaway = false;
 
@@ -136,6 +158,11 @@ export class Session {
       console.warn('Unrecognised handler', handler);
       return;
     }
+    // An action measured from the moment it starts until its last modal closes.
+    if (!this.modal) {
+      this.baseline = this.measure();
+      this.result = null;
+    }
     for (const call of calls) {
       if (call.fn === 'hideModal') this.modal = null;
       else if (call.fn === 'skipTypewriter' || call.fn === 'toggleEndStats') continue;
@@ -144,7 +171,53 @@ export class Session {
         return;
       } else this.run.call(call.fn, ...call.args);
     }
+    if (!this.modal && this.baseline) {
+      this.result = this.diff(this.baseline);
+      this.baseline = null;
+    }
     this.afterChange();
+  }
+
+  /** Puts the result card away. */
+  dismissResult(): void {
+    if (!this.result) return;
+    this.result = null;
+    this.emit();
+  }
+
+  private measure(): Baseline {
+    const S = this.run!.state;
+    const bars: Record<string, number> = {};
+    for (const key of RESULT_BARS) bars[key] = Number(S[key]) || 0;
+    const stores: Record<string, number> = {};
+    for (const [id, el] of hudRecord()) {
+      if (!id.startsWith('inv-')) continue;
+      const n = parseInt(el.text, 10);
+      if (Number.isFinite(n)) stores[id] = n;
+    }
+    stores['water'] = Number(S.water) || 0;
+    return { bars, stores, hours: S.day * 24 + S.hour, topLine: S.log[0] };
+  }
+
+  private diff(before: Baseline): ActionResult | null {
+    const after = this.measure();
+    const S = this.run!.state;
+    const lines: Array<{ msg: string; cls: string }> = [];
+    for (const line of S.log as Array<{ msg: string; cls: string }>) {
+      if (line === before.topLine) break;
+      lines.unshift({ msg: line.msg, cls: line.cls });
+    }
+    const delta = (a: Record<string, number>, b: Record<string, number>) => {
+      const out: Record<string, number> = {};
+      for (const key of Object.keys(b)) {
+        const d = Math.round(((b[key] ?? 0) - (a[key] ?? 0)) * 10) / 10;
+        if (d !== 0) out[key] = d;
+      }
+      return out;
+    };
+    const minutes = Math.round((after.hours - before.hours) * 60);
+    const result = { id: this.version, lines, bars: delta(before.bars, after.bars), stores: delta(before.stores, after.stores), minutes };
+    return lines.length || minutes > 0 || Object.keys(result.bars).length || Object.keys(result.stores).length ? result : null;
   }
 
   // ---- React binding
@@ -160,6 +233,8 @@ export class Session {
 
   private reset(): void {
     this.run = null;
+    this.baseline = null;
+    this.result = null;
     this.modal = null;
     this.elements.clear();
   }
@@ -229,6 +304,7 @@ export class Session {
         modal: this.modal,
         elements: new Map(this.elements),
         endScreen: this.elements.has('endScreen') && !this.elements.get('endScreen')!.classes.has('hidden'),
+        result: this.result,
         version: this.version,
       };
     } else this.view = null;

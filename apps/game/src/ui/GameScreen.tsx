@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { dawnHour, duskHour, rationsLeft, roundDisplay, type HudElement, type PanelEntry } from '@tapout/core';
-import { LOCATIONS, STAGE, type LocationId, type SpecialAction, type Station } from '@tapout/content';
-import { session, type View } from '../session.ts';
+import { dawnHour, duskHour, roundDisplay } from '@tapout/core';
+import { LOCATIONS, STAGE, type LocationId, type Station } from '@tapout/content';
+import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
+import { session, type ActionResult, type View } from '../session.ts';
 import { TableauHost } from '../scene/TableauHost.tsx';
 import type { SceneInput } from '../scene/LocationScene.ts';
 
@@ -38,11 +39,6 @@ function Html({ html, className }: { html: string; className?: string }) {
   return <span className={className} dangerouslySetInnerHTML={{ __html: inertHandlers(html) }} />;
 }
 
-function hudText(hud: ReadonlyMap<string, HudElement>, id: string): string {
-  const el = hud.get(id);
-  return el ? el.html || el.text : '';
-}
-
 /**
  * v12 writes its modal buttons with inline onclick handlers. Inline script is blocked here, so
  * the attribute is renamed before the HTML is mounted and clicks are routed through the port.
@@ -56,67 +52,6 @@ function onHandlerClick(event: MouseEvent) {
   if (!target || (target as HTMLButtonElement).disabled) return;
   event.preventDefault();
   session.click(target.getAttribute('data-handler') ?? '');
-}
-
-// ---- what a station offers right now
-
-interface Offer {
-  key: string;
-  label: string;
-  detail: string;
-  enabled: boolean;
-  handler: string;
-}
-
-function specialOffer(kind: SpecialAction, hud: ReadonlyMap<string, HudElement>): Offer | null {
-  // v12's chips read "🍲 3 · eat"; out of context a name says more.
-  const chip = (id: string, handler: string, name: string): Offer => ({
-    key: kind,
-    label: `${name} (${(hudText(hud, id).replace(/<[^>]+>/g, '').match(/\d+/) ?? ['0'])[0]})`,
-    detail: '',
-    enabled: !hud.get(id)?.disabled,
-    handler,
-  });
-  switch (kind) {
-    case 'sleep':
-      return { key: kind, label: '🌙 Sleep · 6 hours', detail: hudText(hud, 'sleep-sub'), enabled: !hud.get('sleepBtn')?.disabled, handler: 'actSleep()' };
-    case 'turnInEarly':
-      return hud.get('earlyBtn')?.hidden
-        ? null
-        : { key: kind, label: hudText(hud, 'early-label'), detail: hudText(hud, 'early-sub'), enabled: true, handler: 'actTurnInEarly()' };
-    case 'drink':
-      return chip('drinkBtn', 'actDrink()', '💧 Drink clean water');
-    case 'eatBerries':
-      return chip('eatBerriesBtn', 'eatBerries()', '🫐 Eat berries');
-    case 'eatCooked':
-      return chip('eatCookedBtn', 'eatCooked()', '🍲 Eat a cooked meal');
-    case 'eatSmoked':
-      return chip('eatSmokedBtn', 'eatSmoked()', '🥩 Eat smoked meat');
-    case 'eatRation': {
-      const left = rationsLeft();
-      return left > 0 ? { key: kind, label: `🥫 Eat a ration (${left} left)`, detail: '+20 hunger', enabled: true, handler: 'eatRation()' } : null;
-    }
-  }
-}
-
-function offersFor(station: Station, view: View): Offer[] {
-  const { hud } = view;
-  if (station.exitTo) {
-    const to = station.exitTo;
-    return [{ key: `go-${to}`, label: `Walk to ${LOCATIONS[to].label}`, detail: hudText(hud, `tt-${to}`), enabled: !hud.get(`tab-${to}`)?.disabled, handler: `goTo('${to}')` }];
-  }
-  const panel = new Map(view.panel.map((e) => [e.id, e]));
-  const offers: Offer[] = [];
-  for (const id of station.actions) {
-    const entry: PanelEntry | undefined = panel.get(id);
-    if (!entry || !entry.visible) continue;
-    offers.push({ key: id, label: entry.label, detail: entry.detail, enabled: entry.enabled, handler: entry.onclick });
-  }
-  for (const kind of station.special ?? []) {
-    const offer = specialOffer(kind, hud);
-    if (offer) offers.push(offer);
-  }
-  return offers;
 }
 
 // ---- rails and bars
@@ -263,6 +198,50 @@ function ContextPanel({ station, view, onClose, onAct }: { station: Station; vie
           </button>
         ))
       )}
+    </div>
+  );
+}
+
+// ---- the result card: what the last action did
+
+const RESULT_LABELS: Record<string, string> = {
+  energy: 'Energy',
+  health: 'Health',
+  hunger: 'Food',
+  thirst: 'Water',
+  warmth: 'Warmth',
+  morale: 'Morale',
+  stress: 'Stress',
+  water: 'Clean water',
+  ...Object.fromEntries(STORES),
+};
+
+function duration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h && m ? `${h}h ${m}m` : h ? `${h}h` : `${m}m`;
+}
+
+function ResultCard({ result }: { result: ActionResult }) {
+  const tags = [...Object.entries(result.stores), ...Object.entries(result.bars)].map(([key, d]) => {
+    // Stress going up is bad, everything else going up is good.
+    const good = key === 'stress' ? d < 0 : d > 0;
+    return (
+      <span key={key} className={`tag ${good ? 'up' : 'down'}`}>
+        {d > 0 ? '+' : '−'}
+        {Math.abs(d)} {RESULT_LABELS[key] ?? key}
+      </span>
+    );
+  });
+  return (
+    <div className="result-card" key={result.id} onClick={() => session.dismissResult()} title="Click to put this away">
+      {result.minutes > 0 && <span className="result-time">{duration(result.minutes)}</span>}
+      {result.lines.slice(-3).map((line, i) => (
+        <div key={i} className={`ln ${line.cls}`}>
+          <Html html={line.msg} />
+        </div>
+      ))}
+      {tags.length > 0 && <div className="tags">{tags}</div>}
     </div>
   );
 }
@@ -414,7 +393,10 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     () => ({ layout, hidden, idle, standAt: standAt[loc] ?? 'you', selected, dark: guide ? 0 : darkness(S.hour) * 0.85, labels: labels || !!guide, debug }),
     [layout, hidden, idle, standAt, loc, selected, S.hour, labels, guide, debug],
   );
-  const select = useCallback((id: string) => setSelected((current) => (current === id ? null : id)), []);
+  const select = useCallback((id: string) => {
+    session.dismissResult();
+    setSelected((current) => (current === id ? null : id));
+  }, []);
   const events = useMemo(() => ({ select }), [select]);
 
   if (view.endScreen && !view.modal) return <EndScreen view={view} />;
@@ -436,6 +418,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <StoresRail view={view} />
           <BottomBar view={view} onJournal={() => setJournal(true)} />
           {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} />}
+          {view.result && !view.modal && <ResultCard result={view.result} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
           <Modal view={view} />
         </>
