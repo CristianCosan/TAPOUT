@@ -17,7 +17,7 @@ paged journal. Placeholder shapes stand in for the art. The three layout guides
 - Layout per plan §9.1; `legacy/tap-out-v12.html` pinned by a hash test.
 - Seeded RNG; lint forbids `Math.random`, `Date.now`, timers and DOM globals in the core.
 - Fixed 1920×1080 stage, uniformly scaled with letterbox or pillarbox.
-- Electron shell; CI builds a Windows portable `.exe` and `.zip` as a downloadable artifact.
+- Electron shell; CI builds one Windows portable `.exe` (TAP-OUT-<version>) as a downloadable artifact.
 
 ### M1 — legacy harness
 - v12 runs unmodified in Node (`docs/spec/LEGACY_HARNESS.md`); `docs/spec/LEGACY_INDEX.md`.

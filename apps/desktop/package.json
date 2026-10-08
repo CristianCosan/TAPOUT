@@ -25,13 +25,11 @@
     "win": {
       "signAndEditExecutable": false,
       "target": [
-        "portable",
-        "zip"
-      ],
-      "artifactName": "TAP-OUT-${version}-win.${ext}"
+        "portable"
+      ]
     },
     "portable": {
-      "artifactName": "TAP-OUT-${version}-portable.exe"
+      "artifactName": "TAP-OUT-${version}.exe"
     },
     "electronVersion": "44.7.0",
     "npmRebuild": false

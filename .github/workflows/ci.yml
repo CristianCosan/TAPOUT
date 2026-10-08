@@ -35,11 +35,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run package:win
+      - id: version
+        shell: bash
+        run: echo "v=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      # One file inside: the game itself, named TAP-OUT-<version> (Explorer hides the .exe).
       - uses: actions/upload-artifact@v4
         with:
-          name: TAP-OUT-windows
-          path: |
-            apps/desktop/release/*.exe
-            apps/desktop/release/*.zip
+          name: TAP-OUT-${{ steps.version.outputs.v }}-windows
+          path: apps/desktop/release/TAP-OUT-*.exe
           if-no-files-found: error
           retention-days: 30
