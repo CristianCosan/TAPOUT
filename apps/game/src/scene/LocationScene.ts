@@ -52,7 +52,7 @@ export class LocationScene extends Phaser.Scene {
   create(): void {
     this.layer = this.add.container(0, 0);
     this.tooltip = this.add
-      .text(0, 0, '', { fontFamily: 'Georgia, serif', fontSize: '22px', color: '#f2ead8', backgroundColor: '#1b1a17cc', padding: { x: 10, y: 6 } })
+      .text(0, 0, '', { fontFamily: 'Georgia, serif', fontSize: '19px', fontStyle: 'italic', color: '#d8d0bc', backgroundColor: '#1b1a17cc', padding: { x: 10, y: 5 } })
       .setDepth(10_000)
       .setVisible(false);
     this.draw();
@@ -246,8 +246,10 @@ export class LocationScene extends Phaser.Scene {
     if (station && !station.exitTo) {
       const top = Math.min(...station.hotspot.map((p) => p.y));
       this.tooltip
-        .setText(`${station.label}\n${station.blurb}`)
-        .setPosition(Math.min(STAGE.width - 420, Math.max(180, station.anchor.x - 160)), Math.max(70, top - 80))
+        // The name is already on the hover label; the tooltip adds the line about it, just above.
+        .setText(station.blurb)
+        .setOrigin(0.5, 1)
+        .setPosition(Math.min(STAGE.width - 400, Math.max(400, station.anchor.x)), Math.max(110, top - 46))
         .setVisible(id !== 'you');
     } else this.tooltip.setVisible(false);
   }

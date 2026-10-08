@@ -63,9 +63,16 @@ paged journal. Placeholder shapes stand in for the art. The three layout guides
 - Result card after each action: time taken, the new journal lines, and what moved (stores, body).
 - Clicks on panels no longer fall through to the station underneath.
 
+### M11 — travel, map, trapline, hunting
+- Map overlay (M or the Map button; the trailhead post opens it too): the three places with
+  walking, the four fishing spots with your lines, the five trapline spots with snare counts and
+  "Set a snare" while you are in the woods, dead spots with "Explore new grounds".
+- Each fishing spot sets its line right there. Travel fades in with the place name; arrival news
+  shows on the result card. The animal and game-trail stations take the name of what you found.
+
 ## Not started
 
-M11 onwards: the painted locations, art, audio, narrative pass, Steam.
+M12 onwards: the painted locations, art, audio, narrative pass, Steam.
 
 ## Open questions for Sir
 

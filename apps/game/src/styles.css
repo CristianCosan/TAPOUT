@@ -181,7 +181,7 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .context-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .context-head h3 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 26px; letter-spacing: 0.12em; text-transform: uppercase; }
 .context-head p { margin: 4px 0 0; color: var(--sage); font-size: 16px; }
-.context .close { background: none; border: none; color: var(--sage); font-size: 30px; cursor: pointer; line-height: 1; }
+.close { background: none; border: none; color: var(--sage); font-size: 30px; cursor: pointer; line-height: 1; }
 .context-stores { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 16px; color: var(--sage); }
 .context-stores b { color: var(--bone); }
 .context-empty { color: var(--dim); margin: 6px 0; }
@@ -200,3 +200,27 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .result-card .tag.up { color: #a9d39a; border-color: #a9d39a66; }
 .result-card .tag.down { color: #e3a07a; border-color: #e3a07a66; }
 @keyframes result-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+/* travel: the place name fades over the new scene */
+.travel-fade { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; pointer-events: none; font-family: var(--serif); font-size: 72px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--bone); background: #0a100c; animation: travel-out 0.9s ease-in forwards; }
+@keyframes travel-out { 0% { opacity: 1; } 35% { opacity: 1; background: #0a100cdd; } 100% { opacity: 0; } }
+
+/* the map */
+.map-book { position: absolute; left: 330px; top: 90px; width: 1260px; background: #101812f6; border: 1px solid var(--lichen); border-radius: 16px; padding: 18px 30px 30px; box-shadow: 0 14px 50px #000c; }
+.map-book p { color: var(--sage); margin: 4px 0 0; }
+.map-sheet { position: relative; margin-top: 12px; border-radius: 10px; overflow: hidden; }
+.map-svg { position: absolute; inset: 0; }
+.map-land { fill: #2a2f22; }
+.map-lake { fill: #34515e; stroke: #8fa9b4; stroke-width: 2; }
+.map-path { stroke: #c9b98f; stroke-width: 3; stroke-dasharray: 10 8; }
+.map-trail { stroke: #8f8466; stroke-width: 2; stroke-dasharray: 4 7; }
+.map-place, .map-spot { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.map-place b { font-family: var(--serif); font-size: 26px; color: var(--bone); background: #0a100ccc; padding: 2px 12px; border-radius: 6px; }
+.map-place.here b { color: var(--ember); }
+.map-place span { font-size: 14px; color: var(--ember); }
+.map-spot i { font-style: normal; font-size: 15px; background: #0a100ccc; border: 1px solid var(--lichen); border-radius: 999px; padding: 2px 9px; color: var(--bone); }
+.map-spot.set i { border-color: var(--ember); }
+.map-spot span { font-size: 15px; color: var(--bone); text-shadow: 0 1px 3px #000; }
+.map-spot em { font-size: 13px; color: var(--blood); font-style: normal; }
+.map-spot.dead span { color: var(--dim); }
+.map-spot .hud-btn { font-size: 13px; padding: 4px 10px; }

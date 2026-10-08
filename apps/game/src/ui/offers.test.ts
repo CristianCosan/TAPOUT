@@ -45,7 +45,7 @@ function play(seed: number, steps: number) {
       if (!entry.visible || (entry.loc !== loc && entry.loc !== 'all')) continue;
       expect(placed.has(entry.id), `${entry.id} has no station at ${loc}`).toBe(true);
     }
-    const offers = layout.stations.flatMap((s) => offersFor(s, view)).filter((o) => o.enabled);
+    const offers = layout.stations.flatMap((s) => offersFor(s, view)).filter((o) => o.enabled && !o.ui);
     const pick = offers[Math.floor(rnd() * offers.length)];
     if (!pick) throw new Error(`nothing to do at ${loc}, day ${view.state.day} ${view.state.hour}`);
     used.add(pick.key);
@@ -68,5 +68,25 @@ describe('the location screens', () => {
     const usedAtCamp = campActions.filter((a) => used.has(a));
     expect(usedAtCamp.length).toBeGreaterThan(campActions.length * 0.4);
     expect(results).toBeGreaterThan(50);
+  });
+});
+
+describe('fishing spots', () => {
+  it('set a line at the spot you clicked, then show it is out there', () => {
+    const session = new Session(null);
+    session.newRun(['axe', 'saw', 'ferro', 'pot', 'knife', 'sleeping', 'tarp', 'line', 'snare', 'bow'], 'spots');
+    session.click("goTo('shore')");
+    while ((session.getView() as View).modal) session.click('hideModal()');
+    const inlet = LOCATIONS.shore.stations.find((s) => s.id === 'inlet')!;
+    const set = offersFor(inlet, session.getView() as View).find((o) => o.key === 'a-lines')!;
+    expect(set.handler).toBe("placeLineAt('inlet')");
+    session.click(set.handler);
+    const view = session.getView() as View;
+    expect(view.state.lineList).toEqual([expect.objectContaining({ spotId: 'inlet' })]);
+    const after = offersFor(inlet, view).find((o) => o.key === 'a-lines')!;
+    expect(after.enabled).toBe(false);
+    // Other spots still offer a line of their own.
+    const point = LOCATIONS.shore.stations.find((s) => s.id === 'point')!;
+    expect(offersFor(point, view).find((o) => o.key === 'a-lines')!.handler).toBe("placeLineAt('point')");
   });
 });

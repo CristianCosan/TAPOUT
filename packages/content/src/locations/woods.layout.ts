@@ -11,7 +11,7 @@ export const WOODS: LocationLayout = {
     station('timber', 'Standing timber', 'Trees to fell and buck into logs.', 760, 600, 280, 400, ['a-wood']),
     station('birch', 'Birch', 'Peeling bark for tinder.', 1060, 600, 110, 380, ['a-tinder']),
     { ...station('animal', 'Animal', 'Something worth a shot.', 1230, 660, 220, 170, ['a-shot']), when: 'hunt' },
-    station('trailhead', 'Trailhead post', 'Your trapline: snares at the named spots.', 1620, 780, 90, 230, ['a-snare', 'a-moveSnare', 'a-checkTraps']),
+    station('trailhead', 'Trailhead post', 'Your trapline: snares at the named spots.', 1620, 780, 90, 230, ['a-snare', 'a-moveSnare', 'a-checkTraps'], { special: ['map'] }),
     station('deadfall', 'Deadfall', 'Dry fallen wood you can gather by hand.', 500, 860, 280, 140, ['a-firewood']),
     station('moss', 'Mossy rocks', 'Moss for insulation and bedding.', 1140, 870, 240, 110, ['a-moss']),
     station('berries', 'Berry bushes', 'Whatever the season has left.', 1420, 900, 300, 150, ['a-forage']),
