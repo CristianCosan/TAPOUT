@@ -7,6 +7,7 @@ import { addMeat } from './food.ts';
 import { clamp } from './helpers.ts';
 import { triggerMedicalArc } from './medical.ts';
 import { consumeKitStock, hasKit, log, maybeRenameSpot, registerEmptyCheck } from './setup.ts';
+import { RULES } from './rules.ts';
 import { S } from './state.ts';
 import { afterAction, spend } from './threads.ts';
 import { CARRY_CAP, MAX_LINES_TOTAL, TUNING, carryBlocked, rollFish } from './tuning.ts';
@@ -207,7 +208,7 @@ export function iceFishAt(id?){
   const p = Math.min(0.85, sp.q*2.4);
   if (rand() < p){
     const fish = rollFish();
-    addMeat(fish.meat, 'net');
+    addMeat(fish.meat, RULES.iceFishStat ? 'iceFish' : 'net'); // LEG-008
     log(`Caught. Jigging through the hole pays off - a ${fish.name} fish, ${fish.meat} meat.`, 'good');
   } else { log('Nothing. Two hours of jigging through the ice and nothing bites.', 'bad'); registerEmptyCheck(); }
   afterAction('iceFish');

@@ -5,6 +5,7 @@
 import { pushModifier, removeModifier } from './modifiers.ts';
 import { resolveDelta } from './resolve.ts';
 import { log } from './setup.ts';
+import { say } from './rules.ts';
 import { S } from './state.ts';
 import { applyTagDeltas } from './tags.ts';
 import { render, showModal, typewriterInto } from './ui.ts';
@@ -12,8 +13,8 @@ import { render, showModal, typewriterInto } from './ui.ts';
 export function showAnkleBreakCard(){
   const stat = S._pendingAnkleBreakCard;
   S._pendingAnkleBreakCard = null;
-  const statText = stat==='warmth' ? 'feel his feet' : stat==='thirst' ? 'remember his last drink' : 'remember his last full meal';
-  showModal(`<h3>How the hell</h3><div class="wsub">He asks himself how the hell he keeps this up when he already can't stand right, can't ${statText}, and the ankle hasn't let up once.</div>
+  const statText = say(stat==='warmth' ? 'feel his feet' : stat==='thirst' ? 'remember his last drink' : 'remember his last full meal', stat==='warmth' ? 'feel your feet' : stat==='thirst' ? 'remember your last drink' : 'remember your last full meal');
+  showModal(`<h3>How the hell</h3><div class="wsub">${say('He asks himself how the hell he keeps this up', 'You ask yourself how the hell you keep this up')} when ${say('he already', 'you already')} can't stand right, can't ${statText}, and the ankle hasn't let up once.</div>
     <button class="mbtn" onclick="hideModal(); resolveAnkleBreak('${stat}', true)">Power through. Not like this.</button>
     <button class="mbtn ghost" onclick="hideModal(); resolveAnkleBreak('${stat}', false)">Admit it. This might be it.</button>`);
 }
@@ -22,7 +23,7 @@ export function resolveAnkleBreak(stat?, choseRight?){
     S.ankleSalvage = {stat, deadlineDay: S.day + 2};
     applyTagDeltas({hard:1,proud:1});
     pushModifier('salvageClock', '⏳ Salvage Clock', `${stat} needs to reach 35-40+ within 2 days, or the run ends.`, 'neg');
-    log(`⏳ He powers through - and starts the clock. ${stat} has to come back up, and soon, or this doesn't end well.`, 'event');
+    log(`⏳ ${say('He powers', 'You power')} through - and starts the clock. ${stat} has to come back up, and soon, or this doesn't end well.`, 'event');
   } else {
     S.deathSource = 'collapse';
     S._ankleInevitable = true;
@@ -34,12 +35,12 @@ export function showInevitabilityCard(step?){
   if (step === 0){
     showModal(`<h3>The reasoning</h3><div class="wsub tw" id="twInev0" onclick="skipTypewriter('twInev0')"></div>
       <button class="mbtn" onclick="hideModal(); showInevitabilityCard(1)">Continue</button>`);
-    typewriterInto('twInev0', "He does the math out loud, quietly, like it's someone else's decision he's just narrating. One leg. No fix for it out here. The rest of the body already spending down whatever it has left just to stand. There isn't a version of this that ends with him walking out on his own.", 18);
+    typewriterInto('twInev0', say("He does the math out loud, quietly, like it's someone else's decision he's just narrating. One leg. No fix for it out here. The rest of the body already spending down whatever it has left just to stand. There isn't a version of this that ends with him walking out on his own.", "You do the math out loud, quietly, like it's someone else's decision you're just narrating. One leg. No fix for it out here. The rest of the body already spending down whatever it has left just to stand. There isn't a version of this that ends with you walking out on your own."), 18);
     return;
   }
   showModal(`<h3>The crumble</h3><div class="wsub tw" id="twInev1" onclick="skipTypewriter('twInev1')"></div>
     <button class="mbtn" onclick="hideModal(); endGame('tap')">Let it happen</button>`);
-  typewriterInto('twInev1', "The phone's already in his hand by the time he notices it's there. He doesn't remember deciding, exactly - just watching his own thumb move like it belonged to someone more sensible than him.", 18);
+  typewriterInto('twInev1', say("The phone's already in his hand by the time he notices it's there. He doesn't remember deciding, exactly - just watching his own thumb move like it belonged to someone more sensible than him.", "The phone's already in your hand by the time you notice it's there. You don't remember deciding, exactly - just watching your own thumb move like it belonged to someone more sensible than you."), 18);
 }
 export function checkAnkleSalvage(notes?){
   if (!S.ankleSalvage || S.over) return;
@@ -47,7 +48,7 @@ export function checkAnkleSalvage(notes?){
   if (val >= 35){
     removeModifier('salvageClock');
     applyTagDeltas({hard:1,humble:1,spiritual:1});
-    notes.push(`⏳ Salvage met. He did the impossible on one leg - ${S.ankleSalvage.stat} back up past 35, and he's still here to notice it. Something in that is going to stay with him.`);
+    notes.push(say(`⏳ Salvage met. He did the impossible on one leg - ${S.ankleSalvage.stat} back up past 35, and he's still here to notice it. Something in that is going to stay with him.`, `⏳ Salvage met. You did the impossible on one leg - ${S.ankleSalvage.stat} back up past 35, and you're still here to notice it. Something in that is going to stay with you.`));
     resolveDelta(6, notes);
     S.ankleSalvage = null;
     return;

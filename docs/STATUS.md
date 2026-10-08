@@ -1,11 +1,11 @@
 # Status
 
-**Phase 1 (the port) is done.** The whole v12 simulation runs in `packages/core`, and it plays
-identically to the untouched v12 file. A plain but complete playable build exists.
+**Phase 1 is done, including M8.** The whole v12 simulation runs in `packages/core`, proven
+identical to the untouched v12 file, and the deliberate changes to it are in behind rule flags
+(`docs/reports/M8_CHANGES.md`). A plain but complete playable build exists.
 
-**Next:** M8, the deliberate v12 changes (agency fixes, LEG-* defects, the protagonist in
-place of customisation, rival names, the partner rule), each with an intended-difference test.
-Then Phase 2 proper: the real 16:9 location screens.
+**Next:** Phase 2 proper, starting with M9: the real 16:9 location screens with every station
+laid out, for Sir to approve before the art prompts are written.
 
 ## Done
 
@@ -39,9 +39,16 @@ Then Phase 2 proper: the real 16:9 location screens.
   is deleted (D-004). Stored in the browser/Electron local storage until M13 moves it to files.
 - Robot-played in a real browser through complete runs to their endings with no errors.
 
+### M8 — deliberate v12 changes
+- Rule flags in `packages/core/src/v12/rules.ts`; parity keeps running with all of them off.
+- "You" everywhere, the authored cast, the agency fixes, the medics' check before the death
+  verdict, rations, the poultice, ice-fishing stats, the partner rule. One test per change.
+- `npm run balance` compares outcomes under v12's rules and TAP / OUT's on the same seeds.
+- Change report: `docs/reports/M8_CHANGES.md`. LEG-007 is deferred (D-021).
+
 ## Not started
 
-M8 onwards: the deliberate changes, the painted locations, art, audio, narrative pass, Steam.
+M9 onwards: the painted locations, art, audio, narrative pass, Steam.
 
 ## Open questions for Sir
 

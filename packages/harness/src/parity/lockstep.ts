@@ -5,7 +5,7 @@
 // The bot draws from its own seeded stream, never from the game's, so its choices cannot
 // disturb the parity of the two simulations.
 
-import { actionPanel, createRngState, nextFloat, restoreRun, setPresenter, snapshotRun, startRun, type RngState, type Run } from '@tapout/core';
+import { actionPanel, createRngState, nextFloat, rationsLeft, restoreRun, setPresenter, snapshotRun, startRun, type RngState, type RuleSet, type Run, type RunCast } from '@tapout/core';
 import { loadLegacyGame, plain, resolveRunOptions, type LegacyGame, type LegacyStartOptions } from '../legacy/legacy-game.ts';
 import { modalButtons, parseHandler } from '@tapout/core';
 import { firstDifference, type Divergence } from './parity.ts';
@@ -40,13 +40,19 @@ export interface LockstepResult {
 
 class PortSide {
   modal: string | null = null;
+  /** Every modal and typed line the run showed, in order. */
+  readonly transcript: string[] = [];
   constructor(public run: Run) {
     setPresenter({
       showModal: (html) => {
         this.modal = html;
+        this.transcript.push(html);
       },
       hideModal: () => {
         this.modal = null;
+      },
+      typewriterInto: (_id, text) => {
+        this.transcript.push(text);
       },
     });
   }
@@ -154,6 +160,7 @@ function survivorDecision(S: any): Decision | null {
   if (S.hunger < 55 && S.cookedMeal) return { handler: 'eatCooked()', label: 'eat cooked' };
   if (S.hunger < 50 && S.smoked > 0) return { handler: 'eatSmoked()', label: 'eat smoked' };
   if (S.hunger < 50 && (S.berryQ?.length ?? 0) > 0) return { handler: 'eatBerries()', label: 'eat berries' };
+  if (S.hunger < 40 && rationsLeft() > 0) return { handler: 'eatRation()', label: 'eat a ration' };
 
   const evening = S.hour >= 15.5;
   if (evening) {
@@ -248,4 +255,40 @@ export function runLockstep(start: LegacyStartOptions, options: LockstepOptions)
     draws: port.run.rng.draws,
     handlersSeen,
   };
+}
+
+export interface SoloResult {
+  seed: number | string;
+  decisions: number;
+  finalDay: number;
+  over: boolean;
+  cause: string;
+  /** The state at the end, for metrics. */
+  state: any;
+  /** Every modal and typed line shown, in order. */
+  transcript: string[];
+}
+
+/**
+ * Plays the port alone with the same bot, under any rule set: the balance harness for deliberate
+ * changes (M8 onwards), where there is no v12 to compare against.
+ */
+export function runSolo(start: LegacyStartOptions, options: LockstepOptions, rules: Readonly<RuleSet>, cast?: RunCast): SoloResult {
+  const port = new PortSide(startRun({ ...resolveRunOptions(start), rules, cast }));
+  const bot = createRngState(`${String(start.seed)}::bot`);
+  const maxDecisions = options.maxDecisions ?? 5000;
+  let decisions = 0;
+  while (decisions < maxDecisions) {
+    const S = port.run.state;
+    if (S.day > options.days && !port.modal) break;
+    const decision = chooseDecision(port, bot, options);
+    if (!decision) break;
+    decisions++;
+    port.click(decision.handler);
+    if (options.resumeEvery && decisions % options.resumeEvery === 0) {
+      port.run = restoreRun(JSON.parse(JSON.stringify(snapshotRun(port.run))));
+    }
+  }
+  const S = port.run.state;
+  return { seed: start.seed, decisions, finalDay: S.day, over: !!S.over, cause: S.cause, state: S, transcript: port.transcript };
 }

@@ -750,7 +750,7 @@ function panelPass(){
   }
   setBtn('a-cache', r[0], r[1]);
   if (hasKit('pot')){
-    r = S.jug ? [false,'built - water storage doubled'] : (S.fireH<=0 ? [false,'needs fire to bake'] : gate(8,1, S.stock.clay>=4, 'need 4 clay', `−{c}⚡ · ${durTxt(1)} · 4 clay`, 'h'));
+    r = S.jug ? [false,'built - water storage doubled'] : (S.fireH<=0 ? [false,'needs fire to bake'] : gate(8,1, S.stock.clay>=TUNING.costs.jugClayNeed, `need ${TUNING.costs.jugClayNeed} clay`, `−{c}⚡ · ${durTxt(1)} · ${TUNING.costs.jugClayNeed} clay`, 'h') /* LEG-006: the action takes 3; v12's button asked for 4 */);
     setBtn('a-jug', r[0], r[1]);
   }
   r = S.berryPicker ? [false,'carved - foraging is faster'] : gate(4,1, S.stock.wood>=2, 'need 2 logs', `−{c}⚡ · ${durTxt(1)} · 2 logs`, 'h');

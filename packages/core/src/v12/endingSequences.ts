@@ -2,7 +2,8 @@
 // moved verbatim apart from: exports, imports, Math.random -> rand(), and presentation
 // calls routed through ./ui.ts. Parity with the original is enforced by tests.
 
-import { WHO_LABEL } from './camp.ts';
+import { whoLabel } from './camp.ts';
+import { say } from './rules.ts';
 import { S } from './state.ts';
 import { showModal, typewriterInto } from './ui.ts';
 // ============================== v12 §7: ending sequences for ALL endings ==============================
@@ -31,9 +32,9 @@ export function showCollapseFade(){
   typewriterInto('twCFade', "Nothing, for a while. Just a gap where the next thought should be.", 14);
 }
 export function showCollapseAftermath(){
-  const who = WHO_LABEL[S.backstory.who] || 'no one in particular';
+  const who = whoLabel('no one in particular');
   showModal(`<h3>Waking up</h3><div class="wsub tw" id="twCAft" onclick="skipTypewriter('twCAft')"></div><button class="mbtn" onclick="hideModal(); showFinalStatsScreen('dead')">Continue</button>`);
-  typewriterInto('twCAft', `They got to him eventually. A hospital ceiling, too bright, a voice asking his name like it's a test he might fail. He's alive - that's the whole headline. Somewhere, ${who} gets the call that isn't the bad kind, and it takes a while for that to feel real to anyone, including him.`, 16);
+  typewriterInto('twCAft', say(`They got to him eventually. A hospital ceiling, too bright, a voice asking his name like it's a test he might fail. He's alive - that's the whole headline. Somewhere, ${who} gets the call that isn't the bad kind, and it takes a while for that to feel real to anyone, including him.`, `They got to you eventually. A hospital ceiling, too bright, a voice asking your name like it's a test you might fail. You're alive - that's the whole headline. Somewhere, ${who} gets the call that isn't the bad kind, and it takes a while for that to feel real to anyone, including you.`), 16);
 }
 export function showViolentDeathStep1(){
   showModal(`<h3>—</h3><div class="wsub tw" id="twV1" onclick="skipTypewriter('twV1')"></div><button class="mbtn" onclick="hideModal(); showViolentDeathStep2()">Continue</button>`);
@@ -45,7 +46,7 @@ export function showViolentDeathStep2(){
 }
 export function showViolentDeathStep3(){
   showModal(`<h3>Days later</h3><div class="wsub tw" id="twV3" onclick="skipTypewriter('twV3')"></div><button class="mbtn" onclick="hideModal(); showFinalStatsScreen('dead')">Continue</button>`);
-  typewriterInto('twV3', `The med-check boat eases in on schedule, same as every few days. The fire is long cold. Camp is arranged exactly as he left it - the tally tree with its marks, the shelter, everything in its place except him. It takes them a while to understand what they're looking at.`, 16);
+  typewriterInto('twV3', `The med-check boat eases in on schedule, same as every few days. The fire is long cold. Camp is arranged exactly as ${say('he', 'you')} left it - the tally tree with its marks, the shelter, everything in its place except ${say('him', 'you')}. It takes them a while to understand what they're looking at.`, 16);
 }
 export function showLossStep1(kind?){
   const text = "You touch the tally tree on your way past - more marks on it than you remembered cutting. Betty's snag is empty this morning, first time in a while. Your arrows are still in the quiver, unused, the way they'll stay now. There's an antler by the fire pit you never quite got around to doing anything with. It'll stay there.";
@@ -53,11 +54,11 @@ export function showLossStep1(kind?){
   typewriterInto('twL1', text, 18);
 }
 export function showLossPhoneCall(kind?){
-  const salvageLine = S.ankleSalvage===null && S._ankleInevitable ? " He'd fought the ankle as long as the clock gave him." : '';
-  const vowLine = S.vow ? ` A vow he never quite settled, still hanging over the line as he dials.` : '';
+  const salvageLine = S.ankleSalvage===null && S._ankleInevitable ? say(" He'd fought the ankle as long as the clock gave him.", " You'd fought the ankle as long as the clock gave you.") : '';
+  const vowLine = S.vow ? say(` A vow he never quite settled, still hanging over the line as he dials.`, ` A vow you never quite settled, still hanging over the line as you dial.`) : '';
   const text = kind === 'med'
-    ? `The decision was made for him, mostly - but he still has to hold the phone while they confirm it, still has to hear his own voice agree.${salvageLine} "Yeah," he says, when they ask if he understands. "Yeah, I understand."`
-    : `The antenna's already up before he's fully decided. It rings twice.${vowLine} He says less than he expected to. Something like "I'm done. Come get me." Something like relief, arriving early.`;
+    ? say(`The decision was made for him, mostly - but he still has to hold the phone while they confirm it, still has to hear his own voice agree.${salvageLine} "Yeah," he says, when they ask if he understands. "Yeah, I understand."`, `The decision was made for you, mostly - but you still have to hold the phone while they confirm it, still have to hear your own voice agree.${salvageLine} "Yeah," you say, when they ask if you understand. "Yeah, I understand."`)
+    : say(`The antenna's already up before he's fully decided. It rings twice.${vowLine} He says less than he expected to. Something like "I'm done. Come get me." Something like relief, arriving early.`, `The antenna's already up before you've fully decided. It rings twice.${vowLine} You say less than you expected to. Something like "I'm done. Come get me." Something like relief, arriving early.`);
   showModal(`<h3>The Call</h3><div class="wsub tw" id="twLCall" onclick="skipTypewriter('twLCall')"></div><button class="mbtn" onclick="hideModal(); showLossStep2('${kind}')">Continue</button>`);
   typewriterInto('twLCall', text, 16);
 }
@@ -91,7 +92,7 @@ export function showWinStep1(){
   typewriterInto('twW1', text, 18);
 }
 export function showWinStep2(){
-  const who = WHO_LABEL[S.backstory.who] || 'anyone, really';
+  const who = whoLabel('anyone, really');
   const text = S.backstory.who === 'nobody'
     ? "Nobody's waiting on the dock. Someone from the crew walks up anyway and just says your name, and it turns out that's enough."
     : `${who.charAt(0).toUpperCase()+who.slice(1)} steps off first, before the boat's even fully in, and you're moving before you've decided to.`;

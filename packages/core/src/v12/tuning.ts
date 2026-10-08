@@ -204,6 +204,8 @@ export const GAME: any = {
   wolverine: {meat:10, tier:'medium', label:'a wolverine'},
   deer:      {meat:32, tier:'big',    label:'a deer'},
   moose:     {meat:72, tier:'big',    label:'a moose'},
+  // LEG-015 (TAP / OUT): the smoking-visitor fox can be shot; v12 had no entry and would throw.
+  fox:       {meat:3,  tier:'small',  label:'a fox'},
 };
 export const SMALL_GAME_TABLE: any = [['hare',.75],['fatHare',.25]];
 export const HUNT_SPECIES_TABLE: any = [['beaver',.16],['wolverine',.10],['deer',.58],['moose',.16]];
@@ -382,3 +384,7 @@ export const MAX_SNARES_PER_SPOT = 2;
 export const MAX_SNARES_TOTAL = 10;
 export const MAX_LINES_TOTAL = 3;
 
+
+// LEG-002 (TAP / OUT): the rations v12's kit draft describes. Calories match two berry handfuls,
+// which v12 values at +10 hunger / 80 kcal each.
+export const RATIONS = {uses:8, hunger:20, morale:1, energy:4, kcal:160} as const;

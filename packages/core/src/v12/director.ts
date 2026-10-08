@@ -5,6 +5,7 @@
 import { rand } from './runtime.ts';
 import { addBerries, addMeat, meatCount } from './food.ts';
 import { clamp, pick } from './helpers.ts';
+import { RULES } from './rules.ts';
 import { S } from './state.ts';
 // ============================== v6.3: the director ==============================
 export function markSetback(){ S.lastSetbackDay = S.day; }
@@ -24,9 +25,16 @@ export function directorTick(notes?){
   if (ci >= 70) S.highCIStreak = (S.highCIStreak||0) + 1; else S.highCIStreak = 0;
   if (S.highCIStreak >= 3){
     S.highCIStreak = 0;
-    S.wet = clamp(S.wet + 35);
-    markSetback();
-    notes.push('🌧 Comfortable as things have been, something always finds the gap - you come back damp and chilled in a way that\'s going to cost you tonight.');
+    if (RULES.directorFront){
+      // TAP / OUT (plan §2.4): the pressure arrives as weather you can see coming, not an unexplained
+      // soaking. Tomorrow's weather keeps the worse of two rolls.
+      S.weatherFront = true;
+      notes.push('🌫 The wind has backed round to the north-east and the sky over the far shore has gone the colour of a bruise. Something is coming in tomorrow.');
+    } else {
+      S.wet = clamp(S.wet + 35);
+      markSetback();
+      notes.push('🌧 Comfortable as things have been, something always finds the gap - you come back damp and chilled in a way that\'s going to cost you tonight.');
+    }
   }
   if (ci <= 25) S.brutalStreak = (S.brutalStreak||0) + 1; else S.brutalStreak = 0;
   if (S.brutalStreak >= 3 && rand() < 0.5){

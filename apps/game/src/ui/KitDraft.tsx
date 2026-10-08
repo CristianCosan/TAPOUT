@@ -31,7 +31,7 @@ export function KitDraft(props: { onBegin: (kit: string[]) => void; onBack: () =
       <header className="draft-head">
         <h2>Pack your kit</h2>
         <p>
-          Ten items. Everything else stays home. <b className={picked.size === PICKS ? 'ok' : ''}>{picked.size}/{PICKS} picked</b>
+          Ten of these {POOL.length}. Everything else stays home. <b className={picked.size === PICKS ? 'ok' : ''}>{picked.size}/{PICKS} picked</b>
         </p>
       </header>
       <div className="draft-grid">

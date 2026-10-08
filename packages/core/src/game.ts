@@ -5,6 +5,7 @@
 import { createRngState, type RngState } from './rng/rng.ts';
 import { useRng } from './v12/runtime.ts';
 import { S, setS } from './v12/state.ts';
+import { RULES, TAPOUT_RULES, V12_RULES, setRules, type RuleSet } from './v12/rules.ts';
 import * as breakSequence from './v12/breakSequence.ts';
 import * as breakdown from './v12/breakdown.ts';
 import * as camp from './v12/camp.ts';
@@ -22,6 +23,7 @@ import * as night from './v12/night.ts';
 import * as person from './v12/person.ts';
 import * as recorder from './v12/recorder.ts';
 import * as resolve from './v12/resolve.ts';
+import * as rules from './v12/rules.ts';
 import * as setup from './v12/setup.ts';
 import * as shore from './v12/shore.ts';
 import * as tags from './v12/tags.ts';
@@ -34,7 +36,7 @@ import * as panel from './v12/panel.ts';
 
 const MODULES = [
   breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, helpers,
-  interior, medical, modifiers, night, person, recorder, resolve, setup, shore, tags, threads,
+  interior, medical, modifiers, night, person, recorder, resolve, rules, setup, shore, tags, threads,
   travel, tuning, woods, worry, panel,
 ];
 
@@ -53,12 +55,24 @@ export interface RunOptions {
   heightCm: number;
   startWeightKg: number;
   sex: 'man' | 'woman';
+  /** Which deliberate changes to v12 apply. Default: all of them (the TAP / OUT game). */
+  rules?: Readonly<RuleSet>;
+  /** The authored cast, used by TAP / OUT text. Omitted in v12 runs. */
+  cast?: RunCast;
+}
+
+export interface RunCast {
+  partner: string;
+  prizeLabel: string;
+  /** v12 rival name -> the name the radio uses. */
+  rivals: Readonly<Record<string, string>>;
 }
 
 export interface Run {
   readonly rng: RngState;
   /** The live v12 state object. */
   readonly state: any;
+  readonly rules: Readonly<RuleSet>;
   call: <T = unknown>(fn: string, ...args: unknown[]) => T;
 }
 
@@ -69,6 +83,7 @@ export interface Run {
 export function startRun(options: RunOptions): Run {
   const rng = createRngState(options.seed);
   useRng(rng);
+  setRules(options.rules ?? TAPOUT_RULES);
   setup.newGame(
     options.backstory,
     options.startWeightKg,
@@ -77,12 +92,17 @@ export function startRun(options: RunOptions): Run {
     options.sex,
     new Set(options.kit),
   );
-  return liveRun(rng);
+  if (options.cast && RULES.content) {
+    S.cast = { partner: options.cast.partner, prizeLabel: options.cast.prizeLabel };
+    S.tapNames = S.tapNames.map((name: string) => options.cast!.rivals[name] ?? name);
+  }
+  return liveRun(rng, RULES);
 }
 
-function liveRun(rng: RngState): Run {
+function liveRun(rng: RngState, rules: Readonly<RuleSet>): Run {
   return {
     rng,
+    rules,
     get state() {
       return S;
     },
@@ -90,6 +110,7 @@ function liveRun(rng: RngState): Run {
       const target = V12_FUNCTIONS.get(fn);
       if (!target) throw new Error(`v12 has no function called "${fn}"`);
       useRng(rng);
+      setRules(rules);
       return target(...args) as T;
     },
   };
@@ -103,6 +124,8 @@ export interface RunSnapshot {
   version: 1;
   rng: RngState;
   state: unknown;
+  /** Absent in snapshots taken before M8, which were all v12 runs. */
+  rules?: RuleSet;
 }
 
 const SET_TAG = '__set';
@@ -111,7 +134,7 @@ export function snapshotRun(run: Run): RunSnapshot {
   const state = JSON.parse(
     JSON.stringify(run.state, (_key, value) => (value instanceof Set ? { [SET_TAG]: [...value] } : value)),
   );
-  return { format: 'tapout-run', version: 1, rng: { ...run.rng }, state };
+  return { format: 'tapout-run', version: 1, rng: { ...run.rng }, state, rules: { ...RULES } };
 }
 
 export function restoreRun(snapshot: RunSnapshot): Run {
@@ -122,13 +145,17 @@ export function restoreRun(snapshot: RunSnapshot): Run {
       : value,
   );
   const rng = { ...snapshot.rng };
+  setRules(snapshot.rules ? { ...V12_RULES, ...snapshot.rules } : V12_RULES);
   setS(state);
   useRng(rng);
-  return liveRun(rng);
+  return liveRun(rng, RULES);
 }
 
 export { actionPanel, hudRecord, BUTTONS, type PanelEntry, type HudElement } from './v12/panel.ts';
 export { setPresenter, type Presenter } from './v12/ui.ts';
+export { TAPOUT_RULES, V12_RULES, type RuleSet } from './v12/rules.ts';
+export { rationsLeft } from './v12/camp.ts';
+export { forcedTapCause } from './v12/threads.ts';
 
 /**
  * Read-only v12 values and helpers the presentation shows. None of them changes state or draws

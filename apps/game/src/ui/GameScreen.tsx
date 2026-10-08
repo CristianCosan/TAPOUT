@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, type MouseEvent } from 'react';
-import { roundDisplay, type HudElement, type PanelEntry } from '@tapout/core';
+import { rationsLeft, roundDisplay, type HudElement, type PanelEntry } from '@tapout/core';
 import { session, type View } from '../session.ts';
 
 const LOCATIONS = [
@@ -104,6 +104,11 @@ function Body({ view }: { view: View }) {
             <Html html={hudText(hud, id!)} />
           </button>
         ))}
+        {rationsLeft() > 0 && (
+          <button className="chip-btn" onClick={() => session.click('eatRation()')}>
+            🥫 Ration ({rationsLeft()})
+          </button>
+        )}
       </div>
       <h3>Stores</h3>
       <div className="stores">

@@ -4,7 +4,8 @@
 
 import { showAnkleBreakCard } from './breakSequence.ts';
 import { offerBreakdownChoice } from './breakdown.ts';
-import { WHO_LABEL } from './camp.ts';
+import { whoLabel } from './camp.ts';
+import { RULES } from './rules.ts';
 import { showCard } from './cards.ts';
 import { ambientTempC } from './cost.ts';
 import { startEndingSequence } from './endingSequences.ts';
@@ -49,7 +50,7 @@ export function afterNightContinue2(){
 export function confirmTapOut(){
   if (S.over) return;
   if (S.medicalArc && S.medicalArc.forcedTapOnly){ forcedTapPhoneMoment(); return; }
-  const who = WHO_LABEL[S.backstory.who] || 'no one waiting, if you are honest';
+  const who = whoLabel('no one waiting, if you are honest');
   showModal(`
     <h3>The sat phone is in your hand</h3>
     <div class="wsub">Day ${S.day}. ${S.rivals} rival${S.rivals===1?'':'s'} still out there.</div>
@@ -94,7 +95,8 @@ export function endGame(kind?){
   startEndingSequence(kind);
 }
 export function showFinalStatsScreen(kind?){
-  const [title, msg] = CAUSES[kind];
+  const [title, msg0] = CAUSES[kind];
+  const msg = RULES.content && S.cast ? msg0.replace('$500,000', S.cast.prizeLabel) : msg0;
   $('endTitle').textContent = title;
   $('endTitle').className = kind === 'win' ? 'gold' : '';
   $('endDay').textContent = S.day;
@@ -124,7 +126,7 @@ export function showFinalStatsScreen(kind?){
     <div class="endSect"><h4>Food · ${t.food} gathered, ${t.meals} meals eaten</h4>
       <div class="row"><span>🫐 Foraged</span><span>${t.forage}</span></div>
       <div class="row"><span>🪤 Snared</span><span>${t.snared}</span></div>
-      <div class="row"><span>🎣 Lines & net</span><span>${t.lines + t.net}</span></div>
+      <div class="row"><span>🎣 Lines & net</span><span>${t.lines + t.net}</span></div>${t.iceFish ? `<div class="row"><span>🎏 Ice fishing</span><span>${t.iceFish}</span></div>` : ''}
       <div class="row"><span>🏹 Big &amp; medium game (animals)</span><span>${t.animalsKilled||0}</span></div>
       <div class="row"><span>🥓 Smoked & preserved</span><span>${t.smoked}</span></div>
       <div class="row"><span>Arrows remaining</span><span>${S.arrows}/9</span></div>
@@ -256,6 +258,7 @@ export function buildEpilogue(kind?){
     parent: `You called before you'd even properly showered. Whatever the phone was worth out there, it was worth more that day.`,
     nobody: `There wasn't really anyone waiting, and you'd told yourself that would make the ending easier. It didn't, particularly. It also didn't need to.`,
   };
+  if (RULES.content && S.cast) closers.partner = `The first thing you did back was find ${S.cast.partner} and just stand there a minute before saying anything out loud. Some things don't need the sat-phone voice.`;
   p.push(closers[S.backstory.who] || closers.nobody);
 
   return p;
