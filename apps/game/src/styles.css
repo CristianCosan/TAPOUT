@@ -191,3 +191,12 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .journal-book { width: 900px; height: 820px; background: var(--moss); border: 1px solid var(--lichen); border-radius: 18px; padding: 24px 30px; display: flex; flex-direction: column; }
 .journal-page { flex: 1; overflow: hidden; }
 .journal-nav { display: flex; justify-content: space-between; align-items: center; color: var(--sage); }
+
+/* the result card: what the last action did */
+.result-card { position: absolute; z-index: 5; left: 610px; top: 96px; width: 700px; background: #101812ee; border: 1px solid var(--lichen); border-radius: 14px; padding: 14px 18px; box-shadow: 0 10px 30px #0009; display: flex; flex-direction: column; gap: 6px; cursor: pointer; animation: result-in 0.18s ease-out; font-size: 19px; }
+.result-card .result-time { align-self: flex-end; font-size: 15px; color: var(--ember); letter-spacing: 0.05em; }
+.result-card .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.result-card .tag { font-size: 15px; padding: 3px 9px; border-radius: 999px; border: 1px solid; }
+.result-card .tag.up { color: #a9d39a; border-color: #a9d39a66; }
+.result-card .tag.down { color: #e3a07a; border-color: #e3a07a66; }
+@keyframes result-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
