@@ -1,5 +1,28 @@
 # Status
 
+**First person (D-030), build 0.0.3, waiting on Sir's playtest.** The screens are now small 3D
+areas you walk around in first person: Camp, Shore and Woods, built from code shapes. Looking at a
+station lights it, clicking opens its v12 actions in the same panel as before. Day, dusk, night,
+fire light, rain and snow follow v12's clock and weather; ambient sound is made in code. The v12
+core, saves and Windows app are unchanged.
+
+**Next:** Sir plays 0.0.3 and says whether the camp look works. Meanwhile: polish that survives any
+change of look (feel, sound, HUD), then Shore and Woods detail once the look is approved.
+
+## First person — build 0.0.3
+- `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,
+  plus walking speed, eye height and reach. A test proves every station but "you" is placed.
+- `apps/game/src/world/World.ts`: the Three.js world. Pointer-lock mouse look, W A S D, Shift to
+  run, collision with stations, hover by crosshair (or by mouse when the pointer is free), click to
+  open, walk away to close. Sky shader, sun and moon, stars, fog, fire light and smoke, rain, snow,
+  a lake that freezes in winter. Props follow the run (shelter tiers, firepit tiers, rack, cache,
+  chair and table, the tally post's notches, the animal you spotted).
+- `apps/game/src/world/props.ts`: every station as low-poly shapes. `sound.ts`: wind, rain, fire
+  crackle, lake and footsteps from shaped noise.
+- Tab (or the You button) opens the things that need only you. The layout guides (`#guide-camp`)
+  still use the old Phaser screen.
+- `globalThis.__tapoutWorld.lookAt(id)` aims you at a station for robot play and screenshots.
+
 **Phase 1 is done, including M8.** The whole v12 simulation runs in `packages/core`, proven
 identical to the untouched v12 file, and the deliberate changes to it are in behind rule flags
 (`docs/reports/M8_CHANGES.md`). A plain but complete playable build exists.

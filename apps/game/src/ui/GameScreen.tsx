@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { GAME, dawnHour, duskHour, roundDisplay } from '@tapout/core';
-import { HUNT_TRAIL_LABELS, LOCATIONS, STAGE, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { HUNT_TRAIL_LABELS, LOCATIONS, STAGE, WORLD, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
 import { TableauHost } from '../scene/TableauHost.tsx';
 import type { SceneInput } from '../scene/LocationScene.ts';
+import { WorldHost } from '../world/WorldHost.tsx';
+import type { WorldInput } from '../world/World.ts';
+import type { PropState } from '../world/props.ts';
 
 const BARS = [
   ['health', 'Health'],
@@ -163,15 +166,18 @@ function BottomBar({ view, onJournal }: { view: View; onJournal: () => void }) {
 
 // ---- the context panel, next to the station you clicked
 
-function ContextPanel({ station, view, onClose, onAct }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void }) {
+function ContextPanel({ station, view, onClose, onAct, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; beside?: boolean }) {
   const offers = offersFor(station, view);
   const stores = STATION_STORES[station.id] ?? [];
   const xs = station.id === 'you' ? [1000] : station.hotspot.map((p) => p.x);
   const right = Math.max(...xs);
   const left = Math.min(...xs);
   const width = 520;
-  const x = right + 24 + width < 1700 ? right + 24 : Math.max(180, left - 24 - width);
-  const y = Math.max(90, Math.min(STAGE.height - 120 - (110 + offers.length * 78), (station.id === 'you' ? 700 : Math.min(...station.hotspot.map((p) => p.y))) - 20));
+  // In first person the thing you clicked is in the middle of the view; the panel sits beside it.
+  const x = beside ? 1110 : right + 24 + width < 1700 ? right + 24 : Math.max(180, left - 24 - width);
+  const y = beside
+    ? Math.max(90, Math.min(STAGE.height - 120 - (110 + offers.length * 78), 200))
+    : Math.max(90, Math.min(STAGE.height - 120 - (110 + offers.length * 78), (station.id === 'you' ? 700 : Math.min(...station.hotspot.map((p) => p.y))) - 20));
   return (
     <div className="context" style={{ left: x, top: y, width }} onClick={(e) => e.stopPropagation()}>
       <div className="context-head">
@@ -378,6 +384,9 @@ function liveLayout(layout: LocationLayout, S: View['state']): LocationLayout {
   };
 }
 
+/** What the signposts at each exit say. */
+const EXIT_SIGNS: Record<string, string> = { toShore: 'SHORE', toWoods: 'WOODS', toCamp: 'CAMP', trailhead: 'TRAPLINE' };
+
 function darkness(hour: number): number {
   const h = ((hour % 24) + 24) % 24;
   const dusk = duskHour();
@@ -420,6 +429,9 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
         setSelected(null);
         setJournal(false);
         setMap(false);
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        setSelected((current) => (current === 'you' ? null : 'you'));
       } else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
       else if (e.key === 'm' || e.key === 'M') setMap((open) => !open);
       else if (e.key === 'F3') {
@@ -459,6 +471,46 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     setSelected((current) => (current === id ? null : id));
   }, []);
   const events = useMemo(() => ({ select }), [select]);
+  const worldEvents = useMemo(() => ({ select: (id: string) => setSelected(id), clear: () => setSelected(null) }), []);
+
+  const props: PropState = useMemo(() => {
+    const hunt = S.hunt as { state: string; species?: string } | undefined;
+    return {
+      structure: S.structure,
+      dugout: !!S.dugout,
+      insulation: S.insulation,
+      bed: !!S.bed,
+      firepitTier: S.firepitTier,
+      fireLit: S.fireH > 0,
+      rackTier: S.rackTier,
+      hugeRack: !!S.hugeRack,
+      cacheTier: S.cacheTier,
+      chair: !!S.chair,
+      table: !!S.table,
+      day: S.day,
+      winter: !!S.winter,
+      species: hunt && hunt.state !== 'none' ? (hunt.species ?? '') : '',
+      exitLabels: EXIT_SIGNS,
+    };
+    // v12 mutates its state in place; the view version marks a change.
+  }, [S, view.version]);
+  const frozen = !!(view.modal || journal || map || night || curtain !== null);
+  const worldInput: WorldInput = useMemo(
+    () => ({
+      area: WORLD[loc],
+      layout,
+      hidden,
+      selected,
+      hour: S.hour,
+      dawn: dawnHour(),
+      dusk: duskHour(),
+      weather: S.weather,
+      winter: !!S.winter,
+      props,
+      frozen,
+    }),
+    [loc, layout, hidden, selected, S.hour, S.weather, S.winter, props, frozen],
+  );
 
   if (view.endScreen && !view.modal) return <EndScreen view={view} />;
   const station = selected ? layout.stations.find((s) => s.id === selected) : null;
@@ -481,7 +533,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
 
   return (
     <div className="game2">
-      <TableauHost input={input} events={events} />
+      {guide ? <TableauHost input={input} events={events} /> : <WorldHost input={worldInput} events={worldEvents} />}
       {!guide && (
         <>
           <div className="travel-fade" key={loc}>
@@ -491,7 +543,10 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <BodyRail view={view} />
           <StoresRail view={view} />
           <BottomBar view={view} onJournal={() => setJournal(true)} />
-          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} />}
+          <button className="you-btn" onClick={() => setSelected(selected === 'you' ? null : 'you')} title="Things only you need (Tab)">
+            You
+          </button>
+          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} beside />}
           {view.result && !view.modal && <ResultCard result={view.result} />}
           {night && (
             <NightPreview

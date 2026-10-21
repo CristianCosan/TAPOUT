@@ -243,3 +243,16 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .night-curtain { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; pointer-events: none; background: #05080d; color: #c9d3e0; font-family: var(--serif); font-size: 64px; letter-spacing: 0.3em; text-transform: uppercase; animation: curtain 2.2s ease-in-out forwards; }
 @keyframes curtain { 0% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
 .confirm-title { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 64px; letter-spacing: 0.06em; }
+
+/* ---- first person (D-030): the 3D world under the HUD */
+.world { position: absolute; inset: 0; }
+.world canvas { display: block; width: 1920px; height: 1080px; }
+.crosshair { position: absolute; left: 957px; top: 537px; width: 6px; height: 6px; border-radius: 50%; background: #efe3c8aa; box-shadow: 0 0 0 1px #0008; pointer-events: none; z-index: 3; }
+.crosshair.on { left: 951px; top: 531px; width: 18px; height: 18px; background: none; border: 2px solid #f3c27a; }
+.look-label { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 14px; border-radius: 10px; background: #0b100cc8; pointer-events: none; z-index: 3; white-space: nowrap; }
+.look-label b { font-family: var(--serif); font-weight: 400; font-size: 24px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone); }
+.look-label span { font-size: 15px; color: #f3c27a; }
+.look-label.far span { color: var(--sage); }
+.move-hint { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); padding: 8px 18px; border-radius: 10px; background: #0b100cb8; color: var(--sage); font-size: 17px; pointer-events: none; z-index: 3; white-space: nowrap; }
+.you-btn { position: absolute; left: 180px; bottom: 88px; z-index: 5; padding: 10px 22px; border-radius: 10px; border: 1px solid var(--lichen); background: #101812e0; color: var(--bone); font-family: var(--serif); font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
+.you-btn:hover { border-color: #f3c27a; }
