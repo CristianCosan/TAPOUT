@@ -204,6 +204,7 @@ export class World {
 
   configure(input: WorldInput, events: WorldEvents): void {
     this.events = events;
+    this.syncLock(input);
     const prev = this.input;
     this.input = input;
     const key = `${input.area.id}-${input.winter}`;
@@ -471,17 +472,48 @@ export class World {
     this.updateHover(this.eye());
     const h = this.hovered;
     if (h && h.near) {
+      // The panel opening frees the mouse (syncLock) and closing it takes it back.
       this.events?.select(h.id);
-      if (this.locked) document.exitPointerLock();
       return;
     }
     if (!this.locked) {
       this.events?.clear();
-      void this.renderer.domElement.requestPointerLock?.()?.catch?.(() => undefined);
+      this.wantLook = true;
+      this.lock();
     }
   };
+  /**
+   * Once you have clicked to look around, the mouse keeps looking: it is freed while a panel,
+   * card or menu is open and taken back as soon as it closes. Esc frees it until you click again.
+   */
+  private wantLook = false;
+  private freedForUi = false;
+
+  private syncLock(input: WorldInput): void {
+    const busy = input.frozen || input.selected !== null;
+    if (busy && this.locked) {
+      this.freedForUi = true;
+      document.exitPointerLock();
+    } else if (!busy && this.wantLook && !this.locked) {
+      this.lock();
+    }
+  }
+
+  private lock(): void {
+    const canvas = this.renderer.domElement;
+    try {
+      void canvas.requestPointerLock?.()?.catch?.(() => undefined);
+    } catch {
+      // Without a recent click the browser may refuse; the next click on the world takes it.
+    }
+  }
+
   private onLockChange = () => {
+    const was = this.locked;
     this.locked = document.pointerLockElement === this.renderer.domElement;
+    if (this.locked) this.wantLook = true;
+    else if (was && !this.freedForUi) this.wantLook = false;
+    this.freedForUi = false;
     if (this.locked) this.mouse = null;
     this.events?.looking(this.locked);
   };

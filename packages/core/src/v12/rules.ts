@@ -23,6 +23,10 @@ export interface RuleSet {
   iceFishStat: boolean;
   /** §8.3: partner-tagged moments cannot hurt resolve or be the reason for a tap-out. */
   partnerRule: boolean;
+  /** Arriving at camp unloads your pack into camp stock: dropping it off cost nothing anyway. */
+  autoUnload: boolean;
+  /** Numbers in the text are whole: max energy reads 162, never 161.6166666. */
+  wholeNumbers: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -35,6 +39,8 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   poulticeOnce: false,
   iceFishStat: false,
   partnerRule: false,
+  autoUnload: false,
+  wholeNumbers: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

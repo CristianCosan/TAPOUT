@@ -479,7 +479,7 @@ export function finishNight(notes?){
     S.maxEnergy = Math.max(20, S.maxEnergy - debtAtDawn);
     notes.push(`🔋 Yesterday's borrowed energy (${roundDisplay(debtAtDawn)}) comes due - max energy trimmed to ${roundDisplay(S.maxEnergy)} today.`);
   }
-  if (S.maxEnergy !== prevMax) notes.push(`⚡ ${S.maxEnergy>prevMax?'A better stretch shows - max energy has risen to':'The toll of the weeks shows - max energy has slipped to'} ${S.maxEnergy}.`);
+  if (S.maxEnergy !== prevMax) notes.push(`⚡ ${S.maxEnergy>prevMax?'A better stretch shows - max energy has risen to':'The toll of the weeks shows - max energy has slipped to'} ${RULES.wholeNumbers ? roundDisplay(S.maxEnergy) : S.maxEnergy}.`);
   S.peakMax = Math.max(S.peakMax, S.maxEnergy);
   if (S.day % 2 === 0) S.forageDep = Math.max(0, S.forageDep - 1);
   S.huntPressure = Math.max(0, S.huntPressure - 2);

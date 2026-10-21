@@ -195,6 +195,18 @@ export function actDropOff(){
   S.carry.wood = 0; S.carry.rocks = 0; S.carry.moss = 0; S.carry.clay = 0;
   afterAction('dropoff');
 }
+// TAP / OUT (autoUnload): walking into camp empties the pack, with one line saying what came back.
+export function unloadOnArrival(){
+  const c = S.carry;
+  if (c.wood+c.rocks+c.moss+c.clay <= 0) return;
+  const parts = [[c.wood,'log','logs'],[c.rocks,'rock','rocks'],[c.moss,'bundle of moss','bundles of moss'],[c.clay,'lump of clay','lumps of clay']]
+    .filter(([n]) => n > 0).map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
+  const list = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length-1] : parts[0];
+  S.stock.wood += c.wood; S.stock.rocks += c.rocks; S.stock.moss += c.moss; S.stock.clay += c.clay;
+  c.wood = 0; c.rocks = 0; c.moss = 0; c.clay = 0;
+  S.acts.dropoff = (S.acts.dropoff||0) + 1;
+  log(`📦 You brought back ${list} and stack it with the camp stock.`, 'good');
+}
 export function actCampSnares(){
   if (S.campSnares || !S.hadFirstRaid || S.stock.wood<2) return;
   if (!spend(6,0.5,false,'h')) return;

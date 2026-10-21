@@ -1,13 +1,12 @@
 # Status
 
-**First person (D-030), build 0.0.3, waiting on Sir's playtest.** The screens are now small 3D
+**First person (D-030). Sir approved the camp look on 0.0.3; build 0.0.4 has his fixes (D-032).** The screens are now small 3D
 areas you walk around in first person: Camp, Shore and Woods, built from code shapes. Looking at a
 station lights it, clicking opens its v12 actions in the same panel as before. Day, dusk, night,
 fire light, rain and snow follow v12's clock and weather; ambient sound is made in code. The v12
 core, saves and Windows app are unchanged.
 
-**Next:** Sir plays 0.0.3 and says whether the camp look works. Meanwhile: polish that survives any
-change of look (feel, sound, HUD), then Shore and Woods detail once the look is approved.
+**Next:** the story and intro (waiting on Sir's pick), then Shore and Woods detail.
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

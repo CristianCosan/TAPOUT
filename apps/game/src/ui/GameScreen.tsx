@@ -92,7 +92,7 @@ function BodyRail({ view }: { view: View }) {
     <div className="rail-bar" key={key}>
       <div className="rail-bar-head">
         <span>{label}</span>
-        <b>{max === 100 ? roundDisplay(value) : `${roundDisplay(value)}/${max}`}</b>
+        <b>{max === 100 ? roundDisplay(value) : `${roundDisplay(value)}/${roundDisplay(max)}`}</b>
       </div>
       <div className="bar">
         <div className={`bar-fill ${key}${crit ? ' crit' : ''}`} style={{ width: `${Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100))}%` }} />
@@ -244,7 +244,14 @@ function ResultCard({ result }: { result: ActionResult }) {
     );
   });
   return (
-    <div className="result-card" key={result.id} onClick={() => session.dismissResult()} title="Click to put this away">
+    <div
+      className="result-card"
+      key={result.id}
+      onClick={() => session.dismissResult()}
+      // It fades by itself after a few seconds; hovering holds it.
+      onAnimationEnd={(e) => e.animationName === 'result-out' && session.dismissResult()}
+      title="Click to put this away"
+    >
       {result.minutes > 0 && <span className="result-time">{duration(result.minutes)}</span>}
       {result.lines.slice(-3).map((line, i) => (
         <div key={i} className={`ln ${line.cls}`}>
@@ -527,7 +534,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       return;
     }
     if (station && !station.exitTo && station.id !== 'you') setStandAt((at) => ({ ...at, [loc]: station.id }));
-    if (station?.exitTo) setSelected(null);
+    // Back to looking around once you have done something.
+    setSelected(null);
     session.click(offer.handler);
   };
 
