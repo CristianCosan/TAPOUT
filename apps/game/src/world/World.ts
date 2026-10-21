@@ -273,6 +273,7 @@ export class World {
     }
     this.areaRoot.add(this.trees(area, winter));
     this.areaRoot.add(this.rocks(area, winter));
+    this.areaRoot.add(this.undergrowth(area, winter));
   }
 
   /** Ground height: flat where you walk, rising into hills, dropping into the lake. */
@@ -394,6 +395,88 @@ export class World {
       m.castShadow = true;
       m.receiveShadow = true;
       g.add(m);
+    }
+    return g;
+  }
+
+  /** Grass, bushes, ferns, driftwood and a creek: the small things that make a place feel alive. */
+  private undergrowth(area: WorldArea, winter: boolean): THREE.Group {
+    const g = new THREE.Group();
+    const rnd = seeded(area.trees.seed + 500);
+    const nearStation = (x: number, z: number, pad: number) =>
+      Object.values(area.stations).some((st) => Math.hypot(x - st.x, z - st.z) < st.radius + pad);
+    const onLand = (z: number) => area.shoreZ === undefined || z > area.shoreZ + 1.5;
+    const ground = (x: number, z: number) => this.ground(area, x, z);
+    const scatter = (geo: THREE.BufferGeometry, color: number, count: number, inner: number, outer: number, size: [number, number], pad: number) => {
+      const m = new THREE.InstancedMesh(geo, mat(color), count);
+      const o = new THREE.Object3D();
+      const col = new THREE.Color();
+      let n = 0;
+      for (let tries = 0; n < count && tries < count * 8; tries++) {
+        const a = rnd() * Math.PI * 2;
+        const r = inner + Math.sqrt(rnd()) * (outer - inner);
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        if (!onLand(z) || nearStation(x, z, pad)) continue;
+        const k = size[0] + rnd() * (size[1] - size[0]);
+        o.position.set(x, ground(x, z) - 0.02, z);
+        o.rotation.set(0, rnd() * Math.PI * 2, 0);
+        o.scale.set(k, k * (0.7 + rnd() * 0.6), k);
+        o.updateMatrix();
+        m.setMatrixAt(n, o.matrix);
+        m.setColorAt(n, col.setHex(color).multiplyScalar(0.75 + rnd() * 0.45));
+        n++;
+      }
+      m.count = n;
+      m.castShadow = true;
+      m.receiveShadow = true;
+      g.add(m);
+    };
+
+    if (!winter) {
+      // Tufts of grass: three thin blades.
+      const tuft = mergeGeometries([0, 1, 2].map((i) => new THREE.ConeGeometry(0.045, 0.3, 3).translate(Math.cos(i * 2.1) * 0.06, 0.15, Math.sin(i * 2.1) * 0.06).rotateZ((i - 1) * 0.25)));
+      scatter(tuft, 0x8aa04c, area.id === 'woods' ? 500 : 900, 2.5, 42, [0.6, 1.3], 0.6);
+    }
+    // Low bushes, and ferns under the trees in the woods.
+    scatter(rough(new THREE.IcosahedronGeometry(0.6, 0), 0.25, 3).translate(0, 0.35, 0), winter ? 0x8a8f86 : 0x4f6e3a, 70, area.walkRadius - 2, 40, [0.6, 1.4], 1.2);
+    if (area.id === 'woods') {
+      const fern = mergeGeometries([0, 1, 2, 3, 4].map((i) => new THREE.ConeGeometry(0.12, 0.9, 3).rotateZ(1.0).translate(0.38, 0.22, 0).rotateY((i / 5) * Math.PI * 2)));
+      scatter(fern, winter ? 0x7d7a6a : 0x6a9a48, 220, 3, 30, [0.7, 1.3], 0.8);
+    }
+    if (area.shoreZ !== undefined) {
+      // Driftwood along the waterline.
+      const wood = mat(winter ? 0x9a948a : 0x9a8a70);
+      for (let i = 0; i < 9; i++) {
+        const x = -16 + rnd() * 32;
+        const z = area.shoreZ + 0.6 + rnd() * 1.6;
+        if (nearStation(x, z, 1.2)) continue;
+        const len = 1 + rnd() * 2.2;
+        const log = new THREE.Mesh(rough(new THREE.CylinderGeometry(0.08, 0.12, len, 6), 0.03, i), wood);
+        log.position.set(x, ground(x, z) + 0.08, z);
+        log.rotation.set(0, rnd() * Math.PI, Math.PI / 2);
+        log.castShadow = true;
+        g.add(log);
+      }
+    }
+    if (area.id === 'shore' && area.shoreZ !== undefined) {
+      // The creek that gives the Inlet Mouth its name, running down into the lake.
+      const inlet = area.stations.inlet;
+      if (inlet) {
+        const pts = [0, 1, 2, 3, 4, 5].map((i) => new THREE.Vector3(inlet.x - i * 1.4 + Math.sin(i * 1.3) * 1.2, 0, area.shoreZ! + 0.5 + i * 5));
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const ribbon = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 40, 0.8, 4, false),
+          new THREE.MeshStandardMaterial({ color: winter ? 0xc4d4dc : 0x2e5464, roughness: 0.1, metalness: 0.2 }),
+        );
+        ribbon.scale.set(1, 0.08, 1);
+        ribbon.receiveShadow = true;
+        // Follow the ground: lift each vertex onto the terrain.
+        const pos = ribbon.geometry.getAttribute('position') as THREE.BufferAttribute;
+        for (let i = 0; i < pos.count; i++) pos.setY(i, pos.getY(i) + ground(pos.getX(i), pos.getZ(i)) / 0.08 + 0.4);
+        ribbon.geometry.computeVertexNormals();
+        g.add(ribbon);
+      }
     }
     return g;
   }
