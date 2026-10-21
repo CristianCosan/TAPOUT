@@ -6,7 +6,9 @@ station lights it, clicking opens its v12 actions in the same panel as before. D
 fire light, rain and snow follow v12's clock and weather; ambient sound is made in code. The v12
 core, saves and Windows app are unchanged.
 
-**Next:** the story and intro (waiting on Sir's pick), then Shore and Woods detail.
+**Build 0.0.5 adds the intro (D-033)** and grass, bushes, ferns, driftwood and a creek.
+
+**Next:** Shore and Woods detail, then the things you find in camp from home (the photo, Dad's note).
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

@@ -228,6 +228,19 @@ export class World {
     this.renderer.domElement.remove();
   }
 
+  /** Things that are not stations, added by a scene of its own (the intro's plane). */
+  addExtra(o: THREE.Object3D): void {
+    this.scene.add(o);
+  }
+
+  /** Called every frame with the frame time and the time since the world began. */
+  onFrame: ((dt: number, t: number) => void) | null = null;
+
+  /** Where you stand, for scenes that place things around you. */
+  get standing(): THREE.Vector3 {
+    return this.pos.clone();
+  }
+
   /** Points you at a station from a step away. For tests and the robot player. */
   lookAt(id: string): boolean {
     const node = this.stations.get(id);
@@ -681,6 +694,7 @@ export class World {
       if (st && Math.hypot(this.pos.x - st.x, this.pos.z - st.z) > Math.max(st.reach ?? 0, st.radius + FIRST_PERSON.reach + 1.5)) this.events?.clear();
     }
 
+    this.onFrame?.(dt, this.time);
     this.updateHover(eye);
     this.updateSky(dt);
     this.updateFire();

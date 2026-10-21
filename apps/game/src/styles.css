@@ -258,3 +258,28 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .move-hint { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); padding: 8px 18px; border-radius: 10px; background: #0b100cb8; color: var(--sage); font-size: 17px; pointer-events: none; z-index: 3; white-space: nowrap; }
 .you-btn { position: absolute; left: 180px; bottom: 88px; z-index: 5; padding: 10px 22px; border-radius: 10px; border: 1px solid var(--lichen); background: #101812e0; color: var(--bone); font-family: var(--serif); font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
 .you-btn:hover { border-color: #f3c27a; }
+
+/* ---- the intro (D-033) */
+.intro { position: absolute; inset: 0; background: #07090b; }
+.intro-black { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #07090b; }
+.intro-black p { margin: 0; font-family: var(--serif); font-size: 40px; color: var(--bone); opacity: 0; animation: intro-in 1.2s ease-out forwards; }
+.intro-title h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 120px; letter-spacing: 0.35em; color: var(--bone); opacity: 0; animation: intro-in 1.6s ease-out forwards; }
+.intro-title p { font-size: 30px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ember); animation-delay: 1s; }
+@keyframes intro-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.intro-task { position: absolute; top: 28px; left: 50%; transform: translateX(-50%); width: 980px; padding: 14px 22px; border-radius: 14px; background: #0b100cd8; border: 1px solid #2a3a2c; z-index: 4; text-align: center; }
+.intro-task p { margin: 0 0 10px; font-size: 19px; color: var(--sage); }
+.intro-pack-row { display: flex; gap: 18px; align-items: center; justify-content: center; }
+.intro-pack-row b { font-size: 22px; color: var(--bone); }
+.intro-pack-row b.ok { color: #a9d39a; }
+.intro-hover { max-width: 620px; white-space: normal; text-align: center; }
+.intro-hover em { font-size: 14px; color: var(--dim); }
+.intro-note { max-width: 760px; padding: 28px 34px; border-radius: 14px; background: #f1ead8; color: #2a241c; box-shadow: 0 20px 60px #000c; cursor: pointer; }
+.intro-note h3 { margin: 0 0 12px; font-family: var(--serif); font-weight: 400; font-size: 28px; letter-spacing: 0.08em; }
+.intro-note p { margin: 0 0 14px; font-family: var(--serif); font-size: 24px; line-height: 1.5; }
+.intro-hint { font-size: 15px; opacity: 0.6; }
+.intro-subtitle { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); width: 1100px; padding: 18px 28px; border-radius: 14px; background: #0b100cd8; border: 1px solid #2a3a2c; z-index: 4; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+.intro-subtitle b { font-size: 17px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ember); }
+.intro-subtitle p { margin: 0; font-size: 26px; color: var(--bone); line-height: 1.4; }
+.intro-subtitle p.seen { font-family: var(--serif); font-style: italic; color: var(--sage); }
+.intro-subtitle .intro-hint { align-self: flex-end; color: var(--sage); }
+.intro-skip { position: absolute; right: 28px; bottom: 24px; z-index: 6; padding: 8px 18px; border-radius: 10px; border: 1px solid #2a3a2c; background: #0b100cc0; color: var(--sage); font-size: 16px; cursor: pointer; }
