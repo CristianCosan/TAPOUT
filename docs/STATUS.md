@@ -104,6 +104,9 @@ it is home, and nothing while it is set; and a line of yellow floats on the wate
 lines, ink trees over the land, a compass, dark-ink paths. Same places and buttons. A draw-call check found
 about 260 calls and 160k triangles per area, so no performance work is needed there.
 
+**Build 0.0.29** makes the journal the paper notebook from your pack, to match the map (D-050): ruled
+lines, a red margin, pencil-coloured ink, good and bad lines in green and red ink. Same pages and buttons.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

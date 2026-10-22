@@ -188,9 +188,24 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .context-act { text-align: left; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--lichen); background: var(--moss); color: var(--bone); cursor: pointer; display: flex; flex-direction: column; gap: 3px; }
 .context-act:not(:disabled):hover { border-color: var(--ember); background: var(--moss2); }
 .context-act:disabled { opacity: 0.45; cursor: default; }
-.journal-book { width: 900px; height: 820px; background: var(--moss); border: 1px solid var(--lichen); border-radius: 18px; padding: 24px 30px; display: flex; flex-direction: column; }
-.journal-page { flex: 1; overflow: hidden; }
-.journal-nav { display: flex; justify-content: space-between; align-items: center; color: var(--sage); }
+/* the journal is the paper notebook from your pack: ruled lines, a red margin, pencil ink */
+.journal-book { position: relative; width: 900px; height: 820px; border-radius: 6px 14px 14px 6px; padding: 24px 34px 22px 92px; display: flex; flex-direction: column; color: #3a2e22; box-shadow: 0 14px 50px #000c, inset 14px 0 18px -10px #0006;
+  background:
+    linear-gradient(90deg, transparent 70px, #b4523acc 70px, #b4523acc 72px, transparent 72px),
+    radial-gradient(ellipse at 50% 40%, transparent 55%, #6e5d4440 100%),
+    #e8dcbc; }
+.journal-book .context-head h3 { font-family: var(--serif); font-size: 30px; color: #3a2e22; }
+.journal-book .close { color: #6e5d44; }
+.journal-page { flex: 1; overflow: hidden; margin-top: 8px; background: repeating-linear-gradient(180deg, transparent 0 31px, #7f9a9666 31px 32px); }
+.journal-book .ln { padding: 0; border: none; font-size: 18px; line-height: 32px; color: #3a2e22; }
+.journal-book .ln .t { display: inline; margin-right: 12px; font-size: 14px; color: #8a7756; }
+.journal-book .ln.good { color: #3f5a24; }
+.journal-book .ln.bad { color: #8e2c1c; }
+.journal-book .ln.event { color: #7a4f12; font-style: italic; }
+.journal-book .ln.sys { color: #5b5040; }
+.journal-nav { display: flex; justify-content: space-between; align-items: center; color: #6e5d44; padding-top: 12px; }
+.journal-book .hud-btn { background: transparent; border-color: #a8956e; color: #3a2e22; }
+.journal-book .hud-btn:disabled { opacity: 0.35; }
 
 /* the result card: what the last action did */
 .result-card { position: absolute; z-index: 5; left: 610px; top: 96px; width: 700px; background: #101812ee; border: 1px solid var(--lichen); border-radius: 14px; padding: 14px 18px; box-shadow: 0 10px 30px #0009; display: flex; flex-direction: column; gap: 6px; cursor: pointer; animation: result-in 0.18s ease-out, result-out 0.8s ease-in 6s forwards; font-size: 19px; }

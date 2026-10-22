@@ -1,6 +1,6 @@
 {
   "name": "@tapout/desktop",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "private": true,
   "description": "TAP / OUT desktop shell",
   "author": "TAP / OUT",
