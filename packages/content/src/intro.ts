@@ -51,6 +51,25 @@ export const INTRO_KITCHEN = {
   } satisfies Record<string, IntroNote>,
 };
 
+/**
+ * What you brought from home, in the lid of the pack. Looking costs no time and changes
+ * nothing: they are there to be looked at, never a mechanic (CLAUDE.md, partner rule).
+ */
+export const KEEPSAKES = {
+  photo: {
+    title: 'The photo of Mara',
+    text: 'The one from the fridge. The corners have gone soft already. She is laughing at something off to the side, and you still cannot remember what it was.',
+  },
+  axeNote: {
+    title: 'Dad\'s tag',
+    text: 'You cut it off the axe handle so it would not snag, then could not throw it away. KEEP IT SHARP. DON\'T BE A HERO. His capitals lean to the right, like he is walking into wind.',
+  },
+  book: {
+    title: 'Mum\'s bird book',
+    text: 'It came the morning you left, with a library card for a bookmark. A pencil tick next to the gray jay. "Bold and curious. Will take food from the hand."',
+  },
+} satisfies Record<string, IntroNote>;
+
 export interface DropoffLine {
   /** Who is speaking; empty for what you see. */
   who: string;

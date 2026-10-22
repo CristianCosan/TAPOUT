@@ -472,6 +472,81 @@ export class World {
         g.add(log);
       }
     }
+    if (area.shoreZ !== undefined) {
+      // Pebbles along the waterline.
+      const pebble = rough(new THREE.DodecahedronGeometry(0.1, 0), 0.04, 9).scale(1, 0.55, 1);
+      const m = new THREE.InstancedMesh(pebble, mat(winter ? 0xb8bec2 : 0x86827a), 260);
+      const o = new THREE.Object3D();
+      const col = new THREE.Color();
+      for (let i = 0; i < 260; i++) {
+        const x = -30 + rnd() * 60;
+        const z = area.shoreZ + 0.2 + rnd() * rnd() * 3.2;
+        o.position.set(x, ground(x, z) + 0.02, z);
+        o.rotation.set(0, rnd() * 6, 0);
+        o.scale.setScalar(0.6 + rnd() * 1.8);
+        o.updateMatrix();
+        m.setMatrixAt(i, o.matrix);
+        m.setColorAt(i, col.setHex(0x86827a).multiplyScalar(0.7 + rnd() * 0.5));
+      }
+      m.receiveShadow = true;
+      g.add(m);
+    }
+    if (area.id === 'shore' && area.shoreZ !== undefined && !winter) {
+      // Reeds standing in the shallows either side of the creek mouth.
+      const inlet = area.stations.inlet;
+      if (inlet) {
+        const reed = new THREE.CylinderGeometry(0.012, 0.02, 1.3, 3).translate(0, 0.45, 0);
+        const m = new THREE.InstancedMesh(reed, mat(0x8a9a52), 180);
+        const o = new THREE.Object3D();
+        for (let i = 0; i < 180; i++) {
+          const side = i % 2 ? 1 : -1;
+          const x = inlet.x + side * (1.8 + rnd() * 3.5);
+          const z = area.shoreZ - 0.6 + rnd() * 1.4;
+          o.position.set(x, -0.3, z);
+          o.rotation.set((rnd() - 0.5) * 0.3, 0, (rnd() - 0.5) * 0.3);
+          o.scale.set(1, 0.7 + rnd() * 0.6, 1);
+          o.updateMatrix();
+          m.setMatrixAt(i, o.matrix);
+        }
+        m.castShadow = true;
+        g.add(m);
+      }
+    }
+    if (area.id === 'woods') {
+      // Old stumps, fallen trunks and moss on the forest floor.
+      const bark = mat(winter ? 0x6a5e52 : 0x5a4634);
+      for (let i = 0; i < 14; i++) {
+        const a = rnd() * Math.PI * 2;
+        const r = 4 + rnd() * 26;
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        if (nearStation(x, z, 1.5)) continue;
+        const h = 0.25 + rnd() * 0.5;
+        const stump = new THREE.Mesh(rough(new THREE.CylinderGeometry(0.22 + rnd() * 0.15, 0.32, h, 7), 0.05, i), bark);
+        stump.position.set(x, ground(x, z) + h / 2, z);
+        stump.castShadow = true;
+        stump.receiveShadow = true;
+        g.add(stump);
+      }
+      for (let i = 0; i < 9; i++) {
+        const a = rnd() * Math.PI * 2;
+        const r = 8 + rnd() * 24;
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        if (nearStation(x, z, 3)) continue;
+        const len = 3 + rnd() * 5;
+        const log = new THREE.Mesh(rough(new THREE.CylinderGeometry(0.16, 0.24, len, 7), 0.05, i + 30), bark);
+        log.position.set(x, ground(x, z) + 0.18, z);
+        log.rotation.set(0, rnd() * Math.PI, Math.PI / 2);
+        log.castShadow = true;
+        log.receiveShadow = true;
+        g.add(log);
+      }
+      if (!winter) {
+        const moss = new THREE.CircleGeometry(1, 7).rotateX(-Math.PI / 2).translate(0, 0.05, 0);
+        scatter(moss, 0x4e6e30, 90, 2, 30, [0.5, 1.6], 1.0);
+      }
+    }
     if (area.id === 'shore' && area.shoreZ !== undefined) {
       // The creek that gives the Inlet Mouth its name, running down into the lake.
       const inlet = area.stations.inlet;

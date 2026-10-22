@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { GAME, dawnHour, duskHour, roundDisplay } from '@tapout/core';
-import { HUNT_TRAIL_LABELS, LOCATIONS, STAGE, WORLD, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { HUNT_TRAIL_LABELS, KEEPSAKES, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -166,7 +166,7 @@ function BottomBar({ view, onJournal }: { view: View; onJournal: () => void }) {
 
 // ---- the context panel, next to the station you clicked
 
-function ContextPanel({ station, view, onClose, onAct, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; beside?: boolean }) {
+function ContextPanel({ station, view, onClose, onAct, onKeepsake, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onKeepsake: (note: IntroNote) => void; beside?: boolean }) {
   const offers = offersFor(station, view);
   const stores = STATION_STORES[station.id] ?? [];
   const xs = station.id === 'you' ? [1000] : station.hotspot.map((p) => p.x);
@@ -198,8 +198,17 @@ function ContextPanel({ station, view, onClose, onAct, beside }: { station: Stat
           ))}
         </div>
       )}
+      {station.id === 'pack' && (
+        <div className="keepsakes">
+          {Object.values(KEEPSAKES).map((note) => (
+            <button key={note.title} className="hud-btn" onClick={() => onKeepsake(note)}>
+              {note.title}
+            </button>
+          ))}
+        </div>
+      )}
       {offers.length === 0 ? (
-        <p className="context-empty">Nothing to do here right now.</p>
+        station.id !== 'pack' && <p className="context-empty">Nothing to do here right now.</p>
       ) : (
         offers.map((offer) => (
           <button key={offer.key} className="context-act" disabled={!offer.enabled} onClick={() => onAct(offer)}>
@@ -416,6 +425,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [journal, setJournal] = useState(false);
   const [map, setMap] = useState(false);
   const [night, setNight] = useState<Offer | null>(null);
+  const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
   // A new day starts behind a curtain: the night passes, then the dawn report.
   const [curtain, setCurtain] = useState<number | null>(null);
   const lastDay = useRef<number>(S.day);
@@ -434,6 +444,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
         setLabels(true);
       } else if (e.key === 'Escape') {
         setSelected(null);
+        setKeepsake(null);
         setJournal(false);
         setMap(false);
       } else if (e.key === 'Tab') {
@@ -501,7 +512,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     };
     // v12 mutates its state in place; the view version marks a change.
   }, [S, view.version]);
-  const frozen = !!(view.modal || journal || map || night || curtain !== null);
+  const frozen = !!(view.modal || journal || map || night || keepsake || curtain !== null);
   const worldInput: WorldInput = useMemo(
     () => ({
       area: WORLD[loc],
@@ -554,7 +565,19 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <button className="you-btn" onClick={() => setSelected(selected === 'you' ? null : 'you')} title="Things only you need (Tab)">
             You
           </button>
-          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} beside />}
+          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} onKeepsake={(note) => {
+            setSelected(null);
+            setKeepsake(note);
+          }} beside />}
+          {keepsake && (
+            <div className="overlay" onClick={() => setKeepsake(null)}>
+              <div className="intro-note">
+                <h3>{keepsake.title}</h3>
+                <p>{keepsake.text}</p>
+                <span className="intro-hint">Click to put it away</span>
+              </div>
+            </div>
+          )}
           {view.result && !view.modal && <ResultCard result={view.result} />}
           {night && (
             <NightPreview

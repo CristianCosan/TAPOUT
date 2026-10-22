@@ -283,3 +283,4 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .intro-subtitle p.seen { font-family: var(--serif); font-style: italic; color: var(--sage); }
 .intro-subtitle .intro-hint { align-self: flex-end; color: var(--sage); }
 .intro-skip { position: absolute; right: 28px; bottom: 24px; z-index: 6; padding: 8px 18px; border-radius: 10px; border: 1px solid #2a3a2c; background: #0b100cc0; color: var(--sage); font-size: 16px; cursor: pointer; }
+.keepsakes { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 6px; }
