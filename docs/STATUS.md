@@ -22,7 +22,14 @@ for first frost, first snow, the Big Storm, the final two, a kill, awe, a predat
 ending, a low drone while resolve is cracking, owls and far wolves at night, birds going silent on v12's
 `birdsSilent`, footsteps that crunch in winter, ambience ducked under cards and muffled while you sleep.
 
-**Next:** more life and detail as Sir plays.
+**Build 0.0.9 (D-037)** adds the parents / no-contact thread (plan §8.4, rule flag `homeThread`): after several
+very hard nights in a row, thoughts of home surface one stage at a time (your mum's birthday, the form you
+signed, your dad's age), a "Thoughts of home" condition wears a little at resolve from stage 2, talking to the
+camera or a quiet sit eases it, and stage 4 is the Waiver card (accept it, say it to the camera, pick up the
+phone, or not now). Measured with `npm run home:rarity`: in 200 long survivor runs stage 1 34.5%, stage 3 5.5%,
+the card 2%, a thread-caused forced tap-out 0.5%; random-play runs almost never. Parity unchanged.
+
+**Next:** the rest of M18 (letters home, the call home in the endings), then feel and polish.
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

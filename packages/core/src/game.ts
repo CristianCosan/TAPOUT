@@ -33,11 +33,14 @@ import * as tuning from './v12/tuning.ts';
 import * as woods from './v12/woods.ts';
 import * as worry from './v12/worry.ts';
 import * as panel from './v12/panel.ts';
+import * as home from './v12/home.ts';
+
+export type { HomeThread } from './v12/home.ts';
 
 const MODULES = [
   breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, helpers,
   interior, medical, modifiers, night, person, recorder, resolve, rules, setup, shore, tags, threads,
-  travel, tuning, woods, worry, panel,
+  travel, tuning, woods, worry, panel, home,
 ];
 
 /** Every function v12 defines, by its v12 name. */
@@ -66,6 +69,8 @@ export interface RunCast {
   prizeLabel: string;
   /** v12 rival name -> the name the radio uses. */
   rivals: Readonly<Record<string, string>>;
+  /** The parents / no-contact thread's words and numbers (§8.4). */
+  home?: home.HomeThread;
 }
 
 export interface Run {
@@ -93,7 +98,7 @@ export function startRun(options: RunOptions): Run {
     new Set(options.kit),
   );
   if (options.cast && RULES.content) {
-    S.cast = { partner: options.cast.partner, prizeLabel: options.cast.prizeLabel };
+    S.cast = { partner: options.cast.partner, prizeLabel: options.cast.prizeLabel, ...(options.cast.home ? { home: options.cast.home } : {}) };
     S.tapNames = S.tapNames.map((name: string) => options.cast!.rivals[name] ?? name);
   }
   return liveRun(rng, RULES);

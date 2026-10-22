@@ -27,6 +27,8 @@ export interface RuleSet {
   autoUnload: boolean;
   /** Numbers in the text are whole: max energy reads 162, never 161.6166666. */
   wholeNumbers: boolean;
+  /** §8.4: the parents / no-contact thread and its Waiver card. */
+  homeThread: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -41,6 +43,7 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   partnerRule: false,
   autoUnload: false,
   wholeNumbers: false,
+  homeThread: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

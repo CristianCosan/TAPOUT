@@ -5,6 +5,7 @@
 import { rand } from './runtime.ts';
 import { berryCount, cookedMealSpoiled, discardSpoiledBerries, discardSpoiledMeat, meatCount, oldestBerriesSpoiled, oldestMeatSpoiled, spoilageSting, takeBerries, takeMeat } from './food.ts';
 import { clamp, nowAbs, pick } from './helpers.ts';
+import { homeConfess, homeSit } from './home.ts';
 import { hasTrait } from './interior.ts';
 import { applyPoulticeDose, triggerMedicalArc } from './medical.ts';
 import { takeSmoked } from './person.ts';
@@ -462,7 +463,8 @@ export function actConfess(){
     `Doing this for ${whoLabel('anyone, really')}, when it comes down to it.`,
     `Some days ${FEAR_LABEL[S.backstory.fear]||'the fear'} feels closer than others. Today it was close.`,
   ];
-  const text = `${pick(openers)} ${pick(stateLines)} ${pick(closers)}`;
+  let text = `${pick(openers)} ${pick(stateLines)} ${pick(closers)}`;
+  if (RULES.homeThread){ const home = homeConfess(); if (home) text += ` ${home}`; }
   S.confessionals.push({day:S.day, text});
   const dm = 3 + Math.floor(rand()*4);
   S.morale = clamp(S.morale + dm); S.stress = clamp(S.stress - 5);
@@ -576,6 +578,7 @@ export function actSitWatch(){
   } else {
     const gain = hasTrait('restless') ? 0 : 1;
     S.morale = clamp(S.morale + gain);
+    if (RULES.homeThread) homeSit();
     msg = pick(SIT_WATCH_POOL) + (gain ? ' +1 morale' : say(' (not really his thing)', ' (not really your thing)'));
     if (rand() < 0.15){
       if (S.loc === 'shore' && S.shoreSpots.length){

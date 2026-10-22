@@ -15,6 +15,7 @@ import { clamp, hh, nowAbs, pick, roundDisplay } from './helpers.ts';
 import { hasTrait, pickDailyMonologue, pickDawnLine, pickDream } from './interior.ts';
 import { maybeEnvironmentalArc, medicalArcDailyTick } from './medical.ts';
 import { pruneExpiredModifiers } from './modifiers.ts';
+import { homeCardTick, homeThreadTick } from './home.ts';
 import { crowNamingTick, jayDailyTick, maybeCallbackLine, maybeWriteLetter, smokedCount, takeSmoked } from './person.ts';
 import { recordDailySnapshot } from './recorder.ts';
 import { checkBreakingPoint, checkPromise, maybeGeneratePromise, resolveDelta } from './resolve.ts';
@@ -717,6 +718,7 @@ export function finishNight(notes?){
 
   directorTick(notes);
   checkThreads(notes);
+  if (RULES.homeThread) homeThreadTick(notes);
   checkAnkleSalvage(notes);
   if (S.over) return;
 
@@ -734,6 +736,7 @@ export function finishNight(notes?){
   morningEvent(notes);
   maybeResightLostAnimal(notes);
   cardSchedulerTick(notes);
+  if (RULES.homeThread) homeCardTick();
   breakdownDailyTick(notes);
 
   const dawnLine = pickDawnLine();

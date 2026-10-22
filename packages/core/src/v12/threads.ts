@@ -10,6 +10,7 @@ import { clamp, duskHour } from './helpers.ts';
 import { pushModifier, removeModifier } from './modifiers.ts';
 import { resolveDelta } from './resolve.ts';
 import { curfewCapForLoc, log, sensitivityMul } from './setup.ts';
+import { homeTapCause } from './home.ts';
 import { RULES } from './rules.ts';
 import { S } from './state.ts';
 import { TUNING, WEATHER } from './tuning.ts';
@@ -226,10 +227,12 @@ export function afterAction(act?){
 
 // TAP / OUT (plan §8.4): a forced tap-out names what actually broke you, never who is waiting.
 export function forcedTapCause(){
+  const home = homeTapCause();
+  if (home && S.home.forced) return home;
   if (S.injury || S.medicalArc) return 'the injury, and how many more days you would have to drag it through';
   const fear = S.predatorFixation || S.conditions.bearDread.active || S.conditions.raiderSiege.active;
   if (S.warmth < 30 || S.conditions.coldSnap.active || S.soakedThrough) return 'the cold, and another night of it';
   if (S.hunger < 30 || S.hungerStreakDays > 2) return 'how long it has been since a full meal';
   if (fear) return 'whatever has been circling camp in the dark';
-  return 'how much is left of this, and how little of you';
+  return home ?? 'how much is left of this, and how little of you';
 }
