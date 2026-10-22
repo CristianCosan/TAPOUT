@@ -34,13 +34,14 @@ import * as woods from './v12/woods.ts';
 import * as worry from './v12/worry.ts';
 import * as panel from './v12/panel.ts';
 import * as home from './v12/home.ts';
+import * as letters from './v12/letters.ts';
 
 export type { HomeThread } from './v12/home.ts';
 
 const MODULES = [
   breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, helpers,
   interior, medical, modifiers, night, person, recorder, resolve, rules, setup, shore, tags, threads,
-  travel, tuning, woods, worry, panel, home,
+  travel, tuning, woods, worry, panel, home, letters,
 ];
 
 /** Every function v12 defines, by its v12 name. */
@@ -157,6 +158,7 @@ export function restoreRun(snapshot: RunSnapshot): Run {
 }
 
 export { actionPanel, hudRecord, BUTTONS, type PanelEntry, type HudElement } from './v12/panel.ts';
+export { LETTER_BUTTONS } from './v12/letters.ts';
 export { setPresenter, type Presenter } from './v12/ui.ts';
 export { TAPOUT_RULES, V12_RULES, type RuleSet } from './v12/rules.ts';
 export { rationsLeft } from './v12/camp.ts';

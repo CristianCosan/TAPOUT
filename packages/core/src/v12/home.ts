@@ -46,10 +46,33 @@ export interface HomeLines {
   forcedTap: string;
 }
 
+/** Letters you write yourself (rule letters). */
+export interface HomeLetters {
+  toPartner: string;
+  toParents: string;
+  detail: string;
+  parentsRelief: number;
+  once: string;
+  today: string;
+  heading: (to: string) => string;
+  partner: { hungry: readonly string[]; cold: readonly string[]; low: readonly string[]; good: readonly string[]; plain: readonly string[] };
+  parents: { plain: string; worried: string };
+}
+
+/** The call home at the end of a run (rule letters). */
+export interface CallHome {
+  title: string;
+  partner: { tap: string; med: string; dead: string };
+  winParents: string;
+  parentsAfter: string;
+}
+
 /** The thread's words and numbers (content's HOME_THREAD). */
 export interface HomeThread {
   tuning: HomeTuning;
   lines: HomeLines;
+  letters?: HomeLetters;
+  callHome?: CallHome;
 }
 
 export interface HomeState {

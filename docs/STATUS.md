@@ -29,7 +29,13 @@ camera or a quiet sit eases it, and stage 4 is the Waiver card (accept it, say i
 phone, or not now). Measured with `npm run home:rarity`: in 200 long survivor runs stage 1 34.5%, stage 3 5.5%,
 the card 2%, a thread-caused forced tap-out 0.5%; random-play runs almost never. Parity unchanged.
 
-**Next:** the rest of M18 (letters home, the call home in the endings), then feel and polish.
+**Build 0.0.10 (D-038)** finishes the M18 narrative pieces (rule flag `letters`): at your pack you can write a
+letter you will not send, to Mara (once a day, +3 morale, a little resolve, never a cost) or to Mum and Dad
+(once per run; it eases thoughts of home). Every ending except a violent death now passes through the call
+home: Mara picks up after a tap-out, a medical pull or the hospital; your parents too if you wrote to them or
+the thread reached stage 2; after a win you ring your dad from the boat. Your letters appear in the epilogue.
+
+**Next:** M20 feel and polish (teaching tooltips, accessibility options, credits screen).
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUTTONS } from '@tapout/core';
+import { BUTTONS, LETTER_BUTTONS } from '@tapout/core';
 import { LOCATIONS, SAFE, WORLD, type LocationId } from './index.ts';
 
 const ids = Object.keys(LOCATIONS) as LocationId[];
@@ -17,7 +17,7 @@ describe('location layouts', () => {
     });
 
     it(`${id}: actions belong here`, () => {
-      const here = new Set(BUTTONS.filter((b) => b.loc === id || b.loc === 'all').map((b) => b.id));
+      const here = new Set([...BUTTONS, ...LETTER_BUTTONS].filter((b) => b.loc === id || b.loc === 'all').map((b) => b.id));
       const stray = layout.stations.flatMap((s) => s.actions).filter((a) => !here.has(a));
       expect(stray).toEqual([]);
     });

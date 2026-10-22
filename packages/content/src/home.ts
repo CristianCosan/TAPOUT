@@ -6,7 +6,7 @@
 
 import type { HomeThread } from '@tapout/core';
 
-export const HOME_THREAD: HomeThread = {
+export const HOME_THREAD: Required<HomeThread> = {
   tuning: {
     gateScore: 4,
     gateNights: 3,
@@ -69,4 +69,52 @@ export const HOME_THREAD: HomeThread = {
     },
     forcedTap: 'your parents, and the form you signed so quickly, and the call you made sure nobody could make',
   },
+  letters: {
+    toPartner: '✉️ Write to Mara',
+    toParents: '✉️ Write to Mum and Dad',
+    detail: 'A letter you will not send. It helps to write it anyway.',
+    /** Writing to your parents eases thoughts of home by this much (once per run). */
+    parentsRelief: 25,
+    once: 'written',
+    today: 'you wrote today',
+    heading: (to: string) => `✉️ You write to ${to}, on the back of a page from the notebook. You will not send it.`,
+    partner: {
+      hungry: [
+        'Dear Mara. I think about your kitchen more than I should. The good pan, the window over the sink. Save me a plate of anything. Anything at all.',
+        'Mara. I am thinner than you have ever seen me. You would laugh, then you would feed me. Both sound good from here.',
+      ],
+      cold: [
+        'Mara. It is cold enough now that I sleep in everything I own. I keep thinking of your feet on my legs in January and how I used to complain. I take it back.',
+        'Dear Mara. The fire went out twice last night. I lay there thinking about the radiator under our window. I am fine. I just wanted to tell someone about the radiator.',
+      ],
+      low: [
+        'Mara. Some days are harder than I said they would be. You told me to go and find out. I am finding out. I am still here.',
+        'Dear Mara. Not a good day. I am writing so that the day has one good thing in it, which is this.',
+      ],
+      good: [
+        'Mara. There was a moose in the narrows this morning and nobody to tell. So I am telling you. You would have loved it.',
+        'Dear Mara. A good day, for once. I wanted you to have a letter from one of those too.',
+      ],
+      plain: [
+        'Dear Mara. Nothing big today. Wood, water, the usual. I miss the small things most, like arguing over the radio in the car.',
+        'Mara. I talk to you in my head while I work. You are better company than the camera. Do not tell the camera.',
+      ],
+    },
+    parents: {
+      plain: 'Mum, Dad. I am fine. It is beautiful here and very cold. Dad, the axe is sharp. Mum, I saw the gray jay from your book. I will ring you the day I am out.',
+      worried:
+        'Mum, Dad. I signed a form before I came that said nobody could reach me, even if something happened at home. I did it so you would not worry about me worrying. I think about you every day. Dad, stay off the ladder. I will ring the day I am out.',
+    },
+  },
+  callHome: {
+    title: 'The call home',
+    partner: {
+      tap: 'The crew hands you a phone in the boat. Mara picks up on the second ring. "Are you okay?" You say yes, and then you say it properly. She is quiet for a moment. "Come home," she says. "I have been saving you a plate."',
+      med: 'They let you call from the clinic. Mara picks up before it rings. "They told me," she says. "I don\'t care. I don\'t care at all. You\'re coming home."',
+      dead: 'When you can hold a phone again, the nurse dials it for you. Mara is crying and laughing at once. "You idiot," she says. "You absolute idiot. Stay there. I am getting in the car."',
+    },
+    winParents: 'From the boat you ask to use the sat phone one last time. The landline rings in your parents\' hallway, the ring you could pick out of a hundred. Your dad answers. "It\'s me," you say. "I won." There is a long pause. "Well," comes the answer, and the voice on the line does something it has never done. "Well. Come home, then."',
+    parentsAfter: 'Then you ring the landline. Your mum picks up on the first ring, as if she has been sitting next to it for a month. Maybe she has. "Hello, love," she says. "Your father is right here."',
+  },
 };
+

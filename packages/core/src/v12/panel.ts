@@ -2,6 +2,7 @@
 // moved verbatim apart from: exports, imports, Math.random -> rand(), and presentation
 // calls routed through ./ui.ts. Parity with the original is enforced by tests.
 
+import { letterPanel } from './letters.ts';
 import { RULES } from './rules.ts';
 import { fireCap } from './camp.ts';
 import { ambientTempC, eCost, eTime, shiveringActive } from './cost.ts';
@@ -535,7 +536,7 @@ export function actionPanel(): PanelEntry[] {
         enabled: !el.disabled && !S.over,
         detail: recording.get(b.id + '-sub')?.textContent ?? '',
       };
-    });
+    }).concat(letterPanel());
   } finally {
     recording = null;
   }

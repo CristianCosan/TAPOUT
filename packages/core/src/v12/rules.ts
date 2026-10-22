@@ -29,6 +29,8 @@ export interface RuleSet {
   wholeNumbers: boolean;
   /** §8.4: the parents / no-contact thread and its Waiver card. */
   homeThread: boolean;
+  /** M18: letters you write yourself, and the call home at the end of a run. */
+  letters: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -44,6 +46,7 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   autoUnload: false,
   wholeNumbers: false,
   homeThread: false,
+  letters: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

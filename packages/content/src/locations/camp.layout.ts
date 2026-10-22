@@ -27,7 +27,7 @@ export const CAMP: LocationLayout = {
     station('water', 'Pot and water', 'Raw water in, clean water out.', 830, 960, 130, 100, ['a-jug'], { special: ['drink'] }),
     station('food', 'Meat hook', 'Fresh meat and berries, and how long they have.', 1380, 975, 150, 170, [], { special: ['eatBerries', 'eatRation'] }),
     station('stock', 'Materials', 'Rocks, moss, clay and tinder.', 1590, 960, 210, 110, []),
-    station('pack', 'Your pack', 'Whatever you carried back. One kind of load at a time.', 450, 960, 150, 170, ['a-dropoff']),
+    station('pack', 'Your pack', 'Whatever you carried back. One kind of load at a time.', 450, 960, 150, 170, ['a-dropoff', 'a-letterPartner', 'a-letterParents']),
     { ...station('killsite', 'Kill site', 'What is left of the animal.', 1110, 990, 260, 90, KILL_ACTIONS), hotspot: patch(1110, 955, 280, 90), when: 'killSite' },
     station('you', 'You', 'Rest, sit and watch, or anything that needs only you.', 1000, 1000, 1, 1, [...PERSONAL_ACTIONS, ...HUNT_ACTIONS]),
     { ...station('toShore', 'Down to the shore', 'The path to the water.', 230, 560, 120, 160, [], { exitTo: 'shore' }), hotspot: box(230, 580, 140, 200) },
