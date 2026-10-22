@@ -144,6 +144,12 @@ export class Ambience {
         [0, 0.55, 0.75, 1.3, 1.85].forEach((t, i) => tone(out, { at: t, len: i === 1 ? 0.14 : 0.32, freqs: [[0, f * 1.05], [0.3, f]], peak: 0.1, attack: 0.06 }));
         break;
       }
+      case 'deer': {
+        // The alarm snort: one or two sharp blows through the nose.
+        burst(out, { len: 0.22, peak: 0.35, freq: 700, to: 380, q: 0.9, attack: 0.01 });
+        if (r() < 0.6) burst(out, { at: 0.45, len: 0.18, peak: 0.25, freq: 650, to: 360, q: 0.9, attack: 0.01 });
+        break;
+      }
       case 'wolf': {
         // Two or three voices howling far off, a little apart.
         const voices = 2 + Math.floor(r() * 2);

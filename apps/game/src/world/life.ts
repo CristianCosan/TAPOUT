@@ -1,12 +1,13 @@
 // Birds that are only scenery: ravens turning high overhead, geese going south in autumn, a pair
-// of loons on open water, chickadees hopping about that scatter when you walk up. None of them
+// of loons on open water, chickadees hopping about that scatter when you walk up; and in the
+// woods a deer at the tree line that snorts and bounds off if you come too close. None of them
 // is a station and none touches the run; they come and go with the light and the weather.
 
 import * as THREE from 'three';
 import type { WorldArea } from '@tapout/content';
 import { mat } from './kit.ts';
 
-export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf';
+export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer';
 
 export interface Call {
   kind: CallKind;
@@ -64,6 +65,60 @@ function face(g: THREE.Object3D, vx: number, vz: number): void {
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
+/** A white-tailed deer facing -z: legs, neck and tail named so they can move. */
+function deer(winter: boolean): THREE.Group {
+  const coat = winter ? 0x6b5b4b : 0x8a5f3a;
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.9, 3, 8), mat(coat));
+  body.rotation.x = Math.PI / 2;
+  body.position.y = 1.0;
+  g.add(body);
+  const neck = new THREE.Group();
+  neck.name = 'neck';
+  neck.position.set(0, 1.15, -0.55);
+  const n = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.15, 0.6, 6), mat(coat));
+  n.position.set(0, 0.25, -0.1);
+  n.rotation.x = -0.45;
+  neck.add(n);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.42, 6), mat(coat));
+  head.rotation.x = -Math.PI / 2 - 0.3;
+  head.position.set(0, 0.55, -0.32);
+  neck.add(head);
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 4), mat(coat));
+    ear.position.set(side * 0.09, 0.66, -0.18);
+    ear.rotation.z = side * -0.6;
+    neck.add(ear);
+  }
+  g.add(neck);
+  const legs: Array<[number, number, string]> = [[-0.17, -0.45, 'fl'], [0.17, -0.45, 'fr'], [-0.17, 0.45, 'bl'], [0.17, 0.45, 'br']];
+  for (const [x, z, name] of legs) {
+    const geo = new THREE.CylinderGeometry(0.045, 0.035, 0.85, 5);
+    geo.translate(0, -0.42, 0);
+    const leg = new THREE.Mesh(geo, mat(coat));
+    leg.position.set(x, 0.88, z);
+    leg.name = name;
+    g.add(leg);
+  }
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.24, 0.05), mat(0xeeeae0));
+  tail.position.set(0, 1.12, 0.72);
+  tail.rotation.x = 0.5;
+  tail.name = 'tail';
+  g.add(tail);
+  return g;
+}
+
+interface Deer {
+  g: THREE.Group;
+  x: number;
+  z: number;
+  heading: number;
+  state: 'graze' | 'alert' | 'bolt' | 'gone';
+  timer: number;
+  /** Seconds into its bounding. */
+  run: number;
+}
+
 interface Soarer {
   g: THREE.Group;
   cx: number;
@@ -106,6 +161,7 @@ export class Wildlife {
   private geeseWait = rand(20, 60);
   private nextCall = rand(4, 10);
   private calls: Call[] = [];
+  private deer: Deer | null = null;
 
   constructor(
     private readonly area: WorldArea,
@@ -147,6 +203,13 @@ export class Wildlife {
       }
     }
 
+    if (area.id === 'woods') {
+      const g = deer(winter);
+      g.visible = false;
+      this.deer = { g, x: 0, z: 0, heading: 0, state: 'gone', timer: rand(15, 40), run: 0 };
+      this.root.add(g);
+    }
+
     const hoppers = area.id === 'shore' ? 3 : 5;
     for (let i = 0; i < hoppers; i++) {
       const g = bird(0x9a948a, 0x101010, 0.16, 0x6e6a64);
@@ -164,7 +227,13 @@ export class Wildlife {
       ...this.geese.children.map((g) => ({ kind: 'goose', at: g.getWorldPosition(new THREE.Vector3()), visible: this.geese.visible })),
       ...this.loons.map((l) => ({ kind: 'loon', at: l.g.position.clone(), visible: l.g.visible })),
       ...this.hoppers.map((h) => ({ kind: 'chickadee', at: h.g.position.clone(), visible: h.g.visible })),
+      ...(this.deer ? [{ kind: 'deer', at: this.deer.g.position.clone(), visible: this.deer.g.visible }] : []),
     ];
+  }
+
+  /** Brings the deer out now, for tests and screenshots. */
+  showDeer(): void {
+    if (this.deer?.state === 'gone') this.deer.timer = 0;
   }
 
   /** Calls made since the last frame, for the sound to play. */
@@ -255,6 +324,8 @@ export class Wildlife {
     // Chickadees on the ground: hop, peck, and scatter when you come close.
     const out = !daytime || wet || s.weather === 'snow' || s.silent;
     for (const h of this.hoppers) this.hopper(h, dt, s, out);
+
+    if (this.deer) this.updateDeer(this.deer, dt, t, s);
 
     // Voices from the trees you cannot see.
     this.nextCall -= dt;
@@ -358,6 +429,86 @@ export class Wildlife {
           face(g, tx - h.x, tz - h.z);
         }
       }
+    }
+  }
+
+  /** Out at the tree line at dawn, dusk and quiet days; it grazes, looks up, and bounds off if you come close. */
+  private updateDeer(d: Deer, dt: number, t: number, s: LifeState): void {
+    const g = d.g;
+    const neck = g.getObjectByName('neck')!;
+    const tail = g.getObjectByName('tail')!;
+    const legs = ['fl', 'fr', 'bl', 'br'].map((n) => g.getObjectByName(n)!);
+    const away = s.weather === 'storm' || s.day < 0.12 || s.silent;
+    if (d.state === 'gone') {
+      g.visible = false;
+      d.timer -= dt;
+      if (d.timer > 0 || away) {
+        if (d.timer <= 0) d.timer = rand(20, 50);
+        return;
+      }
+      const a = rand(0, Math.PI * 2);
+      const r = this.area.walkRadius + rand(5, 14);
+      d.x = Math.cos(a) * r;
+      d.z = Math.sin(a) * r;
+      if (Math.hypot(d.x - s.player.x, d.z - s.player.z) < 14) {
+        d.timer = rand(5, 10);
+        return;
+      }
+      d.heading = rand(0, Math.PI * 2);
+      d.state = 'graze';
+      d.timer = rand(50, 120);
+      g.visible = true;
+    }
+    const near = Math.hypot(d.x - s.player.x, d.z - s.player.z);
+    if (d.state !== 'bolt' && (near < 9 || away)) {
+      d.state = 'bolt';
+      d.run = 0;
+      // turn away from you, give or take
+      d.heading = Math.atan2(-(d.x - s.player.x), -(d.z - s.player.z)) + rand(-0.5, 0.5);
+      if (!away) this.call('deer', g.position);
+    } else if (d.state === 'graze' && near < 15) {
+      d.state = 'alert';
+      d.timer = rand(4, 8);
+    } else if (d.state === 'alert' && near >= 17) d.state = 'graze';
+
+    if (d.state === 'bolt') {
+      d.run += dt;
+      const speed = Math.min(9, 3 + d.run * 8);
+      d.x += -Math.sin(d.heading) * speed * dt;
+      d.z += -Math.cos(d.heading) * speed * dt;
+      const bound = Math.abs(Math.sin(d.run * 5.5));
+      g.position.set(d.x, this.ground(d.x, d.z) + bound * 0.55, d.z);
+      g.rotation.set(Math.cos(d.run * 5.5) * 0.18, d.heading, 0);
+      legs.forEach((l, i) => (l.rotation.x = (i < 2 ? -1 : 1) * (0.4 + bound * 0.6)));
+      neck.rotation.x = -0.2;
+      tail.rotation.x = -0.4; // the white flag goes up
+      if (d.run > 6) {
+        d.state = 'gone';
+        d.timer = rand(60, 140);
+      }
+      return;
+    }
+    g.position.set(d.x, this.ground(d.x, d.z), d.z);
+    g.rotation.set(0, d.heading, 0);
+    legs.forEach((l) => (l.rotation.x = 0));
+    tail.rotation.x = 0.5 + Math.max(0, Math.sin(t * 3.1)) * 0.25;
+    if (d.state === 'alert') {
+      // head up, ears on you
+      neck.rotation.x = 0.15;
+      neck.rotation.y = Math.atan2(-(s.player.x - d.x), -(s.player.z - d.z)) - d.heading;
+      d.timer -= dt;
+      if (d.timer <= 0) d.state = 'graze';
+      return;
+    }
+    neck.rotation.y = 0;
+    d.timer -= dt;
+    // mostly head down, now and then a look round
+    const look = Math.sin(t * 0.37 + d.x) > 0.7;
+    neck.rotation.x += ((look ? 0.1 : -1.25) - neck.rotation.x) * Math.min(1, dt * 3);
+    if (Math.random() < dt * 0.08) d.heading += rand(-0.6, 0.6);
+    if (d.timer <= 0) {
+      d.state = 'bolt';
+      d.run = 2.5;
     }
   }
 }

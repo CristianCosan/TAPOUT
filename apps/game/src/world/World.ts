@@ -332,6 +332,7 @@ export class World {
   }
 
   birds() {
+    this.life?.showDeer();
     return this.life?.where() ?? [];
   }
 

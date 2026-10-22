@@ -113,6 +113,10 @@ small plop when it is near you; and in rain the drops dimple the water around yo
 **Build 0.0.31** adds clouds to the sky (D-052): soft drifting clouds drawn in the sky shader, a few on clear
 days, most of the sky when overcast, a low fast lid in storms, lit by the hour and tinted at sunset.
 
+**Build 0.0.32** puts a deer at the woods tree line (D-053): out by day and at dawn and dusk, not at night,
+in storms or when the birds go silent. It grazes, lifts its head and watches you inside 15 m, and inside 9 m
+it snorts and bounds off with its white tail up. Scenery only; hunting is v12's.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
