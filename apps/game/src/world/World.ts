@@ -31,6 +31,8 @@ export interface WorldInput {
   frozen: boolean;
   /** v12's birds-go-silent tell. */
   birdsSilent?: boolean;
+  /** Northern lights tonight (scenery, chosen by the app). */
+  aurora?: boolean;
 }
 
 export interface Hover {
@@ -132,8 +134,8 @@ export class World {
   /** How much daylight the sky showed last frame, 0 to 1. */
   private daylight = 1;
   /** Screenshot and test aid: show another hour or weather without touching the run. */
-  private previewing: { hour?: number; weather?: string; tempC?: number } = {};
-  set preview(p: { hour?: number; weather?: string; tempC?: number }) {
+  private previewing: { hour?: number; weather?: string; tempC?: number; aurora?: boolean } = {};
+  set preview(p: { hour?: number; weather?: string; tempC?: number; aurora?: boolean }) {
     this.previewing = p;
     this.shownHour = -1;
   }
@@ -187,6 +189,8 @@ export class World {
     );
     this.sky.renderOrder = -1;
     this.scene.add(this.sky);
+    this.aurora = this.makeAurora();
+    this.scene.add(this.aurora);
 
     const rnd = seeded(99);
     const starPos: number[] = [];
@@ -870,6 +874,7 @@ export class World {
     this.updateSky(dt);
     this.updateFire();
     this.updateWeather(dt, eye);
+    this.updateAurora(dt);
     this.updateBreath(dt, eye, this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'));
     this.updateLife(dt);
     const fire = this.stations.get('fire');
@@ -1180,6 +1185,56 @@ export class World {
       b.position.addScaledVector(b.userData.vel as THREE.Vector3, dt);
       b.position.y += 0.06 * dt;
     }
+  }
+
+  private aurora: THREE.Group;
+  private auroraLight = 0;
+
+  /** Curtains of green and violet light low in the northern sky, rippling slowly. */
+  private makeAurora(): THREE.Group {
+    const g = new THREE.Group();
+    const material = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      fog: false,
+      uniforms: { time: { value: 0 }, strength: { value: 0 } },
+      vertexShader: `uniform float time; varying vec2 vUv; varying float vShift;
+        void main(){ vUv = uv; vec3 p = position;
+          float w = sin(p.x * 0.012 + time * 0.07) * 28.0 + sin(p.x * 0.031 - time * 0.11) * 12.0;
+          p.z += w; vShift = sin(p.x * 0.02 + time * 0.05);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`,
+      fragmentShader: `uniform float time; uniform float strength; varying vec2 vUv; varying float vShift;
+        void main(){
+          float bottom = smoothstep(0.0, 0.12, vUv.y);
+          float top = 1.0 - smoothstep(0.35, 1.0, vUv.y);
+          float rays = 0.55 + 0.45 * sin(vUv.x * 140.0 + time * 0.4 + vShift * 3.0) * sin(vUv.x * 37.0 - time * 0.23);
+          float sides = smoothstep(0.0, 0.15, vUv.x) * (1.0 - smoothstep(0.85, 1.0, vUv.x));
+          vec3 green = vec3(0.25, 1.0, 0.55);
+          vec3 violet = vec3(0.65, 0.3, 0.9);
+          vec3 c = mix(green, violet, smoothstep(0.35, 0.9, vUv.y));
+          gl_FragColor = vec4(c * bottom * top * rays * sides * strength * 0.55, 1.0); }`,
+    });
+    for (let i = 0; i < 3; i++) {
+      const band = new THREE.Mesh(new THREE.PlaneGeometry(520, 90, 120, 1), material);
+      band.position.set(-60 + i * 70, 110 + i * 18, -330 - i * 40);
+      band.rotation.y = (i - 1) * 0.18;
+      g.add(band);
+    }
+    g.visible = false;
+    return g;
+  }
+
+  private updateAurora(dt: number): void {
+    const want = (this.preview.aurora ?? this.input?.aurora) && this.daylight < 0.15 ? 1 : 0;
+    this.auroraLight += (want - this.auroraLight) * Math.min(1, dt * 0.4);
+    this.aurora.visible = this.auroraLight > 0.01;
+    if (!this.aurora.visible) return;
+    const m = (this.aurora.children[0] as THREE.Mesh).material as THREE.ShaderMaterial;
+    m.uniforms.time!.value = this.time;
+    m.uniforms.strength!.value = this.auroraLight;
+    this.aurora.position.set(this.pos.x, 0, this.pos.z);
   }
 
   private leafDummy = new THREE.Object3D();

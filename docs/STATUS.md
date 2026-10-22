@@ -83,6 +83,9 @@ little at dusk, thinner in rain, none on ice.
 **Build 0.0.22** shows your breath in the cold (D-047): at 2 °C or below a faint cloud forms in front of you
 every few seconds, quicker when you run. Read from v12's air temperature.
 
+**Build 0.0.23** adds northern lights (D-048): green and violet curtains rippling low in the northern sky on
+the night of v12's aurora awe event, and on about one clear or cold night in four from day 8.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

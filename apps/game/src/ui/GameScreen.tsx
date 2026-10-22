@@ -408,6 +408,13 @@ function liveLayout(layout: LocationLayout, S: View['state']): LocationLayout {
 }
 
 /** What the signposts at each exit say. */
+/** Scenery: northern lights on some clear nights from day 8, and on the night of v12's aurora awe. */
+function auroraTonight(S: { day: number; weather: string; aweSeen?: string[]; aweLastDay?: number }): boolean {
+  if (S.aweSeen?.includes('aurora') && S.aweLastDay === S.day) return true;
+  if (S.day < 8 || (S.weather !== 'clear' && S.weather !== 'cold')) return false;
+  return (Math.imul(S.day, 2654435761) >>> 0) % 4 === 0;
+}
+
 const EXIT_SIGNS: Record<string, string> = { toShore: 'SHORE', toWoods: 'WOODS', toCamp: 'CAMP', trailhead: 'TRAPLINE' };
 
 function darkness(hour: number): number {
@@ -563,6 +570,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       props,
       frozen,
       birdsSilent: !!S.birdsSilent,
+      aurora: auroraTonight(S),
     }),
     [loc, layout, hidden, selected, S.hour, S.weather, S.winter, S.day, props, frozen, S.birdsSilent],
   );
