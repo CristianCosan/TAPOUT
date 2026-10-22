@@ -10,6 +10,7 @@ import { WorldHost } from '../world/WorldHost.tsx';
 import type { WorldInput } from '../world/World.ts';
 import type { PropState } from '../world/props.ts';
 import { useSoundCues } from '../audio/cues.ts';
+import { playUi } from '../audio/effects.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
 
@@ -440,6 +441,20 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     if (S.day > lastDay.current) setCurtain(S.day);
     lastDay.current = S.day;
   }, [S.day]);
+
+  // Quiet interface sounds: a panel opening or closing, a card arriving, the journal.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    const open = selected !== null;
+    if (open !== wasOpen.current) playUi(open ? 'open' : 'close');
+    wasOpen.current = open;
+  }, [selected]);
+  useEffect(() => {
+    if (view.modal) playUi('card');
+  }, [view.modal]);
+  useEffect(() => {
+    if (journal || map) playUi('page');
+  }, [journal, map]);
 
   // A new location starts with nothing open.
   useEffect(() => setSelected(null), [loc]);

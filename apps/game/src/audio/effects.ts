@@ -162,3 +162,18 @@ export function playAction(fn: string): void {
 }
 
 export const ACTION_SOUNDS: ReadonlySet<string> = new Set(Object.keys(RECIPES));
+
+export type UiSound = 'hover' | 'open' | 'close' | 'card' | 'page';
+
+/** Very quiet interface sounds (plan §7.4 UI): a tick when something lights, a soft open and close. */
+export function playUi(kind: UiSound): void {
+  const out = strip('effects', 0.35);
+  if (!out) return;
+  switch (kind) {
+    case 'hover': tone(out, { len: 0.04, freqs: [[0, 1800], [0.04, 1700]], peak: 0.05 }); break;
+    case 'open': burst(out, { len: 0.12, peak: 0.12, freq: 1800, to: 3200, q: 2, attack: 0.02 }); break;
+    case 'close': burst(out, { len: 0.1, peak: 0.1, freq: 2800, to: 1500, q: 2, attack: 0.02 }); break;
+    case 'card': tone(out, { len: 0.5, freqs: [[0, 440], [0.5, 440]], peak: 0.06, attack: 0.05 }); tone(out, { at: 0.08, len: 0.5, freqs: [[0, 660], [0.5, 660]], peak: 0.04, attack: 0.05 }); break;
+    case 'page': burst(out, { len: 0.18, peak: 0.12, freq: 3500, to: 2000, q: 0.8, attack: 0.03 }); break;
+  }
+}

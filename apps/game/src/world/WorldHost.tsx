@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { playUi } from '../audio/effects.ts';
 import { World, type Hover, type WorldEvents, type WorldInput } from './World.ts';
 
 declare global {
@@ -28,7 +29,12 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
   const fullEvents = useRef<WorldEvents>({
     select: (id) => latest.current.events.select(id),
     clear: () => latest.current.events.clear(),
-    hover: setHover,
+    hover: (h) => {
+      setHover((prev) => {
+        if (h && h.near && (prev?.id !== h.id || !prev.near)) playUi('hover');
+        return h;
+      });
+    },
     looking: setLooking,
   });
 

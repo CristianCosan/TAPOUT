@@ -43,6 +43,10 @@ screen, and the list of keys; and a Credits screen. Remembered on the computer.
 and using, time, other places, night, resolve, winter), each shown once when it applies, dismissed with a click
 or Enter, switchable in Settings. Facts only; no advice and nothing happens if you ignore them.
 
+**Build 0.0.13** adds quiet interface sounds (D-041): a soft tick when something you can use comes into
+view, a wooden knock when a panel opens or closes, a low tone for a card, and a paper rustle for the
+journal and map. On the Effects volume.
+
 **Next:** more M20 polish.
 
 ## First person — build 0.0.3
