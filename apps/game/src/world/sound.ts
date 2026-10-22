@@ -166,6 +166,13 @@ export class Ambience {
     burst(this.out, { at: 0.8 + far, len: 3, peak: loud * 0.5, freq: 160, to: 40, type: 'lowpass', brown: true, attack: 0.6 });
   }
 
+  /** A fish rising: a small wet plop off the water. */
+  plop(loud: number): void {
+    if (!this.out) return;
+    burst(this.out, { len: 0.09, peak: loud * 0.18, freq: 700 + Math.random() * 300, to: 250, type: 'lowpass', attack: 0.004 });
+    burst(this.out, { at: 0.03, len: 0.25, peak: loud * 0.06, freq: 2200, q: 1.2 });
+  }
+
   step(running: boolean, winter: boolean): void {
     if (!this.out || this.t - this.lastStep < 0.2) return;
     this.lastStep = this.t;

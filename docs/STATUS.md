@@ -107,6 +107,9 @@ about 260 calls and 160k triangles per area, so no performance work is needed th
 **Build 0.0.29** makes the journal the paper notebook from your pack, to match the map (D-050): ruled
 lines, a red margin, pencil-coloured ink, good and bad lines in green and red ink. Same pages and buttons.
 
+**Build 0.0.30** puts rings on open water (D-051): now and then a fish rises, most at dawn and dusk, with a
+small plop when it is near you; and in rain the drops dimple the water around you. None on ice.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

@@ -61,6 +61,7 @@ interface StationNode {
 }
 
 const LEAVES = 160;
+const RINGS = 48;
 const PRINTS = 200;
 const FLASH = new THREE.Color(0xdfe6ff);
 
@@ -305,7 +306,7 @@ export class World {
   /** Where the scenery birds are. For tests and screenshots. */
   where() {
     const r = this.renderer.info.render;
-    return { x: this.pos.x, z: this.pos.z, prints: this.prints.count, calls: r.calls, triangles: r.triangles };
+    return { x: this.pos.x, z: this.pos.z, prints: this.prints.count, calls: r.calls, triangles: r.triangles, rings: this.rings?.children.filter((c) => c.visible).length ?? 0, shoreZ: this.input?.area.shoreZ };
   }
 
   birds() {
@@ -351,6 +352,7 @@ export class World {
     this.stations.clear();
     this.water = null;
     this.mist = null;
+    this.rings = null;
     this.prints.count = 0;
     this.printNext = 0;
     this.wetSnap = true;
@@ -367,7 +369,10 @@ export class World {
       w.receiveShadow = true;
       this.water = w;
       this.areaRoot.add(w);
-      if (!ice) this.areaRoot.add(this.makeMist(area.shoreZ));
+      if (!ice) {
+        this.areaRoot.add(this.makeMist(area.shoreZ));
+        this.areaRoot.add(this.makeRings());
+      }
     }
     this.areaRoot.add(this.trees(area, winter));
     this.areaRoot.add(this.rocks(area, winter));
@@ -1139,6 +1144,7 @@ export class World {
     this.updateLightning(dt, w);
     this.updateWet(dt, w);
     this.updateMist(this.preview.hour ?? this.input!.hour, w);
+    this.updateRings(dt, eye, w);
     if (this.water && !this.input!.winter) {
       (this.water.material as THREE.MeshStandardMaterial).roughness = w === 'storm' || w === 'rain' ? 0.35 : 0.08;
     }
@@ -1178,6 +1184,75 @@ export class World {
     for (const m of this.mist.children as THREE.Mesh[]) {
       (m.material as THREE.MeshBasicMaterial).opacity = 0.32 * k;
       m.position.x = m.userData.base + Math.sin(this.time * 0.02 * m.userData.drift * 10) * 6;
+    }
+  }
+
+  private rings: THREE.Group | null = null;
+  private nextRise = 3;
+  private nextDrop = 0;
+
+  /** Rings on open water: now and then a fish rising, and in rain the drops around you. */
+  private makeRings(): THREE.Group {
+    const group = new THREE.Group();
+    const geo = new THREE.RingGeometry(0.8, 1, 40);
+    for (let i = 0; i < RINGS; i++) {
+      const r = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xeef4f6, transparent: true, opacity: 0, depthWrite: false, fog: true }));
+      r.rotation.x = -Math.PI / 2;
+      r.visible = false;
+      r.userData.age = 0;
+      r.userData.life = 1;
+      r.userData.size = 1;
+      group.add(r);
+    }
+    this.rings = group;
+    return group;
+  }
+
+  private ring(x: number, z: number, size: number, life: number): void {
+    const r = (this.rings!.children as THREE.Mesh[]).find((m) => !m.visible) ?? (this.rings!.children[0] as THREE.Mesh);
+    r.position.set(x, -0.2, z);
+    r.userData.age = 0;
+    r.userData.life = life;
+    r.userData.size = size;
+    r.visible = true;
+  }
+
+  private updateRings(dt: number, eye: THREE.Vector3, w: string): void {
+    const shoreZ = this.input!.area.shoreZ;
+    if (!this.rings || shoreZ === undefined) return;
+    const raining = w === 'rain' || w === 'storm';
+    const h = (((this.preview.hour ?? this.input!.hour) % 24) + 24) % 24;
+    // fish rise most at dawn and dusk, a little by day, hardly in a storm
+    const evening = Math.max(1 - Math.abs(h - 6.5) / 2.5, 1 - Math.abs(h - 19.5) / 2.5, 0);
+    this.nextRise -= dt * (0.25 + evening) * (w === 'storm' ? 0.1 : raining ? 0.4 : 1);
+    if (this.nextRise <= 0) {
+      this.nextRise = 3 + Math.random() * 9;
+      const x = eye.x + (Math.random() - 0.5) * 50;
+      const z = shoreZ - 5 - Math.random() * 30;
+      this.ring(x, z, 1.8, 2.6);
+      const dist = Math.hypot(x - eye.x, z - eye.z);
+      if (dist < 30) this.sound.plop(1 / (1 + dist / 8));
+    }
+    if (raining) {
+      this.nextDrop -= dt;
+      while (this.nextDrop <= 0) {
+        this.nextDrop += w === 'storm' ? 0.03 : 0.06;
+        const z = Math.min(shoreZ - 0.6, eye.z - 2 - Math.random() * 12);
+        this.ring(eye.x + (Math.random() - 0.5) * 16, z, 0.3, 0.8);
+      }
+    }
+    for (const r of this.rings.children as THREE.Mesh[]) {
+      if (!r.visible) continue;
+      const u = r.userData as { age: number; life: number; size: number };
+      u.age += dt;
+      const k = u.age / u.life;
+      if (k >= 1) {
+        r.visible = false;
+        continue;
+      }
+      const s = u.size * (0.15 + k);
+      r.scale.set(s, s, 1);
+      (r.material as THREE.MeshBasicMaterial).opacity = 0.75 * (1 - k);
     }
   }
 
