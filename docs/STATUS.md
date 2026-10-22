@@ -78,6 +78,8 @@ across the three areas with reloads) found no errors.
 **Build 0.0.20** adds mist on the lake (D-046): soft banks lying on open water, thickest around dawn, a
 little at dusk, thinner in rain, none on ice.
 
+**Build 0.0.21** adds clusters of rust-capped mushrooms on the woods floor in autumn (D-046).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

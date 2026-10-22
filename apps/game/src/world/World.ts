@@ -497,6 +497,15 @@ export class World {
     if (area.id === 'woods') {
       const fern = mergeGeometries([0, 1, 2, 3, 4].map((i) => new THREE.ConeGeometry(0.12, 0.9, 3).rotateZ(1.0).translate(0.38, 0.22, 0).rotateY((i / 5) * Math.PI * 2)));
       scatter(fern, winter ? 0x7d7a6a : 0x6a9a48, 220, 3, 30, [0.7, 1.3], 0.8);
+      if (!winter) {
+        // Autumn mushrooms in little clusters: a pale stem under a rust cap.
+        const shroom = (dx: number, dz: number, k: number) => [
+          new THREE.CylinderGeometry(0.018 * k, 0.024 * k, 0.09 * k, 5).translate(dx, 0.045 * k, dz),
+          new THREE.SphereGeometry(0.055 * k, 6, 3, 0, Math.PI * 2, 0, Math.PI / 2).translate(dx, 0.085 * k, dz),
+        ];
+        const cluster = mergeGeometries([...shroom(0, 0, 1), ...shroom(0.08, 0.05, 0.7), ...shroom(-0.06, 0.07, 0.55)].map((geo) => geo.toNonIndexed()));
+        scatter(cluster, 0xa0522d, 80, 3, 28, [1.2, 2.2], 0.8);
+      }
     }
     if (area.shoreZ !== undefined) {
       // Driftwood along the waterline.
