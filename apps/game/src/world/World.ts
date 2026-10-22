@@ -62,6 +62,7 @@ interface StationNode {
 
 const LEAVES = 160;
 const RINGS = 48;
+const SPARKS = 60;
 const PRINTS = 200;
 const FLASH = new THREE.Color(0xdfe6ff);
 
@@ -117,6 +118,10 @@ export class World {
   private leafAt: Float32Array;
   private snow: THREE.Points;
   private smoke: THREE.Mesh[] = [];
+  /** Sparks off a burning fire: additive points whose colour fades to black as they die. */
+  private sparks: THREE.Points;
+  private sparkLife = new Float32Array(SPARKS);
+  private sparkVel = new Float32Array(SPARKS * 3);
   private breath: THREE.Sprite[] = [];
   private breathAt = 0;
 
@@ -278,6 +283,13 @@ export class World {
       this.smoke.push(puff);
       this.scene.add(puff);
     }
+
+    const sparkGeo = new THREE.BufferGeometry();
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
+    sparkGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
+    this.sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({ size: 0.07, map: softTexture(), vertexColors: true, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: true }));
+    this.sparks.frustumCulled = false;
+    this.scene.add(this.sparks);
 
     this.scene.fog = new THREE.Fog(0x9fb0bf, 30, 190);
     this.bind();
@@ -919,7 +931,7 @@ export class World {
     this.onFrame?.(dt, this.time);
     this.updateHover(eye);
     this.updateSky(dt);
-    this.updateFire();
+    this.updateFire(dt);
     this.updateWeather(dt, eye);
     this.updateAurora(dt);
     this.updateBreath(dt, eye, this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'));
@@ -1058,7 +1070,48 @@ export class World {
     fog.far = far * (0.45 + day * 0.55);
   }
 
-  private updateFire(): void {
+  private updateSparks(dt: number, base: THREE.Vector3 | null): void {
+    const pos = this.sparks.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const col = this.sparks.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const p = pos.array as Float32Array;
+    const c = col.array as Float32Array;
+    this.sparks.visible = !!base;
+    if (!base) return;
+    const w = this.preview.weather ?? this.input!.weather;
+    const wind = w === 'storm' ? 2.5 : w === 'rain' || w === 'snow' ? 0.8 : 0.3;
+    for (let i = 0; i < SPARKS; i++) {
+      let life = this.sparkLife[i]! - dt;
+      const o = i * 3;
+      if (life <= 0) {
+        // a new spark from the embers, now and then a little burst of them
+        if (Math.random() > dt * 0.3) {
+          c[o] = c[o + 1] = c[o + 2] = 0;
+          this.sparkLife[i] = 0;
+          continue;
+        }
+        life = 0.8 + Math.random() * 1.8;
+        p[o] = base.x + (Math.random() - 0.5) * 0.4;
+        p[o + 1] = base.y + 0.35;
+        p[o + 2] = base.z + (Math.random() - 0.5) * 0.4;
+        this.sparkVel[o] = (Math.random() - 0.5) * 0.6 + wind;
+        this.sparkVel[o + 1] = 1.2 + Math.random() * 1.6;
+        this.sparkVel[o + 2] = (Math.random() - 0.5) * 0.6;
+      }
+      this.sparkLife[i] = life;
+      p[o] = p[o]! + (this.sparkVel[o]! + Math.sin(this.time * 7 + i) * 0.4) * dt;
+      p[o + 1] = p[o + 1]! + this.sparkVel[o + 1]! * dt;
+      p[o + 2] = p[o + 2]! + (this.sparkVel[o + 2]! + Math.cos(this.time * 6 + i) * 0.4) * dt;
+      this.sparkVel[o + 1] = this.sparkVel[o + 1]! * (1 - dt * 0.6);
+      const k = Math.min(1, life / 1.2);
+      c[o] = 0.9 * k;
+      c[o + 1] = 0.4 * k * k;
+      c[o + 2] = 0.08 * k * k * k;
+    }
+    pos.needsUpdate = true;
+    col.needsUpdate = true;
+  }
+
+  private updateFire(dt: number): void {
     const node = this.stations.get('fire');
     const lit = this.fireLight.visible;
     const t = this.time;
@@ -1071,6 +1124,7 @@ export class World {
       f.rotation.y = t * 0.8 + p;
     });
     const base = node?.group.position;
+    this.updateSparks(dt, lit && base && node?.group.visible ? base : null);
     for (const puff of this.smoke) {
       const m = puff.material as THREE.MeshLambertMaterial;
       if (!lit || !base || !node?.group.visible) {

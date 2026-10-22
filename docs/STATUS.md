@@ -117,6 +117,9 @@ days, most of the sky when overcast, a low fast lid in storms, lit by the hour a
 in storms or when the birds go silent. It grazes, lifts its head and watches you inside 15 m, and inside 9 m
 it snorts and bounds off with its white tail up. Scenery only; hunting is v12's.
 
+**Build 0.0.33** sends sparks up from a burning fire: a few at a time, glowing orange and fading as they
+rise, pushed sideways by the wind in rain and storms.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
