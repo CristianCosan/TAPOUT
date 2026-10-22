@@ -8,6 +8,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FIRST_PERSON, type LocationLayout, type WorldArea } from '@tapout/content';
 import { mat, noise, rough, seeded } from './kit.ts';
 import { buildProp, propKey, type PropState } from './props.ts';
+import { Wildlife } from './life.ts';
 import { Ambience } from './sound.ts';
 
 export interface WorldInput {
@@ -98,6 +99,9 @@ export class World {
   private time = 0;
   private disposed = false;
   private sound = new Ambience();
+  private life: Wildlife | null = null;
+  /** How much daylight the sky showed last frame, 0 to 1. */
+  private daylight = 1;
   /** Screenshot and test aid: show another hour or weather without touching the run. */
   private previewing: { hour?: number; weather?: string } = {};
   set preview(p: { hour?: number; weather?: string }) {
@@ -241,6 +245,20 @@ export class World {
     return this.pos.clone();
   }
 
+  /** Where the scenery birds are. For tests and screenshots. */
+  birds() {
+    return this.life?.where() ?? [];
+  }
+
+  /** Stands you somewhere and points you at a spot. For tests and screenshots. */
+  stand(x: number, z: number, at: { x: number; y: number; z: number }): void {
+    this.pos.set(x, 0, z);
+    const eye = this.eye();
+    const d = new THREE.Vector3(at.x, at.y, at.z).sub(eye);
+    this.yaw = Math.atan2(-d.x, -d.z);
+    this.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
+  }
+
   /** Points you at a station from a step away. For tests and the robot player. */
   lookAt(id: string): boolean {
     const node = this.stations.get(id);
@@ -287,6 +305,8 @@ export class World {
     this.areaRoot.add(this.trees(area, winter));
     this.areaRoot.add(this.rocks(area, winter));
     this.areaRoot.add(this.undergrowth(area, winter));
+    this.life = new Wildlife(area, winter, (x, z) => this.ground(area, x, z));
+    this.areaRoot.add(this.life.root);
   }
 
   /** Ground height: flat where you walk, rising into hills, dropping into the lake. */
@@ -774,6 +794,7 @@ export class World {
     this.updateSky(dt);
     this.updateFire();
     this.updateWeather(dt, eye);
+    this.updateLife(dt);
     const fire = this.stations.get('fire');
     const w = { ...input, ...this.preview };
     this.sound.update(dt, {
@@ -859,6 +880,7 @@ export class World {
     }
     const sunT = (h - dawn) / (dusk - dawn);
     const day = smooth(-0.15, 0.3, e);
+    this.daylight = day;
     const twilight = Math.max(0, 1 - Math.abs(e) / 0.28);
     const grey = WEATHER_GREY[input.weather] ?? 0;
 
@@ -928,6 +950,41 @@ export class World {
       puff.position.set(base.x + Math.sin(k * 9) * 0.25 + life * 1.2, base.y + 1.0 + life * 7, base.z + Math.cos(k * 7) * 0.25);
       puff.scale.setScalar(0.5 + life * 2.4);
       m.opacity = 0.32 * (1 - life) * Math.min(1, life * 6);
+    }
+  }
+
+  /** Scenery birds, the jay and the ducks moving, and their calls, placed left or right. */
+  private updateLife(dt: number): void {
+    const t = this.time;
+    const weather = this.preview.weather ?? this.input!.weather;
+    this.life?.update(dt, t, { day: this.daylight, weather, player: this.pos });
+    const calls = this.life?.takeCalls() ?? [];
+
+    const jay = this.stations.get('jay');
+    const jb = jay?.group.visible ? jay.group.getObjectByName('jay-bird') : undefined;
+    if (jb) {
+      const hop = Math.max(0, Math.sin(t * 0.9) * 8 - 7);
+      jb.position.y = 1.4 + hop * 0.12;
+      jb.rotation.y = Math.floor(t / 1.7) % 2 ? 0.6 : -0.4;
+      const head = jb.children[1];
+      if (head) head.position.y = 0.07 + Math.max(0, Math.sin(t * 3.1)) * 0.015;
+      if (Math.random() < dt / 18 && this.daylight > 0.25) calls.push({ kind: 'jay', at: jay!.group.position.clone().setY(1.4) });
+    }
+    const ducks = this.stations.get('duck');
+    ducks?.group.children.forEach((d, i) => {
+      if (d.name !== 'duck') return;
+      const home = d.userData.home as THREE.Vector3;
+      d.position.set(home.x + Math.sin(t * 0.13 + i * 1.7) * 0.6, Math.sin(t * 1.3 + i) * 0.03, home.z + Math.cos(t * 0.11 + i) * 0.4);
+      d.rotation.y = i + Math.sin(t * 0.13 + i * 1.7) * 0.8;
+    });
+
+    if (!calls.length) return;
+    const view = this.camera.matrixWorldInverse;
+    for (const c of calls) {
+      const local = c.at.clone().applyMatrix4(view);
+      const dist = Math.max(1, local.length());
+      const loud = (c.kind === 'loon' ? 0.9 : c.kind === 'goose' ? 1 / (1 + dist / 70) : 1 / (1 + dist / 14)) * (this.input!.frozen ? 0.6 : 1);
+      this.sound.call(c.kind, loud, local.x / dist);
     }
   }
 

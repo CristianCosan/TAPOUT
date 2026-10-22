@@ -11,7 +11,11 @@ core, saves and Windows app are unchanged.
 **Build 0.0.6 (D-034)** adds pebbles along the shorelines, reeds at the inlet, stumps, fallen logs and moss in
 the woods, and three keepsakes from home in the pack at camp (the photo of Mara, Dad's tag, Mum's bird book).
 
-**Next:** more Shore and Woods detail and life (birds, the jay), as Sir plays.
+**Build 0.0.7 (D-035)** adds birds: ravens turning overhead, geese going south in autumn, a pair of loons
+on the lake that dive and call at dusk, chickadees that hop about and scatter when you come close, a jay
+that hops, ducks that drift, and bird calls made in code. Scenery only; nothing touches the run.
+
+**Next:** more life and detail as Sir plays.
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

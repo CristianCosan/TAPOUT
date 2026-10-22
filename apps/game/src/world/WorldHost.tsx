@@ -3,7 +3,14 @@ import { World, type Hover, type WorldEvents, type WorldInput } from './World.ts
 
 declare global {
   // Lets the robot player and tests aim at a station without a mouse.
-  var __tapoutWorld: { lookAt: (id: string) => boolean; preview: (p: { hour?: number; weather?: string }) => void } | undefined;
+  var __tapoutWorld:
+    | {
+        lookAt: (id: string) => boolean;
+        preview: (p: { hour?: number; weather?: string }) => void;
+        birds: () => { kind: string; at: { x: number; y: number; z: number }; visible: boolean }[];
+        stand: (x: number, z: number, at: { x: number; y: number; z: number }) => void;
+      }
+    | undefined;
 }
 
 /**
@@ -30,7 +37,7 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
     const w = new World(parent.current);
     w.configure(latest.current.input, fullEvents.current);
     world.current = w;
-    globalThis.__tapoutWorld = { lookAt: (id) => w.lookAt(id), preview: (p) => (w.preview = p) };
+    globalThis.__tapoutWorld = { lookAt: (id) => w.lookAt(id), preview: (p) => (w.preview = p), birds: () => w.birds(), stand: (x, z, at) => w.stand(x, z, at) };
     return () => {
       globalThis.__tapoutWorld = undefined;
       w.dispose();

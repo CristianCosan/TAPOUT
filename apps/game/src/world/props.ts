@@ -415,6 +415,7 @@ function jay(s: PropState): THREE.Group {
   bird.add(mesh(new THREE.CapsuleGeometry(0.06, 0.1, 2, 6), mat(0x8a9196), 0, 0, 0, Math.PI / 2 - 0.3, 0, 0));
   bird.add(mesh(new THREE.SphereGeometry(0.05, 6, 4), mat(0xe8e8e2), 0, 0.07, 0.07));
   bird.position.set(0.35, 1.4, 0.2);
+  bird.name = 'jay-bird';
   g.add(bird);
   return g;
 }
@@ -502,6 +503,8 @@ function ducks(): THREE.Group {
     d.add(mesh(new THREE.SphereGeometry(0.09, 6, 4), mat(0x2a4a32), 0, 0.25, 0.2));
     d.position.set(i * 1.3 - 2, 0, (i % 2) * 0.8);
     d.rotation.y = i;
+    d.name = 'duck';
+    d.userData.home = d.position.clone();
     g.add(d);
   }
   g.scale.setScalar(1.6);
