@@ -7,9 +7,10 @@ declare global {
   var __tapoutWorld:
     | {
         lookAt: (id: string) => boolean;
-        preview: (p: { hour?: number; weather?: string }) => void;
+        preview: (p: { hour?: number; weather?: string; tempC?: number; aurora?: boolean }) => void;
         birds: () => { kind: string; at: { x: number; y: number; z: number }; visible: boolean }[];
         stand: (x: number, z: number, at: { x: number; y: number; z: number }) => void;
+        where: () => { x: number; z: number; prints: number };
       }
     | undefined;
 }
@@ -43,7 +44,7 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
     const w = new World(parent.current);
     w.configure(latest.current.input, fullEvents.current);
     world.current = w;
-    globalThis.__tapoutWorld = { lookAt: (id) => w.lookAt(id), preview: (p) => (w.preview = p), birds: () => w.birds(), stand: (x, z, at) => w.stand(x, z, at) };
+    globalThis.__tapoutWorld = { lookAt: (id) => w.lookAt(id), preview: (p) => (w.preview = p), birds: () => w.birds(), stand: (x, z, at) => w.stand(x, z, at), where: () => w.where() };
     return () => {
       globalThis.__tapoutWorld = undefined;
       w.dispose();

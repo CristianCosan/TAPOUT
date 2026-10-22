@@ -61,6 +61,7 @@ interface StationNode {
 }
 
 const LEAVES = 160;
+const PRINTS = 200;
 
 let soft: THREE.Texture | null = null;
 /** A white dot fading to clear at the edge, drawn once: mist and breath. */
@@ -189,6 +190,10 @@ export class World {
     );
     this.sky.renderOrder = -1;
     this.scene.add(this.sky);
+    this.prints = new THREE.InstancedMesh(new THREE.CircleGeometry(0.07, 7).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x9aa8b4 }), PRINTS);
+    this.prints.count = 0;
+    this.prints.frustumCulled = false;
+    this.scene.add(this.prints);
     this.aurora = this.makeAurora();
     this.scene.add(this.aurora);
 
@@ -296,6 +301,10 @@ export class World {
   }
 
   /** Where the scenery birds are. For tests and screenshots. */
+  where() {
+    return { x: this.pos.x, z: this.pos.z, prints: this.prints.count };
+  }
+
   birds() {
     return this.life?.where() ?? [];
   }
@@ -339,6 +348,8 @@ export class World {
     this.stations.clear();
     this.water = null;
     this.mist = null;
+    this.prints.count = 0;
+    this.printNext = 0;
     const { area, winter } = input;
     this.areaRoot.add(this.terrain(area, winter));
     if (area.shoreZ !== undefined) {
@@ -855,7 +866,10 @@ export class World {
         this.pos.z += ((fz * f + fx * s) / len) * speed * dt;
         const before = Math.sin(this.bob);
         this.bob += dt * speed * 2.6;
-        if (before > 0 && Math.sin(this.bob) <= 0) this.sound.step(speed > FIRST_PERSON.walkSpeed, input.winter);
+        if (before > 0 && Math.sin(this.bob) <= 0) {
+          this.sound.step(speed > FIRST_PERSON.walkSpeed, input.winter);
+          if (input.winter) this.footprint(input.area);
+        }
         this.keepInside();
       }
     }
@@ -1235,6 +1249,27 @@ export class World {
     m.uniforms.time!.value = this.time;
     m.uniforms.strength!.value = this.auroraLight;
     this.aurora.position.set(this.pos.x, 0, this.pos.z);
+  }
+
+  private prints!: THREE.InstancedMesh;
+  private printNext = 0;
+  private printLeft = false;
+
+  /** In winter each step leaves a print in the snow, left and right in turn; the oldest fade out of the list. */
+  private footprint(area: WorldArea): void {
+    this.printLeft = !this.printLeft;
+    const side = this.printLeft ? 0.11 : -0.11;
+    const x = this.pos.x + Math.cos(this.yaw) * side;
+    const z = this.pos.z - Math.sin(this.yaw) * side;
+    const d = this.leafDummy;
+    d.position.set(x, this.ground(area, x, z) + 0.012, z);
+    d.rotation.set(0, this.yaw, 0);
+    d.scale.set(0.75, 1, 1.5);
+    d.updateMatrix();
+    this.prints.setMatrixAt(this.printNext, d.matrix);
+    this.printNext = (this.printNext + 1) % PRINTS;
+    this.prints.count = Math.min(PRINTS, Math.max(this.prints.count, this.printNext === 0 ? PRINTS : this.printNext));
+    this.prints.instanceMatrix.needsUpdate = true;
   }
 
   private leafDummy = new THREE.Object3D();
