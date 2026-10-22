@@ -69,3 +69,12 @@ export const TIPS_TEXT = {
   dismiss: 'Got it · Enter',
   setting: { label: 'Tips for a first run', hint: 'Short notes on how things work, each shown once' },
 } as const;
+
+/** The screen shown if the game itself breaks (plan M22). Calm, and says the run is safe. */
+export const CRASH_TEXT = {
+  title: 'Something broke',
+  body: 'The game hit an error it could not recover from. Your run is saved up to your last action, so nothing is lost.',
+  logged: 'The details were written to crash.log in your save folder.',
+  restart: 'Restart the game',
+  folder: 'Open the save folder',
+} as const;

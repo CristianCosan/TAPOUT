@@ -1,6 +1,6 @@
 {
   "name": "@tapout/desktop",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "private": true,
   "description": "TAP / OUT desktop shell",
   "author": "TAP / OUT",
@@ -20,6 +20,7 @@
       "main.cjs",
       "preload.cjs",
       "store.cjs",
+      "crashlog.cjs",
       "renderer/**"
     ],
     "win": {

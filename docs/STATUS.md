@@ -55,7 +55,14 @@ clay and tinder as they come in.
 meat is smoking and dark strips once it is smoked, and a fishing spot shows your rod, line and float only
 while your line is set there.
 
-**Next:** more M20 polish.
+**Build 0.0.16** starts M22 hardening with a crash log (D-043): errors from the game and the desktop shell go
+to `crash.log` in the save folder (kept under 256 KB), a renderer crash reloads the window, and if a screen
+breaks you get a calm card saying the run is saved, with Restart and Open the save folder.
+
+M20 is done apart from event illustrations (A10/A11), which belonged to the painted-2D plan and are not
+planned for the 3D game. M21 (Steam) needs a Steamworks account, which costs money, so it waits for Sir.
+
+**Next:** M22 hardening (performance on low-end machines, soak tests).
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

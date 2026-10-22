@@ -18,6 +18,7 @@ import {
   type RunSnapshot,
 } from '@tapout/core';
 import { CAST, GAME_VERSION, P1 } from '@tapout/content';
+import { logError } from './crash.ts';
 import { RESTORED_FROM, RUN_KEY, SaveStore } from './saves.ts';
 
 export interface PageElement {
@@ -354,7 +355,7 @@ export class Session {
     try {
       this.storage.setItem(HISTORY_KEY, JSON.stringify([entry, ...this.history()].slice(0, HISTORY_MAX)));
     } catch (error) {
-      console.error('Could not record the run', error);
+      logError('Could not record the run', error);
     }
   }
 
@@ -390,7 +391,7 @@ export class Session {
       };
       this.saves.write(body, this.run.state.day, new Date().toISOString());
     } catch (error) {
-      console.error('Autosave failed', error);
+      logError('Autosave failed', error);
     }
   }
 
@@ -447,7 +448,7 @@ function safeStorage(): Storage | null {
         if (old && files.getItem(key) === null) files.setItem(key, old);
         if (old) window.localStorage.removeItem(key);
       } catch (error) {
-        console.error('Could not move an old save', error);
+        logError('Could not move an old save', error);
       }
     }
     return files;
