@@ -11,12 +11,14 @@ export interface Settings {
   headBob: boolean;
   rivalNews: boolean;
   tips: boolean;
+  /** Lighter graphics for slower computers: lower resolution, smaller shadows, no fire shadows. */
+  lowGraphics: boolean;
   /** Tips already shown. */
   tipsSeen: string[];
 }
 
 const KEY = 'tapout.settings';
-const DEFAULTS: Settings = { mouseSpeed: 1, invertY: false, headBob: true, rivalNews: true, tips: true, tipsSeen: [] };
+const DEFAULTS: Settings = { mouseSpeed: 1, invertY: false, headBob: true, rivalNews: true, tips: true, lowGraphics: false, tipsSeen: [] };
 
 function load(): Settings {
   try {

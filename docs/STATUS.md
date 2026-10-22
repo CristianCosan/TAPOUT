@@ -62,7 +62,10 @@ breaks you get a calm card saying the run is saved, with Restart and Open the sa
 M20 is done apart from event illustrations (A10/A11), which belonged to the painted-2D plan and are not
 planned for the 3D game. M21 (Steam) needs a Steamworks account, which costs money, so it waits for Sir.
 
-**Next:** M22 hardening (performance on low-end machines, soak tests).
+**Build 0.0.17** adds Lighter graphics in Settings (D-044): 1280x720 rendering scaled up, 1024 sun shadows
+and no fire shadows. In headless software rendering it ran about 60% faster than the full setting.
+
+**Next:** M22 hardening (soak tests).
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

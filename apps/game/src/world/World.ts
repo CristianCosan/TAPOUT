@@ -120,7 +120,6 @@ export class World {
   constructor(private readonly host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(1);
-    this.renderer.setSize(1920, 1080, false);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -146,6 +145,7 @@ export class World {
     this.fireLight.castShadow = true;
     this.fireLight.shadow.mapSize.set(512, 512);
     this.fireLight.shadow.bias = -0.002;
+    this.applyGraphics();
 
     this.sky = new THREE.Mesh(
       new THREE.SphereGeometry(600, 24, 12),
@@ -762,7 +762,24 @@ export class World {
     if (area.shoreZ !== undefined) this.pos.z = Math.max(this.pos.z, area.shoreZ + 0.8);
   }
 
+  private lowGraphics: boolean | null = null;
+
+  /** High: full 1920x1080 with 2048 sun shadows and fire shadows. Lighter: 1280x720, 1024, none. */
+  private applyGraphics(): void {
+    const low = settings().lowGraphics;
+    if (low === this.lowGraphics) return;
+    this.lowGraphics = low;
+    if (low) this.renderer.setSize(1280, 720, false);
+    else this.renderer.setSize(1920, 1080, false);
+    const size = low ? 1024 : 2048;
+    this.sun.shadow.mapSize.set(size, size);
+    this.sun.shadow.map?.dispose();
+    this.sun.shadow.map = null;
+    this.fireLight.castShadow = !low;
+  }
+
   private frame(): void {
+    this.applyGraphics();
     if (this.disposed || !this.input) return;
     const dt = Math.min(0.05, this.clock.getDelta());
     this.time += dt;

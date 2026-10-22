@@ -86,6 +86,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           setFullscreen(on);
           window.setTimeout(() => setFull(isFullscreen()), 300);
         }} />
+        <Toggle {...T.lowGraphics} on={s.lowGraphics} set={(on) => setSetting('lowGraphics', on)} />
         <h4>{T.keys}</h4>
         <div className="key-list">
           {T.keyList.map(([k, what]) => (

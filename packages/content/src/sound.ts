@@ -22,6 +22,7 @@ export const SETTINGS_TEXT = {
   rivalNews: { label: 'Rival names on the radio', hint: 'Off: the radio only says someone left, not who or why' },
   display: 'Display',
   fullscreen: { label: 'Full screen', hint: 'F11 also switches it' },
+  lowGraphics: { label: 'Lighter graphics', hint: 'For slower computers: lower resolution and simpler shadows' },
   keys: 'Keys',
   keyList: [
     ['Click', 'Look around (the mouse stays captured); click a lit thing to use it'],
