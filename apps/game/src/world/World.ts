@@ -84,6 +84,36 @@ function softTexture(): THREE.Texture {
 const WEATHER_GREY: Record<string, number> = { clear: 0, cold: 0.05, overcast: 0.6, rain: 0.8, snow: 0.75, storm: 1 };
 /** How much of the sky clouds take, by v12 weather. */
 const CLOUD_COVER: Record<string, number> = { clear: 0.4, cold: 0.3, overcast: 0.72, rain: 0.85, snow: 0.85, storm: 0.95 };
+/** How hard the wind moves the treetops, by v12 weather. */
+const WIND: Record<string, number> = { clear: 0.15, cold: 0.2, overcast: 0.3, rain: 0.45, snow: 0.35, storm: 1 };
+const SWAY = { swayTime: { value: 0 }, swayWind: { value: 0.2 } };
+
+/** A foliage material whose tops lean and sway with the wind; each tree keeps its own rhythm. */
+function swayMat(color: number): THREE.MeshStandardMaterial {
+  const m = new THREE.MeshStandardMaterial({ color, roughness: 0.92, flatShading: true });
+  m.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, SWAY);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nuniform float swayTime;\nuniform float swayWind;')
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        #ifdef USE_INSTANCING
+          vec2 root = vec2(instanceMatrix[3].x, instanceMatrix[3].z);
+        #else
+          vec2 root = vec2(0.0);
+        #endif
+        float lift = clamp(position.y / 12.0, 0.0, 1.0);
+        float phase = root.x * 0.31 + root.y * 0.17;
+        float gust = 0.6 + 0.4 * sin(swayTime * 0.4 + root.x * 0.05);
+        float sway = (sin(swayTime * 1.3 + phase) * 0.6 + sin(swayTime * 2.9 + phase * 1.7) * 0.25) * swayWind * gust;
+        transformed.x += sway * lift * lift * 0.6;
+        transformed.z += sway * 0.4 * lift * lift * 0.6;`,
+      );
+  };
+  return m;
+}
+
 const FOG: Record<string, [number, number]> = { clear: [40, 280], cold: [40, 240], overcast: [22, 130], rain: [12, 75], snow: [8, 55], storm: [6, 42] };
 
 const smooth = (a: number, b: number, x: number) => {
@@ -497,8 +527,8 @@ export class World {
     const trunk = new THREE.CylinderGeometry(0.16, 0.26, 3.2, 6).translate(0, 1.6, 0);
     const bTrunk = new THREE.CylinderGeometry(0.1, 0.16, 7.5, 6).translate(0, 3.75, 0);
     const bCrown = rough(new THREE.IcosahedronGeometry(1.6, 0), 0.5, 5).translate(0, 7, 0);
-    const add = (geo: THREE.BufferGeometry, color: number, list: typeof spots, tint: boolean) => {
-      const m = new THREE.InstancedMesh(geo, mat(color), list.length);
+    const add = (geo: THREE.BufferGeometry, color: number, list: typeof spots, tint: boolean, sway = false) => {
+      const m = new THREE.InstancedMesh(geo, sway ? swayMat(color) : mat(color), list.length);
       const o = new THREE.Object3D();
       const col = new THREE.Color();
       list.forEach((t, i) => {
@@ -513,10 +543,10 @@ export class World {
       m.receiveShadow = true;
       g.add(m);
     };
-    add(foliage, winter ? 0x6d8676 : 0x2a4430, conifers, true);
+    add(foliage, winter ? 0x6d8676 : 0x2a4430, conifers, true, true);
     add(trunk, 0x4a3828, conifers, false);
     add(bTrunk, 0xd8d2c4, birches, false);
-    add(bCrown, winter ? 0x8a8478 : 0x7a8c3e, birches, true);
+    add(bCrown, winter ? 0x8a8478 : 0x7a8c3e, birches, true, true);
     return g;
   }
 
@@ -1224,6 +1254,8 @@ export class World {
     this.updateWet(dt, w);
     this.updateMist(this.preview.hour ?? this.input!.hour, w);
     this.updateRings(dt, eye, w);
+    SWAY.swayTime.value = this.time;
+    SWAY.swayWind.value += ((WIND[w] ?? 0.2) - SWAY.swayWind.value) * Math.min(1, dt * 0.5);
     if (this.water && !this.input!.winter) {
       (this.water.material as THREE.MeshStandardMaterial).roughness = w === 'storm' || w === 'rain' ? 0.35 : 0.08;
     }
