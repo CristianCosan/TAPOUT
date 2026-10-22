@@ -93,6 +93,9 @@ turn, the last 200 kept per area.
 the thunder follows after a gap that says how far away it struck (a crack when close, a long roll when far).
 Since something now flashes, Settings has **Reduce flashing**, which softens it to a fifth.
 
+**Build 0.0.26** makes the ground wet in rain (D-049): darker with a little sheen while it rains, drying
+slowly after.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

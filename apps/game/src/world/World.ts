@@ -140,6 +140,7 @@ export class World {
   set preview(p: { hour?: number; weather?: string; tempC?: number; aurora?: boolean }) {
     this.previewing = p;
     this.shownHour = -1;
+    this.wetSnap = true;
   }
   get preview() {
     return this.previewing;
@@ -351,6 +352,7 @@ export class World {
     this.mist = null;
     this.prints.count = 0;
     this.printNext = 0;
+    this.wetSnap = true;
     const { area, winter } = input;
     this.areaRoot.add(this.terrain(area, winter));
     if (area.shoreZ !== undefined) {
@@ -412,6 +414,7 @@ export class World {
     geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geo.computeVertexNormals();
     const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }));
+    this.groundMat = m.material;
     m.receiveShadow = true;
     return m;
   }
@@ -1133,6 +1136,7 @@ export class World {
     }
     this.updateLeaves(dt, eye, w);
     this.updateLightning(dt, w);
+    this.updateWet(dt, w);
     this.updateMist(this.preview.hour ?? this.input!.hour, w);
     if (this.water && !this.input!.winter) {
       (this.water.material as THREE.MeshStandardMaterial).roughness = w === 'storm' || w === 'rain' ? 0.35 : 0.08;
@@ -1272,6 +1276,23 @@ export class World {
     this.printNext = (this.printNext + 1) % PRINTS;
     this.prints.count = Math.min(PRINTS, Math.max(this.prints.count, this.printNext === 0 ? PRINTS : this.printNext));
     this.prints.instanceMatrix.needsUpdate = true;
+  }
+
+  private groundMat: THREE.MeshStandardMaterial | null = null;
+  private wetness = 0;
+  private wetSnap = true;
+
+  /** Rain darkens the ground and gives it a little sheen; it dries slowly after. */
+  private updateWet(dt: number, w: string): void {
+    const want = !this.input!.winter && (w === 'rain' || w === 'storm') ? 1 : 0;
+    // A new area (or the first frame) starts as wet as the weather says.
+    if (this.wetSnap) this.wetness = want;
+    this.wetSnap = false;
+    this.wetness += (want - this.wetness) * Math.min(1, dt * (want ? 0.15 : 0.03));
+    const m = this.groundMat;
+    if (!m) return;
+    m.color.setScalar(1 - this.wetness * 0.28);
+    m.roughness = 1 - this.wetness * 0.35;
   }
 
   private flash = 0;
