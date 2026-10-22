@@ -50,3 +50,22 @@ export const CREDITS_TEXT = {
   people: 'Design and direction: Sir. Built with Claude.',
   close: 'Back',
 } as const;
+
+/**
+ * Tips for a first run: plain facts about how the game works, each shown once, dismissible,
+ * never a recommendation and never a consequence (CLAUDE.md, the agenda rule).
+ */
+export const TIPS = [
+  { id: 'body', when: 'start', title: 'Your body', text: 'The bars on the left fall as the hours pass and as you work. Food, water and warmth are the ones that can end a run.' },
+  { id: 'look', when: 'start', title: 'Looking and using', text: 'Things you can use light up when you look at them. Click one to see what you can do there, what it costs and how long it takes.' },
+  { id: 'time', when: 'firstAction', title: 'Time', text: 'Every action takes time and energy; the clock is at the top. Walking around inside a place costs nothing.' },
+  { id: 'travel', when: 'away', title: 'Other places', text: 'The signposts take you between Camp, the Shore and the Woods. The walk costs time, and your pack carries one kind of load back.' },
+  { id: 'dusk', when: 'dusk', title: 'Night', text: 'You sleep at the shelter. Before you lie down, the night preview shows the weather, the fire and how cold it will get.' },
+  { id: 'resolve', when: 'wavering', title: 'Resolve', text: 'Resolve is your will to stay. Hard days wear it down, steady ones and small comforts build it back. You can see it with Tab.' },
+  { id: 'winter', when: 'winter', title: 'Winter', text: 'The lake is freezing over. Open-water lines and the net are done for the season; you can cut through the ice to fish.' },
+] as const;
+
+export const TIPS_TEXT = {
+  dismiss: 'Got it · Enter',
+  setting: { label: 'Tips for a first run', hint: 'Short notes on how things work, each shown once' },
+} as const;

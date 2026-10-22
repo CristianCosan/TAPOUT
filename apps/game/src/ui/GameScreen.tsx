@@ -11,6 +11,7 @@ import type { WorldInput } from '../world/World.ts';
 import type { PropState } from '../world/props.ts';
 import { useSoundCues } from '../audio/cues.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
+import { Tips } from './Tips.tsx';
 
 const BARS = [
   ['health', 'Health'],
@@ -602,6 +603,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {curtain !== null && (
             <div className="night-curtain" key={curtain} onAnimationEnd={() => setCurtain(null)} />
           )}
+          <Tips view={view} hidden={frozen || !!station} />
           {sound && <SettingsPanel onClose={() => setSound(false)} />}
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}

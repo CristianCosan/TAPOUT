@@ -301,3 +301,7 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .key-row { display: grid; grid-template-columns: 160px 1fr; gap: 14px; align-items: center; font-size: 17px; color: var(--bone); }
 .key-row kbd { font-family: inherit; font-size: 15px; padding: 4px 10px; border-radius: 6px; border: 1px solid #2a3a2c; background: #0b100c; color: var(--sage); text-align: center; }
 .credits-line { margin: 0; font-size: 18px; line-height: 1.5; color: var(--bone); }
+.tip-card { position: absolute; left: 150px; bottom: 190px; width: 460px; padding: 16px 20px; border-radius: 12px; background: #0b100ce6; border: 1px solid #2a3a2c; z-index: 5; display: flex; flex-direction: column; gap: 6px; animation: result-in 0.3s ease-out; }
+.tip-card b { font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ember); }
+.tip-card p { margin: 0; font-size: 19px; line-height: 1.45; color: var(--bone); }
+.tip-card .hud-btn { align-self: flex-end; }

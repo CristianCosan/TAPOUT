@@ -39,6 +39,10 @@ the thread reached stage 2; after a win you ring your dad from the boat. Your le
 game) with the four volumes, mouse speed, invert up and down, head bob, rival names on the radio, full
 screen, and the list of keys; and a Credits screen. Remembered on the computer.
 
+**Build 0.0.12** adds tips for a first run (D-040): seven short notes on how things work (your body, looking
+and using, time, other places, night, resolve, winter), each shown once when it applies, dismissed with a click
+or Enter, switchable in Settings. Facts only; no advice and nothing happens if you ignore them.
+
 **Next:** more M20 polish.
 
 ## First person — build 0.0.3

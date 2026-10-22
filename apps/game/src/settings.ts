@@ -10,10 +10,13 @@ export interface Settings {
   invertY: boolean;
   headBob: boolean;
   rivalNews: boolean;
+  tips: boolean;
+  /** Tips already shown. */
+  tipsSeen: string[];
 }
 
 const KEY = 'tapout.settings';
-const DEFAULTS: Settings = { mouseSpeed: 1, invertY: false, headBob: true, rivalNews: true };
+const DEFAULTS: Settings = { mouseSpeed: 1, invertY: false, headBob: true, rivalNews: true, tips: true, tipsSeen: [] };
 
 function load(): Settings {
   try {
