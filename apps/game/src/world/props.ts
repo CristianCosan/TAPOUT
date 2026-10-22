@@ -22,6 +22,15 @@ export interface PropState {
   winter: boolean;
   /** The animal you spotted, if any (v12's species id). */
   species: string;
+  /** What lies in camp: logs and firewood on the pile, meat and berries at the hook, materials. */
+  logs: number;
+  firewood: number;
+  meat: number;
+  berries: number;
+  rocks: number;
+  moss: number;
+  clay: number;
+  tinder: number;
   /** Labels for the exits, by station id. */
   exitLabels: Readonly<Record<string, string>>;
 }
@@ -333,43 +342,62 @@ function stump(): THREE.Group {
   return g;
 }
 
-function woodpile(): THREE.Group {
+/** Logs stacked in rows as they come in (up to 18 shown), split firewood in front (up to 12). */
+function woodpile(s: PropState): THREE.Group {
   const g = new THREE.Group();
   const rnd = seeded(21);
-  for (let row = 0; row < 4; row++) {
-    for (let i = 0; i < 6 - row; i++) {
+  let logs = Math.min(18, s.logs);
+  for (let row = 0; row < 4 && logs > 0; row++) {
+    for (let i = 0; i < 6 - row && logs > 0; i++, logs--) {
       const x = -0.9 + i * 0.32 + row * 0.16;
       const y = 0.13 + row * 0.24;
       const m = log(g, v(x, y, -0.55), v(x + (rnd() - 0.5) * 0.08, y, 0.55), 0.12, C.bark);
       m.rotation.y += (rnd() - 0.5) * 0.05;
     }
   }
-  // A few split pieces in front.
-  for (let i = 0; i < 5; i++) g.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.42, 3), mat(C.cut), -0.7 + i * 0.3, 0.08, 0.95, 0, rnd(), Math.PI / 2));
+  // Two rails it sits on, so an empty pile still reads as a woodpile.
+  for (const x of [-0.85, 0.75]) log(g, v(x, 0.03, -0.6), v(x + 0.1, 0.03, 0.6), 0.04, C.woodDark);
+  const split = Math.min(12, s.firewood);
+  for (let i = 0; i < split; i++) {
+    const layer = Math.floor(i / 6);
+    g.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.42, 3), mat(C.cut), -0.75 + (i % 6) * 0.28 + layer * 0.14, 0.08 + layer * 0.15, 0.95, 0, rnd(), Math.PI / 2));
+  }
   return g;
 }
 
-function food(): THREE.Group {
+/** The meat hook: a piece hanging for each portion (up to 4), berries filling the basket (up to 12). */
+function food(s: PropState): THREE.Group {
   const g = new THREE.Group();
   log(g, v(-0.5, 0, 0), v(0, 1.9, 0), 0.04);
   log(g, v(0.5, 0, 0.1), v(0, 1.9, 0), 0.04);
   log(g, v(0, 0, -0.5), v(0, 1.9, 0), 0.04);
   g.add(mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.5, 4), mat(C.rope), 0, 1.65, 0));
-  g.add(mesh(rough(new THREE.SphereGeometry(0.18, 6, 5), 0.06, 4), mat(C.meat), 0, 1.3, 0, 0, 0, 0));
+  const meat = Math.min(4, s.meat);
+  for (let i = 0; i < meat; i++) {
+    const a = (i / Math.max(1, meat)) * Math.PI * 2;
+    const r = meat > 1 ? 0.13 : 0;
+    g.add(mesh(rough(new THREE.SphereGeometry(0.15, 6, 5), 0.05, 4 + i), mat(C.meat), Math.cos(a) * r, 1.3 - i * 0.04, Math.sin(a) * r));
+  }
   // A bark basket with berries.
   g.add(mesh(new THREE.CylinderGeometry(0.2, 0.15, 0.18, 8), mat(C.woodLight), 0.55, 0.09, 0.45));
   const rnd = seeded(5);
-  for (let i = 0; i < 9; i++) g.add(mesh(new THREE.SphereGeometry(0.035, 5, 4), mat(C.berry, { rough: 0.4 }), 0.55 + (rnd() - 0.5) * 0.24, 0.19, 0.45 + (rnd() - 0.5) * 0.24));
+  for (let i = 0; i < Math.min(12, s.berries); i++) g.add(mesh(new THREE.SphereGeometry(0.035, 5, 4), mat(C.berry, { rough: 0.4 }), 0.55 + (rnd() - 0.5) * 0.24, 0.19 + (i > 8 ? 0.04 : 0), 0.45 + (rnd() - 0.5) * 0.24));
   return g;
 }
 
-function stock(): THREE.Group {
+/** Materials: a stone heap (up to 10), a moss mound that grows with the moss, clay balls, a tinder bundle. */
+function stock(s: PropState): THREE.Group {
   const g = new THREE.Group();
   const rnd = seeded(31);
-  for (let i = 0; i < 7; i++) g.add(mesh(stoneGeo(0.14 + rnd() * 0.08, i + 40), mat(C.stone), -0.55 + rnd() * 0.4, 0.1 + (i > 4 ? 0.18 : 0), -0.2 + rnd() * 0.4));
-  g.add(mesh(rough(new THREE.SphereGeometry(0.32, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0.08, 3), mat(C.moss), 0.25, 0, -0.1));
-  g.add(mesh(rough(new THREE.SphereGeometry(0.22, 6, 4), 0.06, 7), mat(C.clay), 0.75, 0.12, 0.2));
-  g.add(mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.35, 6), mat(0xd0c4a8), 0.3, 0.06, 0.4, 0, 0, Math.PI / 2));
+  for (let i = 0; i < Math.min(10, s.rocks); i++) g.add(mesh(stoneGeo(0.14 + rnd() * 0.08, i + 40), mat(C.stone), -0.55 + rnd() * 0.4, 0.1 + (i >= 5 ? 0.18 : 0), -0.2 + rnd() * 0.4));
+  if (s.moss > 0) {
+    const k = 0.5 + 0.5 * Math.min(1, s.moss / 15);
+    const m = mesh(rough(new THREE.SphereGeometry(0.32, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0.08, 3), mat(C.moss), 0.25, 0, -0.1);
+    m.scale.setScalar(k);
+    g.add(m);
+  }
+  for (let i = 0; i < Math.min(3, s.clay); i++) g.add(mesh(rough(new THREE.SphereGeometry(0.16, 6, 4), 0.05, 7 + i), mat(C.clay), 0.75 + i * 0.12, 0.1 + (i === 2 ? 0.16 : 0), 0.2 - i * 0.18));
+  if (s.tinder > 0) g.add(mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.35, 6), mat(0xd0c4a8), 0.3, 0.06, 0.4, 0, 0, Math.PI / 2));
   return g;
 }
 
@@ -646,9 +674,9 @@ export function buildProp(id: string, s: PropState): THREE.Group {
     case 'camera': return camera();
     case 'comforts': return comforts(s);
     case 'stump': return stump();
-    case 'woodpile': return woodpile();
-    case 'food': return food();
-    case 'stock': return stock();
+    case 'woodpile': return woodpile(s);
+    case 'food': return food(s);
+    case 'stock': return stock(s);
     case 'killsite': return killsite(s);
     case 'raven': return snag();
     case 'jay': return jay(s);
@@ -686,6 +714,9 @@ export function propKey(id: string, s: PropState): string {
     case 'cache': return `${s.cacheTier}`;
     case 'post': return `${Math.min(s.day, 40)}`;
     case 'comforts': return `${s.chair}-${s.table}`;
+    case 'woodpile': return `${Math.min(18, s.logs)}-${Math.min(12, s.firewood)}`;
+    case 'food': return `${Math.min(4, s.meat)}-${Math.min(12, s.berries)}`;
+    case 'stock': return `${Math.min(10, s.rocks)}-${Math.min(15, Math.ceil(s.moss))}-${Math.min(3, s.clay)}-${s.tinder > 0}`;
     case 'animal': return `${s.species}-${s.winter}`;
     case 'killsite': case 'jay': case 'clay': case 'timber': case 'moss': case 'berries': return `${s.winter}`;
     default: return '';

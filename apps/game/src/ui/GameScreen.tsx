@@ -531,6 +531,14 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       day: S.day,
       winter: !!S.winter,
       species: hunt && hunt.state !== 'none' ? (hunt.species ?? '') : '',
+      logs: Math.floor(S.stock?.wood ?? 0),
+      firewood: Math.floor(S.stock?.firewood ?? 0),
+      meat: Math.ceil((S.meatQ ?? []).reduce((a: number, e: { n: number }) => a + e.n, 0)),
+      berries: Math.ceil((S.berryQ ?? []).reduce((a: number, e: { n: number }) => a + e.n, 0)),
+      rocks: Math.floor(S.stock?.rocks ?? 0),
+      moss: S.stock?.moss ?? 0,
+      clay: Math.floor(S.stock?.clay ?? 0),
+      tinder: S.tinder ?? 0,
       exitLabels: EXIT_SIGNS,
     };
     // v12 mutates its state in place; the view version marks a change.

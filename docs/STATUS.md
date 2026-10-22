@@ -47,6 +47,10 @@ or Enter, switchable in Settings. Facts only; no advice and nothing happens if y
 view, a wooden knock when a panel opens or closes, a low tone for a card, and a paper rustle for the
 journal and map. On the Effects volume.
 
+**Build 0.0.14** makes the camp show what you have (D-042): logs stack on the woodpile and split firewood
+piles in front, meat hangs on the hook, berries fill the basket, and the materials corner grows stones, moss,
+clay and tinder as they come in.
+
 **Next:** more M20 polish.
 
 ## First person — build 0.0.3
