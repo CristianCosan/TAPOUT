@@ -22,6 +22,7 @@ export const SETTINGS_TEXT = {
   rivalNews: { label: 'Rival names on the radio', hint: 'Off: the radio only says someone left, not who or why' },
   display: 'Display',
   fullscreen: { label: 'Full screen', hint: 'F11 also switches it' },
+  reduceFlashing: { label: 'Reduce flashing', hint: 'Lightning in storms lights the sky only softly' },
   lowGraphics: { label: 'Lighter graphics', hint: 'For slower computers: lower resolution and simpler shadows' },
   keys: 'Keys',
   keyList: [

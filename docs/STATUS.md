@@ -89,6 +89,10 @@ the night of v12's aurora awe event, and on about one clear or cold night in fou
 **Build 0.0.24** leaves footprints in the snow (D-048): in winter each step leaves a print, left and right in
 turn, the last 200 kept per area.
 
+**Build 0.0.25** adds lightning and thunder to storms (D-049): every 12 to 40 seconds the sky flashes, and
+the thunder follows after a gap that says how far away it struck (a crack when close, a long roll when far).
+Since something now flashes, Settings has **Reduce flashing**, which softens it to a fifth.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

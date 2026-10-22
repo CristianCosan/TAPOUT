@@ -157,6 +157,15 @@ export class Ambience {
     }
   }
 
+  /** Thunder after lightning: a crack when close, then a long low roll. `far` is 0 (overhead) to 1. */
+  thunder(far: number): void {
+    if (!this.out) return;
+    const loud = 0.9 - far * 0.5;
+    if (far < 0.4) burst(this.out, { len: 0.35, peak: loud * 0.6, freq: 1400, to: 300, type: 'lowpass', attack: 0.005 });
+    burst(this.out, { at: 0.05, len: 4 + far * 3, peak: loud * 0.9, freq: 260, to: 50, type: 'lowpass', brown: true, attack: 0.15 + far * 0.4 });
+    burst(this.out, { at: 0.8 + far, len: 3, peak: loud * 0.5, freq: 160, to: 40, type: 'lowpass', brown: true, attack: 0.6 });
+  }
+
   step(running: boolean, winter: boolean): void {
     if (!this.out || this.t - this.lastStep < 0.2) return;
     this.lastStep = this.t;

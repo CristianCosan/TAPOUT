@@ -13,12 +13,14 @@ export interface Settings {
   tips: boolean;
   /** Lighter graphics for slower computers: lower resolution, smaller shadows, no fire shadows. */
   lowGraphics: boolean;
+  /** Storm lightning flashes softly instead of lighting up the whole sky. */
+  reduceFlashing: boolean;
   /** Tips already shown. */
   tipsSeen: string[];
 }
 
 const KEY = 'tapout.settings';
-const DEFAULTS: Settings = { mouseSpeed: 1, invertY: false, headBob: true, rivalNews: true, tips: true, lowGraphics: false, tipsSeen: [] };
+const DEFAULTS: Settings = { mouseSpeed: 1, invertY: false, headBob: true, rivalNews: true, tips: true, lowGraphics: false, reduceFlashing: false, tipsSeen: [] };
 
 function load(): Settings {
   try {

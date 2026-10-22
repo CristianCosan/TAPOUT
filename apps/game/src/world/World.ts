@@ -62,6 +62,7 @@ interface StationNode {
 
 const LEAVES = 160;
 const PRINTS = 200;
+const FLASH = new THREE.Color(0xdfe6ff);
 
 let soft: THREE.Texture | null = null;
 /** A white dot fading to clear at the edge, drawn once: mist and breath. */
@@ -988,8 +989,8 @@ export class World {
     top.lerp(greyCol, grey * 0.85);
     horizon.lerp(greyCol, grey * 0.8);
     const u = this.sky.material.uniforms;
-    u.top!.value.copy(top);
-    u.horizon!.value.copy(horizon);
+    u.top!.value.copy(top).lerp(FLASH, this.flash * 0.55);
+    u.horizon!.value.copy(horizon).lerp(FLASH, this.flash * 0.7);
     u.glow!.value.setHex(0xffb070).multiplyScalar(twilight * 0.7 * (1 - grey));
 
     // The sun arcs across the southern sky; at night the moon takes its place.
@@ -1004,8 +1005,8 @@ export class World {
     this.sun.intensity = day > 0.05 ? day * 3.2 * (1 - grey * 0.88) : 0.6 * (1 - grey * 0.8);
     this.hemi.color.copy(top).lerp(new THREE.Color(0xffffff), 0.35);
     this.hemi.groundColor.setHex(input.winter ? 0x8a9298 : 0x3a3222).multiplyScalar(0.3 + day * 0.7);
-    this.hemi.intensity = 0.42 + day * (1.0 + grey * 0.5);
-    this.renderer.toneMappingExposure = 1.0 + (1 - day) * 0.35;
+    this.hemi.intensity = 0.42 + day * (1.0 + grey * 0.5) + this.flash * 2.5;
+    this.renderer.toneMappingExposure = 1.0 + (1 - day) * 0.35 + this.flash * 1.2;
 
     (this.stars.material as THREE.PointsMaterial).opacity = (1 - day) * (1 - grey) * 0.9;
     this.moon.visible = day < 0.4 && grey < 0.7;
@@ -1016,7 +1017,7 @@ export class World {
 
     const fog = this.scene.fog as THREE.Fog;
     const [near, far] = FOG[input.weather] ?? FOG.clear!;
-    fog.color.copy(horizon);
+    fog.color.copy(horizon).lerp(FLASH, this.flash * 0.6);
     if (this.water) (this.water.material as THREE.MeshStandardMaterial).emissive.copy(horizon).multiplyScalar(input.winter ? 0.1 : 0.32);
     fog.near = near * (0.4 + day * 0.6);
     fog.far = far * (0.45 + day * 0.55);
@@ -1131,6 +1132,7 @@ export class World {
       this.snow.position.set(eye.x, eye.y - 6, eye.z);
     }
     this.updateLeaves(dt, eye, w);
+    this.updateLightning(dt, w);
     this.updateMist(this.preview.hour ?? this.input!.hour, w);
     if (this.water && !this.input!.winter) {
       (this.water.material as THREE.MeshStandardMaterial).roughness = w === 'storm' || w === 'rain' ? 0.35 : 0.08;
@@ -1270,6 +1272,25 @@ export class World {
     this.printNext = (this.printNext + 1) % PRINTS;
     this.prints.count = Math.min(PRINTS, Math.max(this.prints.count, this.printNext === 0 ? PRINTS : this.printNext));
     this.prints.instanceMatrix.needsUpdate = true;
+  }
+
+  private flash = 0;
+  private nextBolt = 15;
+
+  /** Storms (not snowstorms): now and then the sky flashes, and thunder follows after a gap that says how far. */
+  private updateLightning(dt: number, w: string): void {
+    this.flash = Math.max(0, this.flash - dt * 6);
+    if (w !== 'storm' || this.input!.winter) return;
+    this.nextBolt -= dt;
+    if (this.nextBolt > 0) return;
+    this.nextBolt = 12 + Math.random() * 30;
+    const far = Math.random();
+    const k = settings().reduceFlashing ? 0.2 : 1;
+    this.flash = (1 - far * 0.6) * k;
+    window.setTimeout(() => {
+      this.flash = Math.max(this.flash, (0.5 - far * 0.3) * k);
+    }, 120);
+    window.setTimeout(() => this.sound.thunder(far), (0.4 + far * 3.5) * 1000);
   }
 
   private leafDummy = new THREE.Object3D();
