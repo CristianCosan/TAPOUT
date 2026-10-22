@@ -10,7 +10,7 @@ declare global {
         preview: (p: { hour?: number; weather?: string; tempC?: number; aurora?: boolean }) => void;
         birds: () => { kind: string; at: { x: number; y: number; z: number }; visible: boolean }[];
         stand: (x: number, z: number, at: { x: number; y: number; z: number }) => void;
-        where: () => { x: number; z: number; prints: number };
+        where: () => { x: number; z: number; prints: number; calls: number; triangles: number };
       }
     | undefined;
 }

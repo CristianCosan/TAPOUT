@@ -100,6 +100,10 @@ slowly after.
 each snare you have set; the net frame holds a few strands until the gill net is woven, the whole net when
 it is home, and nothing while it is set; and a line of yellow floats on the water at the spot where it is set.
 
+**Build 0.0.28** redraws the map as an inked field map (D-050): paper with grain, the lake with ripple
+lines, ink trees over the land, a compass, dark-ink paths. Same places and buttons. A draw-call check found
+about 260 calls and 160k triangles per area, so no performance work is needed there.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

@@ -212,19 +212,25 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .map-book p { color: var(--sage); margin: 4px 0 0; }
 .map-sheet { position: relative; margin-top: 12px; border-radius: 10px; overflow: hidden; }
 .map-svg { position: absolute; inset: 0; }
-.map-land { fill: #2a2f22; }
-.map-lake { fill: #34515e; stroke: #8fa9b4; stroke-width: 2; }
-.map-path { stroke: #c9b98f; stroke-width: 3; stroke-dasharray: 10 8; }
-.map-trail { stroke: #8f8466; stroke-width: 2; stroke-dasharray: 4 7; }
+.map-land { fill: #cdbb8e; }
+.map-lake { fill: #7f9a96; stroke: #3d3a2c; stroke-width: 2.5; }
+.map-ripple { fill: none; stroke: #5d7774; stroke-width: 1.2; opacity: 0.55; }
+.map-tree { fill: #5d6b44; stroke: #3a3a26; stroke-width: 1; opacity: 0.8; }
+.map-compass circle { fill: none; stroke: #3a2e22; stroke-width: 1.5; opacity: 0.6; }
+.map-compass path { fill: #6e5d44; }
+.map-compass path.north { fill: #9a3a22; }
+.map-compass text { fill: #3a2e22; font-family: var(--serif); font-size: 18px; text-anchor: middle; }
+.map-path { stroke: #6a3a1e; stroke-width: 3; stroke-dasharray: 10 8; }
+.map-trail { stroke: #6e5d44; stroke-width: 2; stroke-dasharray: 4 7; }
 .map-place, .map-spot { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
 .map-place b { font-family: var(--serif); font-size: 26px; color: var(--bone); background: #0a100ccc; padding: 2px 12px; border-radius: 6px; }
 .map-place.here b { color: var(--ember); }
-.map-place span { font-size: 14px; color: var(--ember); }
+.map-place span { font-size: 14px; color: #9a3a22; font-weight: 600; text-shadow: 0 0 4px #e8dbb4, 0 0 2px #e8dbb4; }
 .map-spot i { font-style: normal; font-size: 15px; background: #0a100ccc; border: 1px solid var(--lichen); border-radius: 999px; padding: 2px 9px; color: var(--bone); }
 .map-spot.set i { border-color: var(--ember); }
-.map-spot span { font-size: 15px; color: var(--bone); text-shadow: 0 1px 3px #000; }
-.map-spot em { font-size: 13px; color: var(--blood); font-style: normal; }
-.map-spot.dead span { color: var(--dim); }
+.map-spot span { font-size: 15px; color: #2a2016; font-weight: 600; text-shadow: 0 0 4px #e8dbb4, 0 0 2px #e8dbb4; }
+.map-spot em { font-size: 13px; color: #8a2a1a; font-style: normal; text-shadow: 0 0 3px #e8dbb4; }
+.map-spot.dead span { color: #7a6a52; }
 .map-spot .hud-btn { font-size: 13px; padding: 4px 10px; }
 
 /* past runs on the title */

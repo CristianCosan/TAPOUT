@@ -304,7 +304,8 @@ export class World {
 
   /** Where the scenery birds are. For tests and screenshots. */
   where() {
-    return { x: this.pos.x, z: this.pos.z, prints: this.prints.count };
+    const r = this.renderer.info.render;
+    return { x: this.pos.x, z: this.pos.z, prints: this.prints.count, calls: r.calls, triangles: r.triangles };
   }
 
   birds() {
