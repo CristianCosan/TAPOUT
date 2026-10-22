@@ -71,7 +71,11 @@ Its first run found a real bug: after Continue, writing a letter crashed, becaus
 function in the run's saved cast and JSON dropped it. Fixed (it is a plain string now, and old saves without
 it still work), with a test. 60 runs after the fix: no problems, largest state 34 KB.
 
-**Next:** more M22 hardening.
+**Build 0.0.19** adds autumn leaves drifting down around you (D-046): most in the woods, fewer at camp and
+the shore, none in winter, snow or storms. A robot playthrough of the real screens (about 450 random clicks
+across the three areas with reloads) found no errors.
+
+**Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

@@ -56,6 +56,7 @@ interface StationNode {
   box: THREE.Box3;
 }
 
+const LEAVES = 160;
 const WEATHER_GREY: Record<string, number> = { clear: 0, cold: 0.05, overcast: 0.6, rain: 0.8, snow: 0.75, storm: 1 };
 const FOG: Record<string, [number, number]> = { clear: [40, 280], cold: [40, 240], overcast: [22, 130], rain: [12, 75], snow: [8, 55], storm: [6, 42] };
 
@@ -86,6 +87,9 @@ export class World {
 
   // weather
   private rain: THREE.LineSegments;
+  /** Autumn leaves drifting down around you (scenery only). */
+  private leaves: THREE.InstancedMesh;
+  private leafAt: Float32Array;
   private snow: THREE.Points;
   private smoke: THREE.Mesh[] = [];
 
@@ -198,6 +202,14 @@ export class World {
     this.snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.07, transparent: true, opacity: 0.9 }));
     this.snow.frustumCulled = false;
     this.scene.add(this.rain, this.snow);
+
+    this.leafAt = new Float32Array(LEAVES * 4);
+    for (let i = 0; i < LEAVES; i++) this.leafAt.set([(rnd() - 0.5) * 36, rnd() * 12, (rnd() - 0.5) * 36, rnd() * 6.28], i * 4);
+    this.leaves = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.12, 0.09), new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }), LEAVES);
+    const leafColors = [0xc8761e, 0xd9a520, 0xa8441c, 0xb88a2a, 0x8a5a1c];
+    for (let i = 0; i < LEAVES; i++) this.leaves.setColorAt(i, new THREE.Color(leafColors[i % leafColors.length]!));
+    this.leaves.frustumCulled = false;
+    this.scene.add(this.leaves);
 
     for (let i = 0; i < 10; i++) {
       const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), new THREE.MeshLambertMaterial({ color: 0x8a8a8a, transparent: true, opacity: 0, depthWrite: false, flatShading: true }));
@@ -1060,8 +1072,45 @@ export class World {
       pos.needsUpdate = true;
       this.snow.position.set(eye.x, eye.y - 6, eye.z);
     }
+    this.updateLeaves(dt, eye, w);
     if (this.water && !this.input!.winter) {
       (this.water.material as THREE.MeshStandardMaterial).roughness = w === 'storm' || w === 'rain' ? 0.35 : 0.08;
     }
+  }
+
+  private leafDummy = new THREE.Object3D();
+
+  /** Leaves fall in autumn, more under the trees and in wind, none in winter or heavy weather. */
+  private updateLeaves(dt: number, eye: THREE.Vector3, w: string): void {
+    const input = this.input!;
+    const on = !input.winter && w !== 'snow' && w !== 'storm';
+    this.leaves.visible = on;
+    if (!on) return;
+    const count = input.area.id === 'woods' ? LEAVES : input.area.id === 'camp' ? Math.floor(LEAVES * 0.5) : Math.floor(LEAVES * 0.25);
+    this.leaves.count = count;
+    const wind = w === 'rain' ? 0.9 : 0.35;
+    const a = this.leafAt;
+    const d = this.leafDummy;
+    for (let i = 0; i < count; i++) {
+      const o = i * 4;
+      a[o + 3] = a[o + 3]! + dt * (1.5 + (i % 3));
+      let y = a[o + 1]! - (0.45 + (i % 4) * 0.08) * dt;
+      let x = a[o]! + (wind + Math.sin(a[o + 3]!) * 0.5) * dt;
+      if (y < -0.2) y += 12;
+      // World positions, wrapped into a box around you so walking does not drag them along.
+      if (x - eye.x > 18) x -= 36;
+      else if (x - eye.x < -18) x += 36;
+      let z = a[o + 2]!;
+      if (z - eye.z > 18) z -= 36;
+      else if (z - eye.z < -18) z += 36;
+      a[o] = x;
+      a[o + 1] = y;
+      a[o + 2] = z;
+      d.position.set(x, this.ground(input.area, x, z) + y, z);
+      d.rotation.set(a[o + 3]! * 0.7, a[o + 3]!, Math.sin(a[o + 3]!) * 0.8);
+      d.updateMatrix();
+      this.leaves.setMatrixAt(i, d.matrix);
+    }
+    this.leaves.instanceMatrix.needsUpdate = true;
   }
 }
