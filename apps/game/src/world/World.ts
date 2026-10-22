@@ -307,6 +307,7 @@ export class World {
     }
     this.stations.clear();
     this.water = null;
+    this.mist = null;
     const { area, winter } = input;
     this.areaRoot.add(this.terrain(area, winter));
     if (area.shoreZ !== undefined) {
@@ -320,6 +321,7 @@ export class World {
       w.receiveShadow = true;
       this.water = w;
       this.areaRoot.add(w);
+      if (!ice) this.areaRoot.add(this.makeMist(area.shoreZ));
     }
     this.areaRoot.add(this.trees(area, winter));
     this.areaRoot.add(this.rocks(area, winter));
@@ -1073,8 +1075,54 @@ export class World {
       this.snow.position.set(eye.x, eye.y - 6, eye.z);
     }
     this.updateLeaves(dt, eye, w);
+    this.updateMist(this.preview.hour ?? this.input!.hour, w);
     if (this.water && !this.input!.winter) {
       (this.water.material as THREE.MeshStandardMaterial).roughness = w === 'storm' || w === 'rain' ? 0.35 : 0.08;
+    }
+  }
+
+  private mist: THREE.Group | null = null;
+
+  /** Soft banks of mist lying on open water: thick at dawn, a little at dusk, none by day. */
+  private makeMist(shoreZ: number): THREE.Group {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g2 = c.getContext('2d')!;
+    const grad = g2.createRadialGradient(32, 32, 2, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g2.fillStyle = grad;
+    g2.fillRect(0, 0, 64, 64);
+    const tex = new THREE.CanvasTexture(c);
+    const group = new THREE.Group();
+    const rnd = seeded(77);
+    for (let i = 0; i < 18; i++) {
+      const m = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ map: tex, color: 0xdfe6ea, transparent: true, opacity: 0, depthWrite: false, fog: true }),
+      );
+      const w = 14 + rnd() * 18;
+      m.scale.set(w, w * 0.35, 1);
+      m.rotation.x = -Math.PI / 2 + 0.25;
+      m.position.set((rnd() - 0.5) * 90, 0.3 + rnd() * 0.6, shoreZ - 6 - rnd() * 45);
+      m.userData.drift = 0.15 + rnd() * 0.25;
+      m.userData.base = m.position.x;
+      group.add(m);
+    }
+    this.mist = group;
+    return group;
+  }
+
+  private updateMist(hour: number, w: string): void {
+    if (!this.mist) return;
+    const h = ((hour % 24) + 24) % 24;
+    const dawn = Math.max(0, 1 - Math.abs(h - 6.5) / 2.8);
+    const dusk = Math.max(0, 1 - Math.abs(h - 20) / 2) * 0.4;
+    const k = Math.max(dawn, dusk) * (w === 'storm' ? 0.2 : w === 'clear' || w === 'cold' ? 1 : 0.7);
+    this.mist.visible = k > 0.01;
+    for (const m of this.mist.children as THREE.Mesh[]) {
+      (m.material as THREE.MeshBasicMaterial).opacity = 0.32 * k;
+      m.position.x = m.userData.base + Math.sin(this.time * 0.02 * m.userData.drift * 10) * 6;
     }
   }
 

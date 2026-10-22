@@ -75,6 +75,9 @@ it still work), with a test. 60 runs after the fix: no problems, largest state 3
 the shore, none in winter, snow or storms. A robot playthrough of the real screens (about 450 random clicks
 across the three areas with reloads) found no errors.
 
+**Build 0.0.20** adds mist on the lake (D-046): soft banks lying on open water, thickest around dawn, a
+little at dusk, thinner in rain, none on ice.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
