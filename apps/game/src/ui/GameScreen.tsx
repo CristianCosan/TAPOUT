@@ -548,6 +548,9 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       tinder: S.tinder ?? 0,
       smoked: Math.floor(S.smoked ?? 0),
       lines: (S.lineList ?? []).map((l: { spotId: string }) => l.spotId),
+      snares: (S.snareList ?? []).length,
+      netBuilt: !!S.net?.built,
+      netSpot: S.net?.spot ?? '',
       smoking: (S.smokingSession?.n ?? 0) + (S.hugeSmokingSession?.n ?? 0),
       exitLabels: EXIT_SIGNS,
     };

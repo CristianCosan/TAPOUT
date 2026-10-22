@@ -96,6 +96,10 @@ Since something now flashes, Settings has **Reduce flashing**, which softens it 
 **Build 0.0.26** makes the ground wet in rain (D-049): darker with a little sheen while it rains, drying
 slowly after.
 
+**Build 0.0.27** shows your traps and net (D-042): a strip of red flagging tape on the trapline post for
+each snare you have set; the net frame holds a few strands until the gill net is woven, the whole net when
+it is home, and nothing while it is set; and a line of yellow floats on the water at the spot where it is set.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

@@ -36,6 +36,10 @@ export interface PropState {
   smoking: number;
   /** Fishing spots where your line is set. */
   lines: readonly string[];
+  /** Snares set on the trapline; whether the gill net is built, and where it is set. */
+  snares: number;
+  netBuilt: boolean;
+  netSpot: string;
   /** Labels for the exits, by station id. */
   exitLabels: Readonly<Record<string, string>>;
 }
@@ -490,8 +494,12 @@ function exit(label: string): THREE.Group {
 // ---- shore
 
 /** A flat rock over the water; your rod, line and float only while a line is set here. */
-function fishingSpot(seed: number, set: boolean): THREE.Group {
+function fishingSpot(seed: number, set: boolean, netHere = false): THREE.Group {
   const g = new THREE.Group();
+  if (netHere) {
+    // Your gill net: a line of floats out on the water.
+    for (let i = 0; i < 7; i++) g.add(mesh(new THREE.SphereGeometry(0.06, 6, 4), mat(0xe0b030, { rough: 0.5 }), -1.2 + i * 0.4, -0.18, -3.2 - Math.sin(i) * 0.15));
+  }
   g.add(mesh(rough(new THREE.CylinderGeometry(1.0, 1.3, 0.45, 8), 0.2, seed), mat(C.stone), 0, 0.05, 0));
   if (set) {
     log(g, v(0.3, 0.2, 0.3), v(0.1, 1.5, -1.6), 0.025, C.wood);
@@ -503,14 +511,19 @@ function fishingSpot(seed: number, set: boolean): THREE.Group {
   return g;
 }
 
-function net(): THREE.Group {
+/** The net frame: a few strands while it is being woven, the whole net hanging when it is home, empty while it is set. */
+function net(s: PropState): THREE.Group {
   const g = new THREE.Group();
   log(g, v(-1.0, 0, 0), v(-1.0, 1.6, 0), 0.05);
   log(g, v(1.0, 0, 0), v(1.0, 1.6, 0), 0.05);
   log(g, v(-1.2, 1.55, 0), v(1.2, 1.55, 0), 0.04);
-  const mesh0 = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.3, 12, 8), new THREE.MeshBasicMaterial({ color: 0xc8bfa8, wireframe: true }));
-  mesh0.position.set(0, 0.85, 0);
-  g.add(mesh0);
+  if (s.netBuilt && !s.netSpot) {
+    const mesh0 = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.3, 12, 8), new THREE.MeshBasicMaterial({ color: 0xc8bfa8, wireframe: true }));
+    mesh0.position.set(0, 0.85, 0);
+    g.add(mesh0);
+  } else if (!s.netBuilt) {
+    for (let i = 0; i < 5; i++) g.add(mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.5 + (i % 3) * 0.2, 3), mat(0xc8bfa8), -0.8 + i * 0.4, 1.3 - (i % 3) * 0.1, 0));
+  }
   return g;
 }
 
@@ -624,10 +637,13 @@ function animal(s: PropState): THREE.Group {
   return g;
 }
 
-function trailhead(label: string): THREE.Group {
+/** The trapline post: spare wire loops, and a strip of red flagging tape for each snare you have set. */
+function trailhead(label: string, snares: number): THREE.Group {
   const g = exit(label);
   for (let i = 0; i < 3; i++) g.add(mesh(new THREE.TorusGeometry(0.06, 0.008, 3, 8), mat(0xb0a080, { metal: 0.6 }), -0.02, 1.0 + i * 0.12, 0.08));
-  g.add(mesh(new THREE.BoxGeometry(0.05, 0.12, 0.02), mat(0xd04a2a), 0.0, 1.95, 0.08));
+  for (let i = 0; i < Math.min(6, snares); i++) {
+    g.add(mesh(new THREE.BoxGeometry(0.035, 0.2, 0.01), mat(0xd04a2a), -0.09 + i * 0.036, 1.86 - (i % 2) * 0.03, 0.09, 0, 0, (i % 2 ? 1 : -1) * 0.12));
+  }
   return g;
 }
 
@@ -706,11 +722,11 @@ export function buildProp(id: string, s: PropState): THREE.Group {
     case 'killsite': return killsite(s);
     case 'raven': return snag();
     case 'jay': return jay(s);
-    case 'point': return fishingSpot(1, s.lines.includes('point'));
-    case 'inlet': return fishingSpot(2, s.lines.includes('inlet'));
-    case 'bar': return fishingSpot(3, s.lines.includes('bar'));
-    case 'channel': return fishingSpot(4, s.lines.includes('channel'));
-    case 'net': return net();
+    case 'point': return fishingSpot(1, s.lines.includes('point'), s.netSpot === 'point');
+    case 'inlet': return fishingSpot(2, s.lines.includes('inlet'), s.netSpot === 'inlet');
+    case 'bar': return fishingSpot(3, s.lines.includes('bar'), s.netSpot === 'bar');
+    case 'channel': return fishingSpot(4, s.lines.includes('channel'), s.netSpot === 'channel');
+    case 'net': return net(s);
     case 'edge': return edge();
     case 'rocks': return rockBar();
     case 'clay': return clay(s);
@@ -720,7 +736,7 @@ export function buildProp(id: string, s: PropState): THREE.Group {
     case 'timber': return timber(s);
     case 'birch': return birch();
     case 'animal': return animal(s);
-    case 'trailhead': return trailhead(s.exitLabels[id] ?? 'TRAPLINE');
+    case 'trailhead': return trailhead(s.exitLabels[id] ?? 'TRAPLINE', s.snares);
     case 'deadfall': return deadfall();
     case 'moss': return mossyRocks(s);
     case 'berries': return berries(s);
@@ -740,7 +756,9 @@ export function propKey(id: string, s: PropState): string {
     case 'cache': return `${s.cacheTier}`;
     case 'post': return `${Math.min(s.day, 40)}`;
     case 'comforts': return `${s.chair}-${s.table}`;
-    case 'point': case 'inlet': case 'bar': case 'channel': return `${s.lines.includes(id)}`;
+    case 'point': case 'inlet': case 'bar': case 'channel': return `${s.lines.includes(id)}-${s.netSpot === id}`;
+    case 'net': return `${s.netBuilt}-${!!s.netSpot}`;
+    case 'trailhead': return `${Math.min(6, s.snares)}`;
     case 'woodpile': return `${Math.min(18, s.logs)}-${Math.min(12, s.firewood)}`;
     case 'food': return `${Math.min(4, s.meat)}-${Math.min(12, s.berries)}`;
     case 'stock': return `${Math.min(10, s.rocks)}-${Math.min(15, Math.ceil(s.moss))}-${Math.min(3, s.clay)}-${s.tinder > 0}`;
