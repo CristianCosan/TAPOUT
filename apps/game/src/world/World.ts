@@ -81,6 +81,8 @@ function softTexture(): THREE.Texture {
   return soft;
 }
 const WEATHER_GREY: Record<string, number> = { clear: 0, cold: 0.05, overcast: 0.6, rain: 0.8, snow: 0.75, storm: 1 };
+/** How much of the sky clouds take, by v12 weather. */
+const CLOUD_COVER: Record<string, number> = { clear: 0.4, cold: 0.3, overcast: 0.72, rain: 0.85, snow: 0.85, storm: 0.95 };
 const FOG: Record<string, [number, number]> = { clear: [40, 280], cold: [40, 240], overcast: [22, 130], rain: [12, 75], snow: [8, 55], storm: [6, 42] };
 
 const smooth = (a: number, b: number, x: number) => {
@@ -183,11 +185,31 @@ export class World {
         side: THREE.BackSide,
         depthWrite: false,
         fog: false,
-        uniforms: { top: { value: new THREE.Color() }, horizon: { value: new THREE.Color() }, glow: { value: new THREE.Color() }, sunDir: { value: new THREE.Vector3() } },
+        uniforms: {
+          top: { value: new THREE.Color() },
+          horizon: { value: new THREE.Color() },
+          glow: { value: new THREE.Color() },
+          sunDir: { value: new THREE.Vector3() },
+          cloud: { value: new THREE.Color() },
+          cover: { value: 0 },
+          drift: { value: 0 },
+        },
         vertexShader: 'varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-        fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 glow; uniform vec3 sunDir; varying vec3 vDir;
+        // clouds: value noise on a flat ceiling above you, drifting with the wind; `cover` is how much sky they take
+        fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 glow; uniform vec3 sunDir; uniform vec3 cloud; uniform float cover; uniform float drift; varying vec3 vDir;
+          float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+          float noise(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+            return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+          float fbm(vec2 p){ float v = 0.0; float a = 0.5; for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; } return v; }
           void main(){ float h = max(vDir.y, 0.0); vec3 c = mix(horizon, top, pow(h, 0.55));
           float s = max(dot(normalize(vDir), normalize(sunDir)), 0.0); c += glow * pow(s, 6.0) * (1.0 - h);
+          if (vDir.y > 0.02 && cover > 0.0) {
+            vec2 uv = vDir.xz / (vDir.y + 0.12) * 1.6 + vec2(drift, drift * 0.35);
+            float n = fbm(uv);
+            float k = smoothstep(1.0 - cover, 1.0 - cover + 0.28, n) * smoothstep(0.02, 0.25, vDir.y);
+            vec3 cc = mix(cloud * 0.72, cloud, smoothstep(0.4, 0.9, fbm(uv + 0.6))) + glow * pow(s, 3.0) * 0.6;
+            c = mix(c, cc, k * 0.92);
+          }
           if (vDir.y < 0.0) c = horizon; gl_FragColor = vec4(c, 1.0); }`,
       }),
     );
@@ -1001,6 +1023,9 @@ export class World {
     u.top!.value.copy(top).lerp(FLASH, this.flash * 0.55);
     u.horizon!.value.copy(horizon).lerp(FLASH, this.flash * 0.7);
     u.glow!.value.setHex(0xffb070).multiplyScalar(twilight * 0.7 * (1 - grey));
+    u.cover!.value = CLOUD_COVER[input.weather] ?? 0.3;
+    u.drift!.value += dt * (input.weather === 'storm' ? 0.05 : 0.008);
+    u.cloud!.value.setHex(0x14171c).lerp(new THREE.Color(0xf2f2ee), day).lerp(greyCol, grey * 0.6).lerp(FLASH, this.flash * 0.8);
 
     // The sun arcs across the southern sky; at night the moon takes its place.
     const az = Math.PI * (0.5 + Math.min(1.2, Math.max(-0.2, sunT)));
@@ -1030,7 +1055,6 @@ export class World {
     if (this.water) (this.water.material as THREE.MeshStandardMaterial).emissive.copy(horizon).multiplyScalar(input.winter ? 0.1 : 0.32);
     fog.near = near * (0.4 + day * 0.6);
     fog.far = far * (0.45 + day * 0.55);
-    void dt;
   }
 
   private updateFire(): void {
