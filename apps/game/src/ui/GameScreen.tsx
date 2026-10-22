@@ -539,6 +539,9 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       moss: S.stock?.moss ?? 0,
       clay: Math.floor(S.stock?.clay ?? 0),
       tinder: S.tinder ?? 0,
+      smoked: Math.floor(S.smoked ?? 0),
+      lines: (S.lineList ?? []).map((l: { spotId: string }) => l.spotId),
+      smoking: (S.smokingSession?.n ?? 0) + (S.hugeSmokingSession?.n ?? 0),
       exitLabels: EXIT_SIGNS,
     };
     // v12 mutates its state in place; the view version marks a change.

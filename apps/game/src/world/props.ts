@@ -31,6 +31,11 @@ export interface PropState {
   moss: number;
   clay: number;
   tinder: number;
+  /** Smoked portions in store, and portions on the rack smoking now. */
+  smoked: number;
+  smoking: number;
+  /** Fishing spots where your line is set. */
+  lines: readonly string[];
   /** Labels for the exits, by station id. */
   exitLabels: Readonly<Record<string, string>>;
 }
@@ -253,8 +258,24 @@ function rack(s: PropState): THREE.Group {
     log(g, v(-w / 2 - 0.1, h * 0.75, z), v(w / 2 + 0.1, h * 0.75, z), 0.025, C.wood);
   }
   log(g, v(-w / 2 - 0.1, h, 0), v(w / 2 + 0.1, h, 0), 0.04);
-  // A few strips hung to smoke.
-  for (let i = 0; i < 4; i++) g.add(mesh(new THREE.BoxGeometry(0.08, 0.35, 0.03), mat(0x5a2a22), -w / 3 + (i * w) / 4.5, h * 0.75 - 0.2, -0.4 + (i % 2) * 0.8));
+  // Strips on the rails: raw red while they smoke, dark once smoked (up to 10 shown).
+  const bars = s.rackTier >= 2 ? 5 : 3;
+  const raw = Math.min(10, s.smoking);
+  const strips = Math.min(10, raw + s.smoked);
+  for (let i = 0; i < strips; i++) {
+    const z = -0.4 + ((i % bars) * 0.8) / Math.max(1, bars - 1);
+    const x = -w / 2 + 0.25 + (Math.floor(i / bars) + 0.5) * ((w - 0.5) / Math.ceil(10 / bars)) + (i % 2) * 0.12;
+    g.add(mesh(new THREE.BoxGeometry(0.08, 0.35, 0.03), mat(i < raw ? C.meat : 0x5a2a22), x, h * 0.75 - 0.2, z));
+  }
+  if (raw > 0) {
+    // A smoulder under the rack and a haze of smoke.
+    g.add(mesh(new THREE.CircleGeometry(0.3, 8), new THREE.MeshBasicMaterial({ color: 0xc24a14 }), 0, 0.03, 0, -Math.PI / 2));
+    for (let i = 0; i < 3; i++) {
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.35 + i * 0.12, 7, 5), new THREE.MeshBasicMaterial({ color: 0xb8b8b4, transparent: true, opacity: 0.22 - i * 0.05, depthWrite: false }));
+      puff.position.set(0.05 * i, 0.5 + i * 0.55, 0.05 * i);
+      g.add(puff);
+    }
+  }
   if (s.rackTier >= 2 || s.hugeRack) {
     const roof = mesh(new THREE.PlaneGeometry(w + 0.6, 1.5), mat(C.tarpBlue, { key: 'ds' }), 0, h + 0.18, 0, -Math.PI / 2 + 0.15, 0, 0);
     (roof.material as THREE.Material).side = THREE.DoubleSide;
@@ -468,12 +489,17 @@ function exit(label: string): THREE.Group {
 
 // ---- shore
 
-function fishingSpot(seed: number): THREE.Group {
+/** A flat rock over the water; your rod, line and float only while a line is set here. */
+function fishingSpot(seed: number, set: boolean): THREE.Group {
   const g = new THREE.Group();
   g.add(mesh(rough(new THREE.CylinderGeometry(1.0, 1.3, 0.45, 8), 0.2, seed), mat(C.stone), 0, 0.05, 0));
-  log(g, v(0.3, 0.2, 0.3), v(0.1, 1.5, -1.6), 0.025, C.wood);
-  g.add(mesh(new THREE.CylinderGeometry(0.003, 0.003, 1.4, 3), mat(0xdddddd), 0.1, 0.8, -1.65, 0, 0, 0.0));
-  g.add(mesh(new THREE.SphereGeometry(0.05, 6, 4), mat(0xd23a2a, { rough: 0.4 }), 0.1, 0.06, -1.65));
+  if (set) {
+    log(g, v(0.3, 0.2, 0.3), v(0.1, 1.5, -1.6), 0.025, C.wood);
+    g.add(mesh(new THREE.CylinderGeometry(0.003, 0.003, 1.4, 3), mat(0xdddddd), 0.1, 0.8, -1.65, 0, 0, 0.0));
+    g.add(mesh(new THREE.SphereGeometry(0.05, 6, 4), mat(0xd23a2a, { rough: 0.4 }), 0.1, 0.06, -1.65));
+    // Stones holding the butt of the rod down.
+    for (let i = 0; i < 2; i++) g.add(mesh(stoneGeo(0.1, seed + 60 + i), mat(C.stoneDark), 0.3 + i * 0.16, 0.32, 0.36 - i * 0.08));
+  }
   return g;
 }
 
@@ -680,10 +706,10 @@ export function buildProp(id: string, s: PropState): THREE.Group {
     case 'killsite': return killsite(s);
     case 'raven': return snag();
     case 'jay': return jay(s);
-    case 'point': return fishingSpot(1);
-    case 'inlet': return fishingSpot(2);
-    case 'bar': return fishingSpot(3);
-    case 'channel': return fishingSpot(4);
+    case 'point': return fishingSpot(1, s.lines.includes('point'));
+    case 'inlet': return fishingSpot(2, s.lines.includes('inlet'));
+    case 'bar': return fishingSpot(3, s.lines.includes('bar'));
+    case 'channel': return fishingSpot(4, s.lines.includes('channel'));
     case 'net': return net();
     case 'edge': return edge();
     case 'rocks': return rockBar();
@@ -710,10 +736,11 @@ export function propKey(id: string, s: PropState): string {
   switch (id) {
     case 'fire': return `${s.firepitTier}-${s.fireLit}`;
     case 'shelter': return `${s.structure}-${s.dugout}-${s.insulation}-${s.bed}-${s.winter}`;
-    case 'rack': return `${s.rackTier}-${s.hugeRack}`;
+    case 'rack': return `${s.rackTier}-${s.hugeRack}-${Math.min(10, s.smoking)}-${Math.min(10, s.smoked)}`;
     case 'cache': return `${s.cacheTier}`;
     case 'post': return `${Math.min(s.day, 40)}`;
     case 'comforts': return `${s.chair}-${s.table}`;
+    case 'point': case 'inlet': case 'bar': case 'channel': return `${s.lines.includes(id)}`;
     case 'woodpile': return `${Math.min(18, s.logs)}-${Math.min(12, s.firewood)}`;
     case 'food': return `${Math.min(4, s.meat)}-${Math.min(12, s.berries)}`;
     case 'stock': return `${Math.min(10, s.rocks)}-${Math.min(15, Math.ceil(s.moss))}-${Math.min(3, s.clay)}-${s.tinder > 0}`;

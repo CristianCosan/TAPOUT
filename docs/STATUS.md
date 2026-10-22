@@ -51,6 +51,10 @@ journal and map. On the Effects volume.
 piles in front, meat hangs on the hook, berries fill the basket, and the materials corner grows stones, moss,
 clay and tinder as they come in.
 
+**Build 0.0.15** carries this on (D-042): the smoking rack shows raw strips with a smoulder and smoke while
+meat is smoking and dark strips once it is smoked, and a fishing spot shows your rod, line and float only
+while your line is set there.
+
 **Next:** more M20 polish.
 
 ## First person — build 0.0.3

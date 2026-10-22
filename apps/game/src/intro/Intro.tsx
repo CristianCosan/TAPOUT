@@ -197,7 +197,7 @@ function KitchenStage({ onZip }: { onZip: (ids: string[]) => void }) {
 
 const STILL_PROPS: PropState = {
   structure: 0, dugout: false, insulation: 0, bed: false, firepitTier: 0, fireLit: false, rackTier: 0, hugeRack: false,
-  cacheTier: 0, chair: false, table: false, day: 1, winter: false, species: '', logs: 0, firewood: 0, meat: 0, berries: 0, rocks: 0, moss: 0, clay: 0, tinder: 0, exitLabels: {},
+  cacheTier: 0, chair: false, table: false, day: 1, winter: false, species: '', logs: 0, firewood: 0, meat: 0, berries: 0, rocks: 0, moss: 0, clay: 0, tinder: 0, smoked: 0, smoking: 0, lines: [], exitLabels: {},
 };
 
 function DropoffStage({ onDone }: { onDone: () => void }) {
