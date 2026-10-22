@@ -54,6 +54,11 @@ function partnerLine(w: HomeLetters): string {
   return (pick(fresh.length ? fresh : all.length ? all : pool) as string);
 }
 
+/** The line before a letter. Saves from builds 0.0.10 to 0.0.17 lost it (it was a function), so it may be missing. */
+function heading(w: HomeLetters, to: string): string {
+  return typeof w.heading === 'string' ? `${w.heading.replace('{to}', to)} ` : '';
+}
+
 export function actWriteLetter(to?: string) {
   const w = letterWords();
   if (!w || S.over || S.letterDay === S.day) return;
@@ -68,13 +73,13 @@ export function actWriteLetter(to?: string) {
     if (home) home.pressure = clamp(home.pressure - w.parentsRelief);
     resolveDelta(2, notes);
     S.letters.push({ day: S.day, trigger: 'toParents', text, written: true });
-    log(`${w.heading('Mum and Dad')} <span class="equote">"${text}"</span>`, 'good');
+    log(`${heading(w, 'Mum and Dad')}<span class="equote">"${text}"</span>`, 'good');
   } else {
     text = partnerLine(w);
     S.morale = clamp(S.morale + 3);
     resolveDelta(2, notes);
     S.letters.push({ day: S.day, trigger: 'toPartner', text, written: true });
-    log(`${w.heading(S.cast.partner)} <span class="equote">"${text}"</span> (+3 morale)`, 'good');
+    log(`${heading(w, S.cast.partner)}<span class="equote">"${text}"</span> (+3 morale)`, 'good');
   }
   notes.forEach((n) => log(n, 'event'));
   afterAction('letter');

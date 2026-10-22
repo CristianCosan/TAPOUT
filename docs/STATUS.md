@@ -65,7 +65,13 @@ planned for the 3D game. M21 (Steam) needs a Steamworks account, which costs mon
 **Build 0.0.17** adds Lighter graphics in Settings (D-044): 1280x720 rendering scaled up, 1024 sun shadows
 and no fire shadows. In headless software rendering it ran about 60% faster than the full setting.
 
-**Next:** M22 hardening (soak tests).
+**Build 0.0.18** adds a soak test, `npm run soak -- --seeds 100` (D-045): whole TAP / OUT runs saved and
+reloaded through JSON every 7 decisions, checked for thrown errors, stalls, non-finite numbers and save size.
+Its first run found a real bug: after Continue, writing a letter crashed, because the letter heading was a
+function in the run's saved cast and JSON dropped it. Fixed (it is a plain string now, and old saves without
+it still work), with a test. 60 runs after the fix: no problems, largest state 34 KB.
+
+**Next:** more M22 hardening.
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

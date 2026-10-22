@@ -77,7 +77,8 @@ export const HOME_THREAD: Required<HomeThread> = {
     parentsRelief: 25,
     once: 'written',
     today: 'you wrote today',
-    heading: (to: string) => `✉️ You write to ${to}, on the back of a page from the notebook. You will not send it.`,
+    /** {to} is who the letter is for. A string, not a function: the cast is saved with the run. */
+    heading: '✉️ You write to {to}, on the back of a page from the notebook. You will not send it.',
     partner: {
       hungry: [
         'Dear Mara. I think about your kitchen more than I should. The good pan, the window over the sink. Save me a plate of anything. Anything at all.',

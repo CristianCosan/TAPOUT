@@ -2,7 +2,7 @@
 // Mara or to your parents at your pack, it never costs resolve, the letter home is once per run
 // and eases thoughts of home, and every ending but a violent death passes through the call home.
 import { beforeEach, describe, expect, it } from 'vitest';
-import { actionPanel, setPresenter, startRun, TAPOUT_RULES, V12_RULES, type Run, type RuleSet } from '@tapout/core';
+import { actionPanel, restoreRun, setPresenter, snapshotRun, startRun, TAPOUT_RULES, V12_RULES, type Run, type RuleSet } from '@tapout/core';
 import { CAST, HOME_THREAD } from '@tapout/content';
 
 let modal: string | null = null;
@@ -58,6 +58,19 @@ describe('letters you write yourself', () => {
     expect(run.state.letters.at(-1).text).toBe(HOME_THREAD.letters.parents.worried);
     run.state.day += 1;
     expect(letters(run).find((e) => e.id === 'a-letterParents')!.visible).toBe(false);
+  });
+
+  it('still work after the run is saved and continued', () => {
+    const saved = JSON.parse(JSON.stringify(snapshotRun(start())));
+    const run = restoreRun(saved);
+    run.call('actWriteLetter', 'partner');
+    expect(run.state.letters.at(-1)).toMatchObject({ written: true });
+    expect(run.state.log.some((l: { msg: string }) => l.msg.includes('You write to Mara'))).toBe(true);
+    // A save from 0.0.10-0.0.17 has no heading (it was a function, and JSON dropped it).
+    const old = restoreRun(saved);
+    delete old.state.cast.home.letters.heading;
+    old.call('actWriteLetter', 'partner');
+    expect(old.state.letters.at(-1)).toMatchObject({ written: true });
   });
 
   it('do not use up the letters that write themselves', () => {

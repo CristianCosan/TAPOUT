@@ -54,7 +54,8 @@ export interface HomeLetters {
   parentsRelief: number;
   once: string;
   today: string;
-  heading: (to: string) => string;
+  /** {to} is replaced with who the letter is for. */
+  heading: string;
   partner: { hungry: readonly string[]; cold: readonly string[]; low: readonly string[]; good: readonly string[]; plain: readonly string[] };
   parents: { plain: string; worried: string };
 }
