@@ -8,6 +8,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FIRST_PERSON, type LocationLayout, type WorldArea } from '@tapout/content';
 import { mat, noise, rough, seeded } from './kit.ts';
 import { buildProp, propKey, type PropState } from './props.ts';
+import { audio } from '../audio/engine.ts';
 import { Wildlife } from './life.ts';
 import { Ambience } from './sound.ts';
 
@@ -25,6 +26,8 @@ export interface WorldInput {
   props: PropState;
   /** An overlay is open: no walking, no looking. */
   frozen: boolean;
+  /** v12's birds-go-silent tell. */
+  birdsSilent?: boolean;
 }
 
 export interface Hover {
@@ -100,6 +103,7 @@ export class World {
   private disposed = false;
   private sound = new Ambience();
   private life: Wildlife | null = null;
+  private unready: () => void = () => undefined;
   /** How much daylight the sky showed last frame, 0 to 1. */
   private daylight = 1;
   /** Screenshot and test aid: show another hour or weather without touching the run. */
@@ -203,6 +207,7 @@ export class World {
 
     this.scene.fog = new THREE.Fog(0x9fb0bf, 30, 190);
     this.bind();
+    this.unready = audio.ready(() => this.sound.start());
     this.renderer.setAnimationLoop(() => this.frame());
   }
 
@@ -226,6 +231,7 @@ export class World {
     this.disposed = true;
     this.renderer.setAnimationLoop(null);
     this.unbind();
+    this.unready();
     this.sound.stop();
     if (document.pointerLockElement === this.renderer.domElement) document.exitPointerLock();
     this.renderer.dispose();
@@ -775,7 +781,7 @@ export class World {
         this.pos.z += ((fz * f + fx * s) / len) * speed * dt;
         const before = Math.sin(this.bob);
         this.bob += dt * speed * 2.6;
-        if (before > 0 && Math.sin(this.bob) <= 0) this.sound.step(speed > FIRST_PERSON.walkSpeed);
+        if (before > 0 && Math.sin(this.bob) <= 0) this.sound.step(speed > FIRST_PERSON.walkSpeed, input.winter);
         this.keepInside();
       }
     }
@@ -802,6 +808,7 @@ export class World {
       fireDistance: this.fireLight.visible && fire ? fire.group.position.distanceTo(this.pos) : Infinity,
       waterDistance: input.area.shoreZ !== undefined && !input.winter ? Math.max(0, this.pos.z - input.area.shoreZ) : Infinity,
       frozen: input.frozen,
+      winter: input.winter,
     });
     this.renderer.render(this.scene, this.camera);
   }
@@ -957,7 +964,7 @@ export class World {
   private updateLife(dt: number): void {
     const t = this.time;
     const weather = this.preview.weather ?? this.input!.weather;
-    this.life?.update(dt, t, { day: this.daylight, weather, player: this.pos });
+    this.life?.update(dt, t, { day: this.daylight, weather, player: this.pos, silent: !!this.input!.birdsSilent });
     const calls = this.life?.takeCalls() ?? [];
 
     const jay = this.stations.get('jay');
@@ -968,7 +975,7 @@ export class World {
       jb.rotation.y = Math.floor(t / 1.7) % 2 ? 0.6 : -0.4;
       const head = jb.children[1];
       if (head) head.position.y = 0.07 + Math.max(0, Math.sin(t * 3.1)) * 0.015;
-      if (Math.random() < dt / 18 && this.daylight > 0.25) calls.push({ kind: 'jay', at: jay!.group.position.clone().setY(1.4) });
+      if (Math.random() < dt / 18 && this.daylight > 0.25 && !this.input!.birdsSilent) calls.push({ kind: 'jay', at: jay!.group.position.clone().setY(1.4) });
     }
     const ducks = this.stations.get('duck');
     ducks?.group.children.forEach((d, i) => {
@@ -983,7 +990,7 @@ export class World {
     for (const c of calls) {
       const local = c.at.clone().applyMatrix4(view);
       const dist = Math.max(1, local.length());
-      const loud = (c.kind === 'loon' ? 0.9 : c.kind === 'goose' ? 1 / (1 + dist / 70) : 1 / (1 + dist / 14)) * (this.input!.frozen ? 0.6 : 1);
+      const loud = (c.kind === 'loon' || c.kind === 'wolf' ? 0.9 : c.kind === 'owl' ? 0.5 : c.kind === 'goose' ? 1 / (1 + dist / 70) : 1 / (1 + dist / 14)) * (this.input!.frozen ? 0.6 : 1);
       this.sound.call(c.kind, loud, local.x / dist);
     }
   }

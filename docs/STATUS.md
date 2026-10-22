@@ -15,6 +15,13 @@ the woods, and three keepsakes from home in the pack at camp (the photo of Mara,
 on the lake that dive and call at dusk, chickadees that hop about and scatter when you come close, a jay
 that hops, ducks that drift, and bird calls made in code. Scenery only; nothing touches the run.
 
+**Build 0.0.8 (D-036)** is the sound pass, all made in code: one engine with Master, Ambience, Effects and Music
+volumes (a Sound button on the top bar), sounds for every action (chopping, fire, water, fishing, building,
+hunting, cooking, eating, the flute), a quiet music bed that follows the weather with long silences, stings
+for first frost, first snow, the Big Storm, the final two, a kill, awe, a predator, a stat in danger and the
+ending, a low drone while resolve is cracking, owls and far wolves at night, birds going silent on v12's
+`birdsSilent`, footsteps that crunch in winter, ambience ducked under cards and muffled while you sleep.
+
 **Next:** more life and detail as Sir plays.
 
 ## First person — build 0.0.3

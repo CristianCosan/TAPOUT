@@ -9,6 +9,8 @@ import type { SceneInput } from '../scene/LocationScene.ts';
 import { WorldHost } from '../world/WorldHost.tsx';
 import type { WorldInput } from '../world/World.ts';
 import type { PropState } from '../world/props.ts';
+import { useSoundCues } from '../audio/cues.ts';
+import { SoundPanel } from './SoundPanel.tsx';
 
 const BARS = [
   ['health', 'Health'],
@@ -60,7 +62,7 @@ function onHandlerClick(event: MouseEvent) {
 
 // ---- rails and bars
 
-function TopBar({ view, onJournal, onMap }: { view: View; onJournal: () => void; onMap: () => void }) {
+function TopBar({ view, onJournal, onMap, onSound }: { view: View; onJournal: () => void; onMap: () => void; onSound: () => void }) {
   const { hud } = view;
   return (
     <header className="hud-top">
@@ -77,6 +79,9 @@ function TopBar({ view, onJournal, onMap }: { view: View; onJournal: () => void;
       </button>
       <button className="hud-btn" onClick={onJournal} title="Journal (J)">
         Journal
+      </button>
+      <button className="hud-btn" onClick={onSound} title="Sound volumes">
+        Sound
       </button>
       <button className="hud-btn phone" disabled={hud.get('tapBtn')?.disabled} onClick={() => session.click('confirmTapOut()')}>
         📞 Sat phone
@@ -426,6 +431,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [map, setMap] = useState(false);
   const [night, setNight] = useState<Offer | null>(null);
   const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
+  const [sound, setSound] = useState(false);
   // A new day starts behind a curtain: the night passes, then the dawn report.
   const [curtain, setCurtain] = useState<number | null>(null);
   const lastDay = useRef<number>(S.day);
@@ -445,6 +451,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       } else if (e.key === 'Escape') {
         setSelected(null);
         setKeepsake(null);
+        setSound(false);
         setJournal(false);
         setMap(false);
       } else if (e.key === 'Tab') {
@@ -512,7 +519,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     };
     // v12 mutates its state in place; the view version marks a change.
   }, [S, view.version]);
-  const frozen = !!(view.modal || journal || map || night || keepsake || curtain !== null);
+  const frozen = !!(view.modal || journal || map || night || keepsake || sound || curtain !== null);
+  useSoundCues(view, curtain !== null);
   const worldInput: WorldInput = useMemo(
     () => ({
       area: WORLD[loc],
@@ -526,8 +534,9 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       winter: !!S.winter,
       props,
       frozen,
+      birdsSilent: !!S.birdsSilent,
     }),
-    [loc, layout, hidden, selected, S.hour, S.weather, S.winter, props, frozen],
+    [loc, layout, hidden, selected, S.hour, S.weather, S.winter, props, frozen, S.birdsSilent],
   );
 
   if (view.endScreen && !view.modal) return <EndScreen view={view} />;
@@ -558,7 +567,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <div className="travel-fade" key={loc}>
             {layout.label}
           </div>
-          <TopBar view={view} onJournal={() => setJournal(true)} onMap={() => setMap(true)} />
+          <TopBar view={view} onJournal={() => setJournal(true)} onMap={() => setMap(true)} onSound={() => setSound(true)} />
           <BodyRail view={view} />
           <StoresRail view={view} />
           <BottomBar view={view} onJournal={() => setJournal(true)} />
@@ -593,6 +602,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {curtain !== null && (
             <div className="night-curtain" key={curtain} onAnimationEnd={() => setCurtain(null)} />
           )}
+          {sound && <SoundPanel onClose={() => setSound(false)} />}
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
           <Modal view={view} />

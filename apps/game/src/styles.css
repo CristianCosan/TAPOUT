@@ -284,3 +284,12 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .intro-subtitle .intro-hint { align-self: flex-end; color: var(--sage); }
 .intro-skip { position: absolute; right: 28px; bottom: 24px; z-index: 6; padding: 8px 18px; border-radius: 10px; border: 1px solid #2a3a2c; background: #0b100cc0; color: var(--sage); font-size: 16px; cursor: pointer; }
 .keepsakes { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 6px; }
+.sound-panel { width: 720px; padding: 28px 34px; border-radius: 14px; background: #0f1610; border: 1px solid #2a3a2c; display: flex; flex-direction: column; gap: 18px; }
+.sound-panel h3 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 30px; letter-spacing: 0.08em; color: var(--bone); }
+.sound-row { display: grid; grid-template-columns: 260px 1fr 48px; align-items: center; gap: 18px; }
+.sound-name { display: flex; flex-direction: column; }
+.sound-name b { font-size: 20px; color: var(--bone); font-weight: 600; }
+.sound-name em { font-size: 15px; color: var(--sage); font-style: normal; }
+.sound-row input { width: 100%; accent-color: var(--ember); }
+.sound-val { font-size: 18px; color: var(--bone); text-align: right; }
+.sound-panel .big-btn { align-self: flex-end; }

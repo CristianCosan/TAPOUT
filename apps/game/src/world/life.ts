@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import type { WorldArea } from '@tapout/content';
 import { mat } from './kit.ts';
 
-export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay';
+export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf';
 
 export interface Call {
   kind: CallKind;
@@ -17,6 +17,8 @@ export interface LifeState {
   /** 0 at night, 1 in full day. */
   day: number;
   weather: string;
+  /** v12's birds-go-silent tell: something is coming (a front, the frost, a predator). */
+  silent: boolean;
   player: THREE.Vector3;
 }
 
@@ -251,21 +253,25 @@ export class Wildlife {
     }
 
     // Chickadees on the ground: hop, peck, and scatter when you come close.
-    const out = !daytime || wet || s.weather === 'snow';
+    const out = !daytime || wet || s.weather === 'snow' || s.silent;
     for (const h of this.hoppers) this.hopper(h, dt, s, out);
 
     // Voices from the trees you cannot see.
     this.nextCall -= dt;
     if (this.nextCall <= 0) {
       this.nextCall = rand(5, 14);
-      if (daytime && !wet) {
-        const a = rand(0, Math.PI * 2);
-        const far = this.area.walkRadius + rand(4, 14);
-        const at = new THREE.Vector3(Math.cos(a) * far, 4, Math.sin(a) * far);
-        const roll = Math.random();
+      const a = rand(0, Math.PI * 2);
+      const far = this.area.walkRadius + rand(4, 14);
+      const at = new THREE.Vector3(Math.cos(a) * far, 4, Math.sin(a) * far);
+      const roll = Math.random();
+      if (daytime && !wet && !s.silent) {
         if (roll < 0.62) this.call('chickadee', at);
         else if (roll < 0.85) this.call('raven', this.soarers[0]!.g.position);
         else this.call('jay', at);
+      } else if (s.day < 0.1 && s.weather !== 'storm') {
+        // The night: an owl now and then, wolves far off more rarely.
+        if (roll < 0.22) this.call('owl', at);
+        else if (roll < 0.3) this.call('wolf', at.setLength(220));
       }
     }
   }

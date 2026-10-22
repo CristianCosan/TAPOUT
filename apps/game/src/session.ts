@@ -88,6 +88,7 @@ export class Session {
   private modal: string | null = null;
   private elements = new Map<string, PageElement>();
   private listeners = new Set<() => void>();
+  private callListeners = new Set<(fn: string) => void>();
   private view: View | null = null;
   private version = 0;
   private baseline: Baseline | null = null;
@@ -175,6 +176,12 @@ export class Session {
     this.emit();
   }
 
+  /** Hears the name of every v12 call a click makes (the sounds use it). */
+  onCall(f: (fn: string) => void): () => void {
+    this.callListeners.add(f);
+    return () => this.callListeners.delete(f);
+  }
+
   /** Runs a v12 handler, exactly as clicking that button in v12 would. */
   click(handler: string): void {
     if (!this.run) return;
@@ -194,7 +201,10 @@ export class Session {
       else if (call.fn === 'restartRun') {
         this.leaveRun();
         return;
-      } else this.run.call(call.fn, ...call.args);
+      } else {
+        for (const f of this.callListeners) f(call.fn);
+        this.run.call(call.fn, ...call.args);
+      }
     }
     if (!this.modal && this.baseline) {
       this.result = this.diff(this.baseline);
