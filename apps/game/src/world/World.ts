@@ -24,6 +24,8 @@ export interface WorldInput {
   dusk: number;
   weather: string;
   winter: boolean;
+  /** v12's air temperature now, for your breath showing in the cold. */
+  tempC?: number;
   props: PropState;
   /** An overlay is open: no walking, no looking. */
   frozen: boolean;
@@ -57,6 +59,22 @@ interface StationNode {
 }
 
 const LEAVES = 160;
+
+let soft: THREE.Texture | null = null;
+/** A white dot fading to clear at the edge, drawn once: mist and breath. */
+function softTexture(): THREE.Texture {
+  if (soft) return soft;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  soft = new THREE.CanvasTexture(c);
+  return soft;
+}
 const WEATHER_GREY: Record<string, number> = { clear: 0, cold: 0.05, overcast: 0.6, rain: 0.8, snow: 0.75, storm: 1 };
 const FOG: Record<string, [number, number]> = { clear: [40, 280], cold: [40, 240], overcast: [22, 130], rain: [12, 75], snow: [8, 55], storm: [6, 42] };
 
@@ -92,6 +110,8 @@ export class World {
   private leafAt: Float32Array;
   private snow: THREE.Points;
   private smoke: THREE.Mesh[] = [];
+  private breath: THREE.Sprite[] = [];
+  private breathAt = 0;
 
   // you
   private pos = new THREE.Vector3();
@@ -112,8 +132,8 @@ export class World {
   /** How much daylight the sky showed last frame, 0 to 1. */
   private daylight = 1;
   /** Screenshot and test aid: show another hour or weather without touching the run. */
-  private previewing: { hour?: number; weather?: string } = {};
-  set preview(p: { hour?: number; weather?: string }) {
+  private previewing: { hour?: number; weather?: string; tempC?: number } = {};
+  set preview(p: { hour?: number; weather?: string; tempC?: number }) {
     this.previewing = p;
     this.shownHour = -1;
   }
@@ -210,6 +230,13 @@ export class World {
     for (let i = 0; i < LEAVES; i++) this.leaves.setColorAt(i, new THREE.Color(leafColors[i % leafColors.length]!));
     this.leaves.frustumCulled = false;
     this.scene.add(this.leaves);
+
+    for (let i = 0; i < 3; i++) {
+      const b = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTexture(), color: 0xeef2f4, transparent: true, opacity: 0, depthWrite: false }));
+      b.userData.age = 9;
+      this.breath.push(b);
+      this.scene.add(b);
+    }
 
     for (let i = 0; i < 10; i++) {
       const puff = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), new THREE.MeshLambertMaterial({ color: 0x8a8a8a, transparent: true, opacity: 0, depthWrite: false, flatShading: true }));
@@ -843,6 +870,7 @@ export class World {
     this.updateSky(dt);
     this.updateFire();
     this.updateWeather(dt, eye);
+    this.updateBreath(dt, eye, this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'));
     this.updateLife(dt);
     const fire = this.stations.get('fire');
     const w = { ...input, ...this.preview };
@@ -1094,15 +1122,7 @@ export class World {
 
   /** Soft banks of mist lying on open water: thick at dawn, a little at dusk, none by day. */
   private makeMist(shoreZ: number): THREE.Group {
-    const c = document.createElement('canvas');
-    c.width = c.height = 64;
-    const g2 = c.getContext('2d')!;
-    const grad = g2.createRadialGradient(32, 32, 2, 32, 32, 32);
-    grad.addColorStop(0, 'rgba(255,255,255,1)');
-    grad.addColorStop(1, 'rgba(255,255,255,0)');
-    g2.fillStyle = grad;
-    g2.fillRect(0, 0, 64, 64);
-    const tex = new THREE.CanvasTexture(c);
+    const tex = softTexture();
     const group = new THREE.Group();
     const rnd = seeded(77);
     for (let i = 0; i < 18; i++) {
@@ -1132,6 +1152,33 @@ export class World {
     for (const m of this.mist.children as THREE.Mesh[]) {
       (m.material as THREE.MeshBasicMaterial).opacity = 0.32 * k;
       m.position.x = m.userData.base + Math.sin(this.time * 0.02 * m.userData.drift * 10) * 6;
+    }
+  }
+
+  /** In the cold your breath shows: a small cloud in front of you every few seconds, quicker when running. */
+  private updateBreath(dt: number, eye: THREE.Vector3, running: boolean): void {
+    const cold = (this.preview.tempC ?? this.input?.tempC ?? 10) <= 2;
+    this.breathAt -= dt;
+    if (cold && this.breathAt <= 0 && !this.input?.frozen) {
+      this.breathAt = running ? 1.6 : 3.4;
+      const b = this.breath.reduce((a, c) => ((c.userData.age as number) > (a.userData.age as number) ? c : a));
+      const dir = new THREE.Vector3();
+      this.camera.getWorldDirection(dir);
+      b.position.copy(eye).addScaledVector(dir, 0.55);
+      b.position.y -= 0.16;
+      b.userData.age = 0;
+      b.userData.vel = dir.multiplyScalar(0.25);
+    }
+    for (const b of this.breath) {
+      const age = (b.userData.age as number) + dt;
+      b.userData.age = age;
+      const life = Math.min(1, age / 1.3);
+      b.material.opacity = 0.18 * Math.sin(Math.PI * life);
+      b.visible = life < 1;
+      if (!b.visible) continue;
+      b.scale.setScalar(0.18 + life * 0.35);
+      b.position.addScaledVector(b.userData.vel as THREE.Vector3, dt);
+      b.position.y += 0.06 * dt;
     }
   }
 

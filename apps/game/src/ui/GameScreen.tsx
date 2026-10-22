@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { GAME, dawnHour, duskHour, roundDisplay } from '@tapout/core';
+import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay } from '@tapout/core';
 import { HUNT_TRAIL_LABELS, KEEPSAKES, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
@@ -559,11 +559,12 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       dusk: duskHour(),
       weather: S.weather,
       winter: !!S.winter,
+      tempC: ambientTempC(),
       props,
       frozen,
       birdsSilent: !!S.birdsSilent,
     }),
-    [loc, layout, hidden, selected, S.hour, S.weather, S.winter, props, frozen, S.birdsSilent],
+    [loc, layout, hidden, selected, S.hour, S.weather, S.winter, S.day, props, frozen, S.birdsSilent],
   );
 
   if (view.endScreen && !view.modal) return <EndScreen view={view} />;

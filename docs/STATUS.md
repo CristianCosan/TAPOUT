@@ -80,6 +80,9 @@ little at dusk, thinner in rain, none on ice.
 
 **Build 0.0.21** adds clusters of rust-capped mushrooms on the woods floor in autumn (D-046).
 
+**Build 0.0.22** shows your breath in the cold (D-047): at 2 °C or below a faint cloud forms in front of you
+every few seconds, quicker when you run. Read from v12's air temperature.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
