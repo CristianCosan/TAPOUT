@@ -293,3 +293,11 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .sound-row input { width: 100%; accent-color: var(--ember); }
 .sound-val { font-size: 18px; color: var(--bone); text-align: right; }
 .sound-panel .big-btn { align-self: flex-end; }
+.settings-panel { width: 860px; max-height: 960px; overflow-y: auto; gap: 12px; }
+.settings-panel h4 { margin: 10px 0 0; font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ember); font-weight: 600; }
+.toggle-row { grid-template-columns: 1fr 48px; }
+.toggle-row input { width: 26px; height: 26px; justify-self: end; accent-color: var(--ember); }
+.key-list { display: flex; flex-direction: column; gap: 6px; }
+.key-row { display: grid; grid-template-columns: 160px 1fr; gap: 14px; align-items: center; font-size: 17px; color: var(--bone); }
+.key-row kbd { font-family: inherit; font-size: 15px; padding: 4px 10px; border-radius: 6px; border: 1px solid #2a3a2c; background: #0b100c; color: var(--sage); text-align: center; }
+.credits-line { margin: 0; font-size: 18px; line-height: 1.5; color: var(--bone); }

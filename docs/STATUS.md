@@ -35,7 +35,11 @@ letter you will not send, to Mara (once a day, +3 morale, a little resolve, neve
 home: Mara picks up after a tap-out, a medical pull or the hospital; your parents too if you wrote to them or
 the thread reached stage 2; after a win you ring your dad from the boat. Your letters appear in the epilogue.
 
-**Next:** M20 feel and polish (teaching tooltips, accessibility options, credits screen).
+**Build 0.0.11 (D-039)** starts M20: a Settings screen (from the title screen, and the Settings button in the
+game) with the four volumes, mouse speed, invert up and down, head bob, rival names on the radio, full
+screen, and the list of keys; and a Credits screen. Remembered on the computer.
+
+**Next:** more M20 polish.
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

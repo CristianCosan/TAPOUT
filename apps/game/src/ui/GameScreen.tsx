@@ -10,7 +10,7 @@ import { WorldHost } from '../world/WorldHost.tsx';
 import type { WorldInput } from '../world/World.ts';
 import type { PropState } from '../world/props.ts';
 import { useSoundCues } from '../audio/cues.ts';
-import { SoundPanel } from './SoundPanel.tsx';
+import { SettingsPanel } from './SettingsPanel.tsx';
 
 const BARS = [
   ['health', 'Health'],
@@ -80,8 +80,8 @@ function TopBar({ view, onJournal, onMap, onSound }: { view: View; onJournal: ()
       <button className="hud-btn" onClick={onJournal} title="Journal (J)">
         Journal
       </button>
-      <button className="hud-btn" onClick={onSound} title="Sound volumes">
-        Sound
+      <button className="hud-btn" onClick={onSound} title="Sound, mouse, keys">
+        Settings
       </button>
       <button className="hud-btn phone" disabled={hud.get('tapBtn')?.disabled} onClick={() => session.click('confirmTapOut()')}>
         📞 Sat phone
@@ -602,7 +602,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {curtain !== null && (
             <div className="night-curtain" key={curtain} onAnimationEnd={() => setCurtain(null)} />
           )}
-          {sound && <SoundPanel onClose={() => setSound(false)} />}
+          {sound && <SettingsPanel onClose={() => setSound(false)} />}
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
           <Modal view={view} />

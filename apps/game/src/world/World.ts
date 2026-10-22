@@ -9,6 +9,7 @@ import { FIRST_PERSON, type LocationLayout, type WorldArea } from '@tapout/conte
 import { mat, noise, rough, seeded } from './kit.ts';
 import { buildProp, propKey, type PropState } from './props.ts';
 import { audio } from '../audio/engine.ts';
+import { settings } from '../settings.ts';
 import { Wildlife } from './life.ts';
 import { Ambience } from './sound.ts';
 
@@ -650,8 +651,10 @@ export class World {
   private onMouseMove = (e: MouseEvent) => {
     if (this.locked) {
       if (this.input?.frozen) return;
-      this.yaw -= e.movementX * FIRST_PERSON.lookSensitivity;
-      this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch - e.movementY * FIRST_PERSON.lookSensitivity));
+      const s = settings();
+      const k = FIRST_PERSON.lookSensitivity * s.mouseSpeed;
+      this.yaw -= e.movementX * k;
+      this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch - e.movementY * k * (s.invertY ? -1 : 1)));
       return;
     }
     const rect = this.renderer.domElement.getBoundingClientRect();
@@ -737,7 +740,7 @@ export class World {
 
   private eye(): THREE.Vector3 {
     const area = this.input!.area;
-    return new THREE.Vector3(this.pos.x, this.ground(area, this.pos.x, this.pos.z) + FIRST_PERSON.eyeHeight + Math.sin(this.bob) * 0.035, this.pos.z);
+    return new THREE.Vector3(this.pos.x, this.ground(area, this.pos.x, this.pos.z) + FIRST_PERSON.eyeHeight + (settings().headBob ? Math.sin(this.bob) * 0.035 : 0), this.pos.z);
   }
 
   private keepInside(): void {

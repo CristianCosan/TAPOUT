@@ -4,7 +4,7 @@
 
 import { createRngState, type RngState } from './rng/rng.ts';
 import { useRng } from './v12/runtime.ts';
-import { S, setS } from './v12/state.ts';
+import { S, SETTINGS, setS, setSettings } from './v12/state.ts';
 import { RULES, TAPOUT_RULES, V12_RULES, setRules, type RuleSet } from './v12/rules.ts';
 import * as breakSequence from './v12/breakSequence.ts';
 import * as breakdown from './v12/breakdown.ts';
@@ -174,3 +174,8 @@ export { fireCap } from './v12/camp.ts';
 export { waterCap, computeBMI } from './v12/setup.ts';
 export { meatCount, berryCount } from './v12/food.ts';
 export { roundDisplay, hh, duskHour, dawnHour } from './v12/helpers.ts';
+
+/** v12's radio setting: name the rivals who leave and why, or only that someone left. */
+export function setRivalNews(on: boolean): void {
+  setSettings({ ...SETTINGS, showRivalNews: on });
+}

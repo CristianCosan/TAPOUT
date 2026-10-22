@@ -16,6 +16,11 @@ ipcMain.on('store:set', (event, key, value) => {
 ipcMain.on('store:remove', (event, key) => {
   event.returnValue = saves().remove(key);
 });
+ipcMain.on('window:fullscreen', (event, on) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && typeof on === 'boolean') win.setFullScreen(on);
+  event.returnValue = win ? win.isFullScreen() : false;
+});
 ipcMain.on('store:openFolder', (event) => {
   shell.openPath(app.getPath('userData'));
   event.returnValue = true;
