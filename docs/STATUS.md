@@ -123,6 +123,9 @@ rise, pushed sideways by the wind in rain and storms.
 **Build 0.0.34** makes the treetops move with the wind (a vertex shader on the foliage): a slow sway on calm
 days, harder in rain, and a heavy, gusting thrash in storms. Each tree keeps its own rhythm.
 
+**Build 0.0.35** adds shooting stars: on a clear, dark night a meteor streaks across the sky every half
+minute to a minute and a half.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

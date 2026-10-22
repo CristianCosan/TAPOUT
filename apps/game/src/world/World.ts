@@ -63,6 +63,7 @@ interface StationNode {
 const LEAVES = 160;
 const RINGS = 48;
 const SPARKS = 60;
+const UP = new THREE.Vector3(0, 1, 0);
 const PRINTS = 200;
 const FLASH = new THREE.Color(0xdfe6ff);
 
@@ -138,6 +139,10 @@ export class World {
   private sky: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
   private stars: THREE.Points;
   private moon: THREE.Mesh;
+  /** Now and then on a clear night, a meteor streaks across the sky. */
+  private meteor: THREE.Mesh;
+  private meteorAt = 25;
+  private meteorRun: { from: THREE.Vector3; dir: THREE.Vector3; t: number; length: number } | null = null;
   private water: THREE.Mesh | null = null;
   private shownHour = -1;
 
@@ -271,6 +276,12 @@ export class World {
     this.scene.add(this.stars);
     this.moon = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 10), new THREE.MeshBasicMaterial({ color: 0xe8ecf4, fog: false, transparent: true }));
     this.scene.add(this.moon);
+    // a thin streak, bright at the head (its top end) and fading down the tail
+    const streak = new THREE.CylinderGeometry(1.1, 0.05, 1, 4, 1, true).translate(0, -0.5, 0);
+    this.meteor = new THREE.Mesh(streak, new THREE.MeshBasicMaterial({ color: 0xf4f6ff, transparent: true, opacity: 0, fog: false, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.meteor.frustumCulled = false;
+    this.meteor.visible = false;
+    this.scene.add(this.meteor);
 
     // Rain: short streaks in a box that follows you. Snow: drifting points.
     const rainPos = new Float32Array(2400 * 6);
@@ -1086,6 +1097,7 @@ export class World {
     this.renderer.toneMappingExposure = 1.0 + (1 - day) * 0.35 + this.flash * 1.2;
 
     (this.stars.material as THREE.PointsMaterial).opacity = (1 - day) * (1 - grey) * 0.9;
+    this.updateMeteor(dt, day < 0.1 && grey < 0.1);
     this.moon.visible = day < 0.4 && grey < 0.7;
     this.moon.position.copy(this.pos).addScaledVector(moonDir, 520);
     (this.moon.material as THREE.MeshBasicMaterial).opacity = 1 - day * 2.5;
@@ -1139,6 +1151,34 @@ export class World {
     }
     pos.needsUpdate = true;
     col.needsUpdate = true;
+  }
+
+  private updateMeteor(dt: number, dark: boolean): void {
+    if (!this.meteorRun) {
+      this.meteor.visible = false;
+      if (!dark) return;
+      this.meteorAt -= dt;
+      if (this.meteorAt > 0) return;
+      this.meteorAt = 20 + Math.random() * 70;
+      // somewhere high in the sky, falling at a slant
+      const a = Math.random() * Math.PI * 2;
+      const from = new THREE.Vector3(Math.cos(a) * 300, 220 + Math.random() * 120, Math.sin(a) * 300);
+      const dir = new THREE.Vector3(Math.random() - 0.5, -0.35 - Math.random() * 0.3, Math.random() - 0.5).normalize();
+      this.meteorRun = { from, dir, t: 0, length: 0.6 + Math.random() * 0.6 };
+    }
+    const m = this.meteorRun;
+    m.t += dt;
+    const k = m.t / m.length;
+    if (k >= 1) {
+      this.meteorRun = null;
+      return;
+    }
+    const head = m.from.clone().addScaledVector(m.dir, k * 160);
+    this.meteor.position.copy(this.pos).add(head);
+    this.meteor.quaternion.setFromUnitVectors(UP, m.dir);
+    this.meteor.scale.set(1, 60 * Math.min(1, k * 4), 1);
+    this.meteor.visible = true;
+    (this.meteor.material as THREE.MeshBasicMaterial).opacity = Math.sin(k * Math.PI) * 0.9;
   }
 
   private updateFire(dt: number): void {
