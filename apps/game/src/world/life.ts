@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import type { WorldArea } from '@tapout/content';
 import { mat } from './kit.ts';
 
-export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver';
+export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver' | 'squirrel';
 
 export interface Call {
   kind: CallKind;
@@ -137,6 +137,34 @@ function beaver(): THREE.Group {
   return g;
 }
 
+/** A red squirrel facing -z, its bushy tail up behind it. */
+function squirrel(): THREE.Group {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 5), mat(0x9a4a24));
+  body.scale.set(0.9, 1.1, 1.4);
+  body.position.y = 0.09;
+  g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.055, 6, 5), mat(0xa4532a));
+  head.position.set(0, 0.17, -0.1);
+  g.add(head);
+  const tail = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.16, 2, 6), mat(0xb0602e));
+  tail.position.set(0, 0.2, 0.13);
+  tail.rotation.x = 0.35;
+  tail.name = 'tail';
+  g.add(tail);
+  return g;
+}
+
+interface Squirrel {
+  g: THREE.Group;
+  x: number;
+  z: number;
+  heading: number;
+  state: 'sit' | 'run' | 'gone';
+  timer: number;
+  chatter: number;
+}
+
 interface Beaver {
   g: THREE.Group;
   x: number;
@@ -201,6 +229,7 @@ export class Wildlife {
   private calls: Call[] = [];
   private deer: Deer | null = null;
   private beaver: Beaver | null = null;
+  private squirrel: Squirrel | null = null;
 
   constructor(
     private readonly area: WorldArea,
@@ -249,6 +278,13 @@ export class Wildlife {
       this.root.add(g);
     }
 
+    if (area.id === 'woods' || area.id === 'camp') {
+      const g = squirrel();
+      g.visible = false;
+      this.squirrel = { g, x: 0, z: 0, heading: 0, state: 'gone', timer: rand(5, 25), chatter: rand(2, 6) };
+      this.root.add(g);
+    }
+
     if (area.id === 'woods') {
       const g = deer(winter);
       g.visible = false;
@@ -274,6 +310,7 @@ export class Wildlife {
       ...this.loons.map((l) => ({ kind: 'loon', at: l.g.position.clone(), visible: l.g.visible })),
       ...this.hoppers.map((h) => ({ kind: 'chickadee', at: h.g.position.clone(), visible: h.g.visible })),
       ...(this.deer ? [{ kind: 'deer', at: this.deer.g.position.clone(), visible: this.deer.g.visible }] : []),
+      ...(this.squirrel ? [{ kind: 'squirrel', at: this.squirrel.g.position.clone(), visible: this.squirrel.g.visible }] : []),
       ...(this.beaver ? [{ kind: 'beaver', at: this.beaver.g.position.clone(), visible: this.beaver.g.visible }] : []),
     ];
   }
@@ -282,6 +319,7 @@ export class Wildlife {
   showDeer(): void {
     if (this.deer?.state === 'gone') this.deer.timer = 0;
     if (this.beaver?.state === 'gone') this.beaver.timer = 0;
+    if (this.squirrel?.state === 'gone') this.squirrel.timer = 0;
   }
 
   /** Calls made since the last frame, for the sound to play. */
@@ -375,6 +413,7 @@ export class Wildlife {
 
     if (this.deer) this.updateDeer(this.deer, dt, t, s);
     if (this.beaver) this.updateBeaver(this.beaver, dt, t, s);
+    if (this.squirrel) this.updateSquirrel(this.squirrel, dt, t, s);
 
     // Voices from the trees you cannot see.
     this.nextCall -= dt;
@@ -613,6 +652,68 @@ export class Wildlife {
       g.children.forEach((c) => (c.visible = true));
       b.state = 'gone';
       b.timer = rand(90, 200);
+    }
+  }
+
+  /** Sits near the edge of the clearing scolding you now and then; come within a few metres and it dashes off into the trees. */
+  private updateSquirrel(q: Squirrel, dt: number, t: number, s: LifeState): void {
+    const g = q.g;
+    const out = s.day > 0.2 && !WET.has(s.weather) && !s.silent;
+    if (q.state === 'gone') {
+      g.visible = false;
+      q.timer -= dt;
+      if (q.timer > 0 || !out) {
+        if (q.timer <= 0) q.timer = rand(20, 50);
+        return;
+      }
+      const a = rand(0, Math.PI * 2);
+      const r = this.area.walkRadius - rand(0.5, 3);
+      q.x = Math.cos(a) * r;
+      q.z = Math.sin(a) * r;
+      if (this.area.shoreZ !== undefined && q.z < this.area.shoreZ + 2) {
+        q.timer = rand(3, 8);
+        return;
+      }
+      if (Math.hypot(q.x - s.player.x, q.z - s.player.z) < 7) {
+        q.timer = rand(3, 8);
+        return;
+      }
+      q.heading = Math.atan2(q.x, q.z); // facing the middle of the clearing
+      q.state = 'sit';
+      q.timer = rand(40, 90);
+      g.visible = true;
+    }
+    const tail = g.getObjectByName('tail')!;
+    const near = Math.hypot(q.x - s.player.x, q.z - s.player.z);
+    if (q.state === 'sit') {
+      g.position.set(q.x, this.ground(q.x, q.z), q.z);
+      g.rotation.set(0, q.heading, 0);
+      q.chatter -= dt;
+      const scolding = q.chatter < 1.2;
+      tail.rotation.x = 0.35 + (scolding ? Math.sin(t * 30) * 0.25 : 0);
+      if (q.chatter <= 0) {
+        q.chatter = rand(5, 12);
+        this.call('squirrel', g.position);
+      }
+      q.timer -= dt;
+      if (near < 4 || q.timer <= 0 || !out) {
+        q.state = 'run';
+        q.timer = 2.5;
+        // away from you, out toward the trees
+        q.heading = Math.atan2(-(q.x - s.player.x), -(q.z - s.player.z));
+        if (near < 4) this.call('squirrel', g.position);
+      }
+      return;
+    }
+    q.timer -= dt;
+    q.x += -Math.sin(q.heading) * 4.5 * dt;
+    q.z += -Math.cos(q.heading) * 4.5 * dt;
+    g.position.set(q.x, this.ground(q.x, q.z) + Math.abs(Math.sin(t * 22)) * 0.08, q.z);
+    g.rotation.set(0, q.heading, 0);
+    tail.rotation.x = 1.1;
+    if (q.timer <= 0) {
+      q.state = 'gone';
+      q.timer = rand(40, 100);
     }
   }
 }

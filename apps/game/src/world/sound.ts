@@ -147,6 +147,15 @@ export class Ambience {
         [0, 0.55, 0.75, 1.3, 1.85].forEach((t, i) => tone(out, { at: t, len: i === 1 ? 0.14 : 0.32, freqs: [[0, f * 1.05], [0.3, f]], peak: 0.1, attack: 0.06 }));
         break;
       }
+      case 'squirrel': {
+        // The red squirrel's scold: a fast dry rattle that slows and drops at the end.
+        const n = 14 + Math.floor(r() * 10);
+        for (let i = 0; i < n; i++) {
+          const at = i * (0.045 + i * 0.0015);
+          burst(out, { at, len: 0.03, peak: 0.1 * (1 - i / (n * 1.4)), freq: 3600 - i * 40 + r() * 300, q: 3, attack: 0.002 });
+        }
+        break;
+      }
       case 'beaver': {
         // The tail slap: a flat crack off the water, then the splash settling.
         burst(out, { len: 0.12, peak: 0.6, freq: 900, to: 400, q: 0.6, attack: 0.002 });

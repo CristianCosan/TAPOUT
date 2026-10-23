@@ -142,6 +142,10 @@ your ankles with the wind, thicker and faster in a storm, easing in and out as t
 **Build 0.0.40** lays low fog between the trees of the woods in the early morning (thickest around 06:50,
 lifting by mid-morning, thin in rain, almost none in storms, none in winter), lit by the hour.
 
+**Build 0.0.41** adds a red squirrel at the edge of the clearing in the woods and at camp: it sits facing
+you, flicks its tail and scolds you with a dry rattle every few seconds, and dashes off into the trees if you
+come within a few metres. Not in rain, at night, or when the birds go silent.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
