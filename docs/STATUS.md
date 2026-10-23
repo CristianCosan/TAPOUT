@@ -132,6 +132,10 @@ thickest by -24 °C, coming and going over a few seconds.
 **Build 0.0.37** makes the frozen lake sing: in winter, near the ice at camp and the shore, a crack runs
 across it every 12 to 47 seconds, a sharp tick, a falling "pew" and a low boom (made in code, louder close).
 
+**Build 0.0.38** puts a beaver on the lake at the shore (D-056): now and then in daylight it swims a slow
+line along the shore with a V of wake behind it; go down to the water's edge near it and it slaps its tail
+(a flat crack with an echo) and dives. Not in winter, storms, or when the birds go silent.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

@@ -1,13 +1,14 @@
 // Birds that are only scenery: ravens turning high overhead, geese going south in autumn, a pair
 // of loons on open water, chickadees hopping about that scatter when you walk up; and in the
-// woods a deer at the tree line that snorts and bounds off if you come too close. None of them
+// woods a deer at the tree line that snorts and bounds off if you come too close; and at the shore
+// a beaver swimming its line now and then, that slaps its tail and dives if you come down to the water. None of them
 // is a station and none touches the run; they come and go with the light and the weather.
 
 import * as THREE from 'three';
 import type { WorldArea } from '@tapout/content';
 import { mat } from './kit.ts';
 
-export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer';
+export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver';
 
 export interface Call {
   kind: CallKind;
@@ -108,6 +109,43 @@ function deer(winter: boolean): THREE.Group {
   return g;
 }
 
+/** A beaver's head and back low in the water, facing -z, and the V of its wake. */
+function beaver(): THREE.Group {
+  const g = new THREE.Group();
+  const back = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 5), mat(0x3b2a1c));
+  back.scale.set(1, 0.45, 1.8);
+  back.position.set(0, 0, 0.18);
+  g.add(back);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 7, 5), mat(0x45311f));
+  head.scale.set(1, 0.8, 1.25);
+  head.position.set(0, 0.06, -0.24);
+  g.add(head);
+  const wake = new THREE.Group();
+  wake.name = 'wake';
+  for (const side of [-1, 1]) {
+    const arm = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 4).translate(0, 2, 0), new THREE.MeshBasicMaterial({ color: 0xc8d6dc, transparent: true, opacity: 0.35, depthWrite: false }));
+    arm.rotation.x = Math.PI / 2;
+    arm.rotation.z = side * 0.32;
+    arm.position.set(0, -0.08, -0.2);
+    wake.add(arm);
+  }
+  g.add(wake);
+  const splash = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 28), new THREE.MeshBasicMaterial({ color: 0xe0eaee, transparent: true, opacity: 0, depthWrite: false }));
+  splash.rotation.x = -Math.PI / 2;
+  splash.name = 'splash';
+  g.add(splash);
+  return g;
+}
+
+interface Beaver {
+  g: THREE.Group;
+  x: number;
+  z: number;
+  dir: number;
+  state: 'swim' | 'dive' | 'gone';
+  timer: number;
+}
+
 interface Deer {
   g: THREE.Group;
   x: number;
@@ -162,6 +200,7 @@ export class Wildlife {
   private nextCall = rand(4, 10);
   private calls: Call[] = [];
   private deer: Deer | null = null;
+  private beaver: Beaver | null = null;
 
   constructor(
     private readonly area: WorldArea,
@@ -203,6 +242,13 @@ export class Wildlife {
       }
     }
 
+    if (area.id === 'shore' && area.shoreZ !== undefined && !winter) {
+      const g = beaver();
+      g.visible = false;
+      this.beaver = { g, x: 0, z: 0, dir: 1, state: 'gone', timer: rand(10, 40) };
+      this.root.add(g);
+    }
+
     if (area.id === 'woods') {
       const g = deer(winter);
       g.visible = false;
@@ -228,12 +274,14 @@ export class Wildlife {
       ...this.loons.map((l) => ({ kind: 'loon', at: l.g.position.clone(), visible: l.g.visible })),
       ...this.hoppers.map((h) => ({ kind: 'chickadee', at: h.g.position.clone(), visible: h.g.visible })),
       ...(this.deer ? [{ kind: 'deer', at: this.deer.g.position.clone(), visible: this.deer.g.visible }] : []),
+      ...(this.beaver ? [{ kind: 'beaver', at: this.beaver.g.position.clone(), visible: this.beaver.g.visible }] : []),
     ];
   }
 
   /** Brings the deer out now, for tests and screenshots. */
   showDeer(): void {
     if (this.deer?.state === 'gone') this.deer.timer = 0;
+    if (this.beaver?.state === 'gone') this.beaver.timer = 0;
   }
 
   /** Calls made since the last frame, for the sound to play. */
@@ -326,6 +374,7 @@ export class Wildlife {
     for (const h of this.hoppers) this.hopper(h, dt, s, out);
 
     if (this.deer) this.updateDeer(this.deer, dt, t, s);
+    if (this.beaver) this.updateBeaver(this.beaver, dt, t, s);
 
     // Voices from the trees you cannot see.
     this.nextCall -= dt;
@@ -509,6 +558,61 @@ export class Wildlife {
     if (d.timer <= 0) {
       d.state = 'bolt';
       d.run = 2.5;
+    }
+  }
+
+  /** Out in the light, swimming a slow line along the shore; at the water's edge near it, a slap and a dive. */
+  private updateBeaver(b: Beaver, dt: number, t: number, s: LifeState): void {
+    const g = b.g;
+    const shoreZ = this.area.shoreZ!;
+    const splash = g.getObjectByName('splash') as THREE.Mesh;
+    const wake = g.getObjectByName('wake')!;
+    const out = s.day > 0.05;
+    if (b.state === 'gone') {
+      g.visible = false;
+      b.timer -= dt;
+      if (b.timer > 0 || !out || s.weather === 'storm' || s.silent) {
+        if (b.timer <= 0) b.timer = rand(20, 60);
+        return;
+      }
+      b.dir = Math.random() < 0.5 ? -1 : 1;
+      b.x = -b.dir * rand(30, 40);
+      b.z = shoreZ - rand(6, 16);
+      b.state = 'swim';
+      g.visible = true;
+      wake.visible = true;
+      (splash.material as THREE.MeshBasicMaterial).opacity = 0;
+    }
+    if (b.state === 'swim') {
+      b.x += b.dir * 0.75 * dt;
+      g.position.set(b.x, WATER_Y + 0.03 + Math.sin(t * 2.2) * 0.012, b.z);
+      g.rotation.y = b.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+      wake.children.forEach((a) => ((a as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.28 + Math.sin(t * 3) * 0.06);
+      const edge = s.player.z < shoreZ + 3;
+      const near = Math.hypot(b.x - s.player.x, b.z - s.player.z);
+      if (edge && near < 16) {
+        b.state = 'dive';
+        b.timer = 0;
+        this.call('beaver', g.position);
+      } else if (Math.abs(b.x) > 42) {
+        b.state = 'gone';
+        b.timer = rand(60, 160);
+      }
+      return;
+    }
+    // the dive: the tail comes down, a splash spreads, and it is gone under
+    b.timer += dt;
+    wake.visible = false;
+    g.children.forEach((c) => {
+      if (c !== splash) c.visible = b.timer < 0.25;
+    });
+    splash.visible = true;
+    splash.scale.setScalar(0.3 + b.timer * 1.4);
+    (splash.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.6 * (1 - b.timer / 1.6));
+    if (b.timer > 1.6) {
+      g.children.forEach((c) => (c.visible = true));
+      b.state = 'gone';
+      b.timer = rand(90, 200);
     }
   }
 }

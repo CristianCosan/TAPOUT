@@ -105,7 +105,7 @@ export class Ambience {
       tail = p;
     }
     tail.connect(this.out);
-    if (kind === 'loon' || kind === 'goose' || kind === 'wolf' || kind === 'owl') tail.connect(this.echo);
+    if (kind === 'loon' || kind === 'goose' || kind === 'wolf' || kind === 'owl' || kind === 'beaver') tail.connect(this.echo);
 
     const r = Math.random;
     switch (kind) {
@@ -145,6 +145,12 @@ export class Ambience {
         // A great horned owl: hoo, h-hoo, hoo, hoo.
         const f = 300 + r() * 30;
         [0, 0.55, 0.75, 1.3, 1.85].forEach((t, i) => tone(out, { at: t, len: i === 1 ? 0.14 : 0.32, freqs: [[0, f * 1.05], [0.3, f]], peak: 0.1, attack: 0.06 }));
+        break;
+      }
+      case 'beaver': {
+        // The tail slap: a flat crack off the water, then the splash settling.
+        burst(out, { len: 0.12, peak: 0.6, freq: 900, to: 400, q: 0.6, attack: 0.002 });
+        burst(out, { at: 0.04, len: 0.9, peak: 0.22, freq: 2400, to: 700, q: 0.5, attack: 0.02 });
         break;
       }
       case 'deer': {
