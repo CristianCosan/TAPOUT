@@ -166,6 +166,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.51** adds the sound of rain on the shelter roof when you stand under or beside it: a taut patter on the tarp, softer on boughs or logs (D-063).
 
+**Build 0.0.52** adds puddles that fill in the low spots of each clearing in rain and dry up after.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

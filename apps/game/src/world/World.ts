@@ -209,6 +209,8 @@ export class World {
   private sparkLife = new Float32Array(SPARKS);
   /** 1 while the fire burns, running down to 0 over two minutes after it goes out. */
   private smoulder = 0;
+  /** Puddles in the low spots of the clearing that fill in rain and dry after. */
+  private puddles: THREE.Group | null = null;
   /** Snow blowing low along the ground in winter snow and storms. */
   private drift: THREE.Points;
   /** In winter, now and then a load of snow slides off a bough near you and comes down in a soft curtain. */
@@ -561,6 +563,8 @@ export class World {
       }
     }
     if (area.shoreZ === undefined && !winter) this.areaRoot.add(this.makeGroundFog(area));
+    this.puddles = winter ? null : this.makePuddles(area);
+    if (this.puddles) this.areaRoot.add(this.puddles);
     this.areaRoot.add(this.trees(area, winter));
     this.areaRoot.add(this.rocks(area, winter));
     this.areaRoot.add(this.undergrowth(area, winter));
@@ -1233,6 +1237,9 @@ export class World {
     const [near, far] = FOG[input.weather] ?? FOG.clear!;
     fog.color.copy(horizon).lerp(FLASH, this.flash * 0.6);
     if (this.water) (this.water.material as THREE.MeshStandardMaterial).emissive.copy(horizon).multiplyScalar(input.winter ? 0.1 : 0.32);
+    // puddles show a little of the grey sky
+    const pm = (this.puddles?.children[0] as THREE.Mesh | undefined)?.material as THREE.MeshStandardMaterial | undefined;
+    pm?.emissive.copy(horizon).multiplyScalar(0.22);
     fog.near = near * (0.4 + day * 0.6);
     fog.far = far * (0.45 + day * 0.55);
   }
@@ -1797,6 +1804,30 @@ export class World {
   private wetSnap = true;
 
   /** Rain darkens the ground and gives it a little sheen; it dries slowly after. */
+  private makePuddles(area: WorldArea): THREE.Group {
+    const g = new THREE.Group();
+    const rnd = seeded(area.trees.seed + 7);
+    const m = new THREE.MeshStandardMaterial({ color: 0x262c30, roughness: 0.04, metalness: 0.35, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    const spots = Object.values(area.stations);
+    let guard = 0;
+    while (g.children.length < 9 && guard++ < 200) {
+      const a = rnd() * Math.PI * 2;
+      const r = 2 + rnd() * (area.walkRadius - 3);
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      if (area.shoreZ !== undefined && z < area.shoreZ + 4) continue;
+      if (spots.some((st) => Math.hypot(st.x - x, st.z - z) < 2.6)) continue;
+      const p = new THREE.Mesh(rough(new THREE.CircleGeometry(0.5 + rnd() * 0.8, 9), 0.12, g.children.length + 3), m);
+      p.rotation.set(-Math.PI / 2, 0, rnd() * 3);
+      p.userData.squash = 0.55 + rnd() * 0.45;
+      p.position.set(x, this.ground(area, x, z) + 0.025, z);
+      p.receiveShadow = true;
+      g.add(p);
+    }
+    g.visible = false;
+    return g;
+  }
+
   private updateWet(dt: number, w: string): void {
     const want = !this.input!.winter && (w === 'rain' || w === 'storm') ? 1 : 0;
     // A new area (or the first frame) starts as wet as the weather says.
@@ -1807,6 +1838,15 @@ export class World {
     if (!m) return;
     m.color.setScalar(1 - this.wetness * 0.28);
     m.roughness = 1 - this.wetness * 0.35;
+    // the puddles fill once the ground is properly wet, and shrink as it dries
+    const fill = Math.max(0, (this.wetness - 0.3) / 0.7);
+    if (this.puddles) {
+      this.puddles.visible = fill > 0.01;
+      const pm = (this.puddles.children[0] as THREE.Mesh | undefined)?.material as THREE.MeshStandardMaterial | undefined;
+      if (pm) pm.opacity = fill * 0.9;
+      const k = 0.35 + fill * 0.65;
+      for (const p of this.puddles.children) p.scale.set(k, k * (p.userData.squash as number), 1);
+    }
   }
 
   private flash = 0;
