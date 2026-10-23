@@ -326,3 +326,9 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .tip-card b { font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ember); }
 .tip-card p { margin: 0; font-size: 19px; line-height: 1.45; color: var(--bone); }
 .tip-card .hud-btn { align-self: flex-end; }
+
+/* frost at the edges of the view in hard cold (World.updateFrost sets the opacity) */
+.frost { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 1;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.06' numOctaves='4' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.9 0 0 0 0 0.95 0 0 0 0 1 0 0 0 2.6 -1.25'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E"), radial-gradient(ellipse at center, transparent 35%, #dfeaf244 60%, #e8f1f6bb 90%);
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 30%, #000 75%);
+  mask-image: radial-gradient(ellipse at center, transparent 30%, #000 75%); }

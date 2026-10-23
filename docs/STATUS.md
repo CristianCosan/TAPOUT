@@ -126,6 +126,9 @@ days, harder in rain, and a heavy, gusting thrash in storms. Each tree keeps its
 **Build 0.0.35** adds shooting stars: on a clear, dark night a meteor streaks across the sky every half
 minute to a minute and a half.
 
+**Build 0.0.36** lets frost creep in at the edges of the view in hard cold (D-055): none above -6 °C,
+thickest by -24 °C, coming and going over a few seconds.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

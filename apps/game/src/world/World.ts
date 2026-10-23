@@ -189,6 +189,10 @@ export class World {
     return this.previewing;
   }
 
+  /** Frost creeping in at the edges of the view in hard cold (an HTML layer over the canvas). */
+  private frost = document.createElement('div');
+  private frostShown = -1;
+
   constructor(private readonly host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(1);
@@ -363,6 +367,7 @@ export class World {
     if (document.pointerLockElement === this.renderer.domElement) document.exitPointerLock();
     this.renderer.dispose();
     this.renderer.domElement.remove();
+    this.frost.remove();
   }
 
   /** Things that are not stations, added by a scene of its own (the intro's plane). */
@@ -976,6 +981,7 @@ export class World {
     this.updateWeather(dt, eye);
     this.updateAurora(dt);
     this.updateBreath(dt, eye, this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'));
+    this.updateFrost(dt);
     this.updateLife(dt);
     const fire = this.stations.get('fire');
     const w = { ...input, ...this.preview };
@@ -1405,6 +1411,20 @@ export class World {
       r.scale.set(s, s, 1);
       (r.material as THREE.MeshBasicMaterial).opacity = 0.75 * (1 - k);
     }
+  }
+
+  /** None above -6 °C, thickest by -24 °C; it creeps in and thaws over a few seconds. */
+  private updateFrost(dt: number): void {
+    if (!this.frost.parentElement) {
+      this.frost.className = 'frost';
+      this.host.appendChild(this.frost);
+    }
+    const t = this.preview.tempC ?? this.input?.tempC ?? 10;
+    const target = Math.max(0, Math.min(1, (-6 - t) / 18));
+    if (this.frostShown < 0) this.frostShown = target;
+    this.frostShown += (target - this.frostShown) * Math.min(1, dt * 0.4);
+    const v = Math.round(this.frostShown * 100) / 100;
+    if (this.frost.style.opacity !== String(v)) this.frost.style.opacity = String(v);
   }
 
   /** In the cold your breath shows: a small cloud in front of you every few seconds, quicker when running. */
