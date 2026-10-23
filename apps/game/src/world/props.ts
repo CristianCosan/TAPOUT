@@ -360,9 +360,16 @@ function camera(): THREE.Group {
     const a = (i / 3) * Math.PI * 2;
     log(g, v(Math.cos(a) * 0.45, 0, Math.sin(a) * 0.45), v(0, 1.35, 0), 0.02, C.metal);
   }
-  g.add(mesh(new THREE.BoxGeometry(0.22, 0.24, 0.42), mat(C.black, { rough: 0.5 }), 0, 1.5, 0));
-  g.add(mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.18, 10), mat(C.black, { rough: 0.3, metal: 0.4 }), 0, 1.5, 0.28, Math.PI / 2, 0, 0));
-  g.add(mesh(new THREE.SphereGeometry(0.02, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff2020 }), 0.08, 1.64, 0.2));
+  // The head turns on the tripod (the screen eases it round to keep you in frame); the tally light blinks while it records.
+  const head = new THREE.Group();
+  head.name = 'cam-head';
+  head.position.set(0, 1.5, 0);
+  head.add(mesh(new THREE.BoxGeometry(0.22, 0.24, 0.42), mat(C.black, { rough: 0.5 })));
+  head.add(mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.18, 10), mat(C.black, { rough: 0.3, metal: 0.4 }), 0, 0, 0.28, Math.PI / 2, 0, 0));
+  const tally = mesh(new THREE.SphereGeometry(0.02, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff2020 }), 0.08, 0.14, 0.2);
+  tally.name = 'tally';
+  head.add(tally);
+  g.add(head);
   g.add(mesh(new THREE.BoxGeometry(0.3, 0.2, 0.24), mat(0x2a2c2e), 0.05, 0.12, 0.05));
   return g;
 }

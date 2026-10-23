@@ -1458,6 +1458,17 @@ export class World {
     this.life?.update(dt, t, { day: this.daylight, weather, player: this.pos, silent: !!this.input!.birdsSilent });
     const calls = this.life?.takeCalls() ?? [];
 
+    // The show's camera keeps you in frame, turning slowly on its tripod, its red light blinking.
+    const cam = this.stations.get('camera');
+    const head = cam?.group.visible ? cam.group.getObjectByName('cam-head') : undefined;
+    if (cam && head) {
+      const local = cam.group.worldToLocal(this.pos.clone());
+      const want = Math.max(-0.9, Math.min(0.9, Math.atan2(local.x, local.z)));
+      head.rotation.y += (want - head.rotation.y) * Math.min(1, dt * 0.6);
+      const tally = head.getObjectByName('tally');
+      if (tally) tally.visible = t % 1.6 < 1.1;
+    }
+
     const jay = this.stations.get('jay');
     const jb = jay?.group.visible ? jay.group.getObjectByName('jay-bird') : undefined;
     if (jb) {

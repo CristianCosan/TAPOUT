@@ -170,6 +170,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.53** is a hardening pass. Lighter graphics now also halves rain and snow, thins the blowing ground drift to a third, and drops the morning ground fog. The core soak (100 runs, about 120k decisions) and the random-click UI soak both came back clean. The only console line was a missing favicon request, now silenced.
 
+**Build 0.0.54** makes the show's camera at camp turn slowly to keep you in frame, with its red light blinking (D-064).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
