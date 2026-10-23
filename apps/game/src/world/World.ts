@@ -88,6 +88,27 @@ void main() {
   gl_FragColor = vec4(mix(dark, col, lit), opacity * (0.25 + 0.75 * max(lit, 0.0)));
 }`;
 
+/** The moon's path on open water: a band of glitter that breaks and shifts with the ripples. */
+const GLITTER_FRAG = `
+uniform float time;
+uniform float strength;
+varying vec2 vUv;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+void main() {
+  float x = (vUv.x - 0.5) * 2.0;
+  float y = vUv.y;
+  float band = exp(-x * x * 5.0 / (0.5 + y));
+  vec2 g = vec2(x * 40.0, y * 700.0 + time * 1.5);
+  vec2 cell = floor(g);
+  vec2 f = fract(g) - 0.5;
+  float h = hash(cell);
+  // each glint a thin sliver across the ripple, winking on and off
+  float shape = smoothstep(0.5, 0.1, length(f * vec2(1.0, 2.6)));
+  float spark = step(0.78, h) * shape * max(0.0, sin(time * 5.0 + h * 40.0));
+  float a = band * (0.2 + spark * 2.2) * strength * smoothstep(0.0, 0.08, y) * (1.0 - y);
+  gl_FragColor = vec4(vec3(0.82, 0.88, 1.0) * a, 1.0);
+}`;
+
 /** Flakes in one load of snow sliding off a bough. */
 const SLIDE = 150;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -168,6 +189,7 @@ export class World {
   private moon: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
   /** A soft glow round the moon, bigger and brighter as it fills. */
   private moonHalo: THREE.Sprite;
+  private glitter: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
   /** Now and then on a clear night, a meteor streaks across the sky. */
   private meteor: THREE.Mesh;
   private meteorAt = 25;
@@ -327,6 +349,19 @@ export class World {
     this.moonHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTexture(), color: 0xc8d4ec, transparent: true, opacity: 0, depthWrite: false, fog: false }));
     this.moonHalo.scale.setScalar(80);
     this.scene.add(this.moonHalo);
+    this.glitter = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0, 0, -0.5),
+      new THREE.ShaderMaterial({
+        uniforms: { time: { value: 0 }, strength: { value: 0 } },
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: GLITTER_FRAG,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    this.glitter.visible = false;
+    this.scene.add(this.glitter);
     // a thin streak, bright at the head (its top end) and fading down the tail
     const streak = new THREE.CylinderGeometry(1.1, 0.05, 1, 4, 1, true).translate(0, -0.5, 0);
     this.meteor = new THREE.Mesh(streak, new THREE.MeshBasicMaterial({ color: 0xf4f6ff, transparent: true, opacity: 0, fog: false, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -1184,6 +1219,7 @@ export class World {
     this.moonHalo.visible = this.moon.visible;
     this.moonHalo.position.copy(this.moon.position);
     (this.moonHalo.material as THREE.SpriteMaterial).opacity = Math.max(0, 1 - day * 2.5) * full * 0.22 * (1 - grey);
+    this.updateGlitter(Math.max(0, 1 - day * 3) * full * (1 - grey) * (this.moon.visible ? 1 : 0), moonDir);
     this.sky.position.copy(this.pos);
     this.stars.position.copy(this.pos);
 
@@ -1213,6 +1249,27 @@ export class World {
     }
     pos.needsUpdate = true;
     this.drift.position.set(eye.x, this.ground(this.input!.area, eye.x, eye.z), eye.z);
+  }
+
+  /** Lays the moon's path on open water from the shore out towards the moon. */
+  private updateGlitter(strength: number, moonDir: THREE.Vector3): void {
+    const shoreZ = this.input!.area.shoreZ;
+    const on = strength > 0.02 && !!this.water && !this.input!.winter && shoreZ !== undefined;
+    this.glitter.visible = on;
+    if (!on) return;
+    const dx = moonDir.x;
+    const dz = moonDir.z;
+    const len = Math.hypot(dx, dz);
+    const ux = dx / len;
+    const uz = dz / len;
+    // start where the line from you towards the moon meets the water's edge
+    const back = Math.max(0, (this.pos.z - (shoreZ! - 1)) / -uz);
+    const length = 160;
+    this.glitter.position.set(this.pos.x + ux * back, -0.2, this.pos.z + uz * back);
+    this.glitter.rotation.set(0, Math.atan2(-ux, -uz), 0);
+    this.glitter.scale.set(14, 1, length);
+    this.glitter.material.uniforms.time!.value = this.time;
+    this.glitter.material.uniforms.strength!.value = strength;
   }
 
   private updateSlide(dt: number, eye: THREE.Vector3, w: string): void {

@@ -158,6 +158,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.47** gives the moon its phases over the run (a crescent the first evening, full near day 11), with brighter moonlight and a soft glow as it fills (D-061). `preview()` also takes `day`.
 
+**Build 0.0.48** lays a glittering moon path on the open lake on moonlit nights, brighter as the moon fills.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
