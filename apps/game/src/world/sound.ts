@@ -161,6 +161,21 @@ export class Ambience {
         }
         break;
       }
+      case 'eagle': {
+        // The bald eagle's thin, chittering whistle: a few high notes that tumble down.
+        const n = 5 + Math.floor(r() * 4);
+        for (let i = 0; i < n; i++) {
+          const f = 3200 - i * 140 + r() * 200;
+          tone(out, { at: i * 0.11, len: 0.08, freqs: [[0, f], [0.08, f * 0.86]], peak: 0.05 * (1 - i / (n * 1.5)), attack: 0.006 });
+        }
+        break;
+      }
+      case 'splash': {
+        // Something big hitting the water: a slap and a spray that falls back.
+        burst(out, { len: 0.1, peak: 0.4, freq: 700, to: 300, type: 'lowpass', attack: 0.003 });
+        burst(out, { at: 0.03, len: 0.8, peak: 0.18, freq: 3000, to: 900, q: 0.5, attack: 0.02 });
+        break;
+      }
       case 'hare': {
         // A hare going: the soft drum of its hind feet on the ground, quick and fading.
         for (let i = 0; i < 5; i++) burst(out, { at: i * 0.11, len: 0.06, peak: 0.16 * (1 - i / 6), freq: 180, to: 90, type: 'lowpass', attack: 0.004 });

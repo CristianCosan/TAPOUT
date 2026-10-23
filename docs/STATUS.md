@@ -172,6 +172,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.54** makes the show's camera at camp turn slowly to keep you in frame, with its red light blinking (D-064).
 
+0.0.55 (2026-10-23): a bald eagle circles over the lake on clear days at the shore, dives for a fish with a splash ring, and climbs away (D-065).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

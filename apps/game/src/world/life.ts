@@ -3,14 +3,15 @@
 // woods a deer at the tree line that snorts and bounds off if you come too close; and at the shore
 // a beaver swimming its line now and then, that slaps its tail and dives if you come down to the water;
 // and in winter a red fox trotting across the snow, that stops to listen and pounces on a vole;
-// and a snowshoe hare at the edge of the clearing, brown in autumn and white in winter, that freezes and then bolts. None of them
+// and a snowshoe hare at the edge of the clearing, brown in autumn and white in winter, that freezes and then bolts;
+// and over open water a bald eagle that circles, folds and drops on a fish, and labours away with it. None of them
 // is a station and none touches the run; they come and go with the light and the weather.
 
 import * as THREE from 'three';
 import type { WorldArea } from '@tapout/content';
 import { mat } from './kit.ts';
 
-export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver' | 'squirrel' | 'woodpecker' | 'fox' | 'hare';
+export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver' | 'squirrel' | 'woodpecker' | 'fox' | 'hare' | 'eagle' | 'splash';
 
 export interface Call {
   kind: CallKind;
@@ -250,6 +251,18 @@ interface Hare {
   hop: number;
 }
 
+interface Eagle {
+  g: THREE.Group;
+  splash: THREE.Mesh;
+  state: 'soar' | 'dive' | 'splash' | 'climb' | 'gone';
+  timer: number;
+  cx: number;
+  cz: number;
+  a: number;
+  from: THREE.Vector3;
+  to: THREE.Vector3;
+}
+
 interface Fox {
   g: THREE.Group;
   x: number;
@@ -340,6 +353,7 @@ export class Wildlife {
   private squirrel: Squirrel | null = null;
   private fox: Fox | null = null;
   private hare: Hare | null = null;
+  private eagle: Eagle | null = null;
   /** At dusk and at night an owl now and then glides low and silent across the clearing. */
   private owl = bird(0x6a5a48, 0x5e5040, 0.75, 0x7a6a56);
   private owlFlight: { from: THREE.Vector3; to: THREE.Vector3; t: number; length: number } | null = null;
@@ -406,6 +420,24 @@ export class Wildlife {
       this.root.add(g);
     }
 
+    if (area.shoreZ !== undefined && !winter) {
+      const g = bird(0x3a2a1c, 0xf0eee6, 1.25, 0x33251a);
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.04, 0.4), mat(0xf0eee6));
+      tail.position.set(0, 0, 0.6);
+      g.add(tail);
+      for (const side of [-1, 1]) {
+        const tip = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.4), mat(0x2a1e14));
+        tip.position.set(side * 1.25, 0, 0.05);
+        g.getObjectByName(side < 0 ? 'wl' : 'wr')!.add(tip);
+      }
+      g.visible = false;
+      const splash = new THREE.Mesh(new THREE.RingGeometry(0.7, 1, 28), new THREE.MeshBasicMaterial({ color: 0xe0eaee, transparent: true, opacity: 0, depthWrite: false }));
+      splash.rotation.x = -Math.PI / 2;
+      splash.visible = false;
+      this.eagle = { g, splash, state: 'gone', timer: rand(40, 120), cx: 0, cz: 0, a: 0, from: new THREE.Vector3(), to: new THREE.Vector3() };
+      this.root.add(g, splash);
+    }
+
     if (area.id === 'woods' || area.id === 'camp') {
       const g = hare(winter);
       g.visible = false;
@@ -443,6 +475,7 @@ export class Wildlife {
       ...(this.deer ? [{ kind: 'deer', at: this.deer.g.position.clone(), visible: this.deer.g.visible }] : []),
       { kind: 'owl', at: this.owl.position.clone(), visible: this.owl.visible },
       ...(this.squirrel ? [{ kind: 'squirrel', at: this.squirrel.g.position.clone(), visible: this.squirrel.g.visible }] : []),
+      ...(this.eagle ? [{ kind: 'eagle', at: this.eagle.g.position.clone(), visible: this.eagle.g.visible }] : []),
       ...(this.hare ? [{ kind: 'hare', at: this.hare.g.position.clone(), visible: this.hare.g.visible }] : []),
       ...(this.fox ? [{ kind: 'fox', at: this.fox.g.position.clone(), visible: this.fox.g.visible }] : []),
       ...(this.beaver ? [{ kind: 'beaver', at: this.beaver.g.position.clone(), visible: this.beaver.g.visible }] : []),
@@ -456,6 +489,7 @@ export class Wildlife {
     if (this.squirrel?.state === 'gone') this.squirrel.timer = 0;
     if (this.fox?.state === 'gone') this.fox.timer = 0;
     if (this.hare?.state === 'gone') this.hare.timer = 0;
+    if (this.eagle?.state === 'gone') this.eagle.timer = 0;
     if (!this.owlFlight) this.owlWait = 0;
   }
 
@@ -553,6 +587,7 @@ export class Wildlife {
     if (this.squirrel) this.updateSquirrel(this.squirrel, dt, t, s);
     if (this.fox) this.updateFox(this.fox, dt, t, s);
     if (this.hare) this.updateHare(this.hare, dt, t, s);
+    if (this.eagle) this.updateEagle(this.eagle, dt, t, s);
     this.updateOwl(dt, t, s);
 
     // Voices from the trees you cannot see.
@@ -855,6 +890,94 @@ export class Wildlife {
     if (q.timer <= 0) {
       q.state = 'gone';
       q.timer = rand(40, 100);
+    }
+  }
+
+  /** Circles high over the water, folds and drops on a fish, and labours away low over the lake. */
+  private updateEagle(e: Eagle, dt: number, t: number, s: LifeState): void {
+    const g = e.g;
+    const shoreZ = this.area.shoreZ!;
+    if (e.state === 'gone') {
+      g.visible = false;
+      e.timer -= dt;
+      if (e.timer > 0 || s.day < 0.3 || WET.has(s.weather) || s.weather === 'storm') {
+        if (e.timer <= 0) e.timer = rand(40, 90);
+        return;
+      }
+      e.cx = s.player.x + rand(-15, 15);
+      e.cz = shoreZ - rand(22, 40);
+      e.a = rand(0, Math.PI * 2);
+      e.state = 'soar';
+      e.timer = rand(14, 26);
+      g.visible = true;
+      if (Math.random() < 0.6) this.call('eagle', new THREE.Vector3(e.cx, 28, e.cz));
+    }
+    const splashMat = e.splash.material as THREE.MeshBasicMaterial;
+    if (e.state === 'soar') {
+      e.a += dt * 0.22;
+      const r = 16;
+      const x = e.cx + Math.cos(e.a) * r;
+      const z = e.cz + Math.sin(e.a) * r;
+      g.position.set(x, 28 + Math.sin(t * 0.4) * 1.5, z);
+      face(g, -Math.sin(e.a), Math.cos(e.a));
+      g.rotation.z = 0.25; // banked into the turn
+      flap(g, 0.06);
+      e.timer -= dt;
+      if (e.timer <= 0) {
+        e.state = 'dive';
+        e.timer = 0;
+        e.from.copy(g.position);
+        e.to.set(e.cx + rand(-4, 4), WATER_Y + 0.3, e.cz + rand(-4, 4));
+      }
+      return;
+    }
+    if (e.state === 'dive') {
+      e.timer += dt;
+      const k = Math.min(1, e.timer / 2.4);
+      g.position.lerpVectors(e.from, e.to, k * k);
+      face(g, e.to.x - e.from.x, e.to.z - e.from.z);
+      g.rotation.x = -0.6 * (1 - k * 0.5); // head down, wings swept back
+      g.rotation.z = 0;
+      flap(g, -0.5);
+      if (k >= 1) {
+        e.state = 'splash';
+        e.timer = 0;
+        e.splash.position.set(e.to.x, WATER_Y + 0.02, e.to.z);
+        e.splash.visible = true;
+        this.call('splash', e.to);
+      }
+      return;
+    }
+    if (e.state === 'splash') {
+      // talons in, wings up and beating, a ring spreading round it
+      e.timer += dt;
+      g.rotation.x = 0.3;
+      flap(g, Math.sin(t * 9) * 0.8);
+      g.position.y = e.to.y + Math.min(1.5, e.timer * 1.2);
+      e.splash.scale.setScalar(0.6 + e.timer * 2.4);
+      splashMat.opacity = Math.max(0, 0.6 * (1 - e.timer / 1.4));
+      if (e.timer > 1.0) {
+        e.state = 'climb';
+        e.timer = 0;
+        e.from.copy(g.position);
+        e.to.set(e.from.x + rand(-40, 40), 14, shoreZ - 90);
+      }
+      return;
+    }
+    // climbing away low and heavy with the fish, out across the lake
+    e.timer += dt;
+    e.splash.scale.setScalar(3 + e.timer * 2.4);
+    splashMat.opacity = Math.max(0, 0.6 * (1 - (e.timer + 1) / 1.4));
+    if (splashMat.opacity <= 0) e.splash.visible = false;
+    const k = Math.min(1, e.timer / 12);
+    g.position.lerpVectors(e.from, e.to, k);
+    face(g, e.to.x - e.from.x, e.to.z - e.from.z);
+    g.rotation.x = 0.05;
+    flap(g, Math.sin(t * 6) * 0.6);
+    if (k >= 1) {
+      e.state = 'gone';
+      e.splash.visible = false;
+      e.timer = rand(120, 300);
     }
   }
 
