@@ -2,14 +2,15 @@
 // of loons on open water, chickadees hopping about that scatter when you walk up; and in the
 // woods a deer at the tree line that snorts and bounds off if you come too close; and at the shore
 // a beaver swimming its line now and then, that slaps its tail and dives if you come down to the water;
-// and in winter a red fox trotting across the snow, that stops to listen and pounces on a vole. None of them
+// and in winter a red fox trotting across the snow, that stops to listen and pounces on a vole;
+// and a snowshoe hare at the edge of the clearing, brown in autumn and white in winter, that freezes and then bolts. None of them
 // is a station and none touches the run; they come and go with the light and the weather.
 
 import * as THREE from 'three';
 import type { WorldArea } from '@tapout/content';
 import { mat } from './kit.ts';
 
-export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver' | 'squirrel' | 'woodpecker' | 'fox';
+export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver' | 'squirrel' | 'woodpecker' | 'fox' | 'hare';
 
 export interface Call {
   kind: CallKind;
@@ -204,6 +205,51 @@ function fox(): THREE.Group {
   return g;
 }
 
+/** A snowshoe hare facing -z, sitting hunched: ears named so they can turn. */
+function hare(winter: boolean): THREE.Group {
+  const coat = winter ? 0xeceeea : 0x7a6448;
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.15, 7, 5), mat(coat));
+  body.scale.set(0.85, 0.9, 1.25);
+  body.position.set(0, 0.15, 0.03);
+  g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.075, 6, 5), mat(coat));
+  head.scale.set(0.9, 0.95, 1.2);
+  head.position.set(0, 0.25, -0.15);
+  g.add(head);
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Group();
+    ear.name = side < 0 ? 'el' : 'er';
+    ear.position.set(side * 0.03, 0.3, -0.12);
+    const e = new THREE.Mesh(new THREE.CapsuleGeometry(0.018, 0.12, 2, 4).translate(0, 0.07, 0), mat(coat));
+    e.scale.z = 0.5;
+    ear.add(e);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 3), mat(0x1c1814));
+    tip.position.y = 0.145;
+    tip.scale.set(1, 1, 0.5);
+    ear.add(tip);
+    g.add(ear);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.16), mat(winter ? 0xe0e2de : 0x8a7860));
+    foot.position.set(side * 0.08, 0.015, 0.06);
+    g.add(foot);
+  }
+  const tail = new THREE.Mesh(new THREE.SphereGeometry(0.035, 5, 4), mat(0xf4f4f0));
+  tail.position.set(0, 0.14, 0.2);
+  g.add(tail);
+  return g;
+}
+
+interface Hare {
+  g: THREE.Group;
+  x: number;
+  z: number;
+  heading: number;
+  state: 'sit' | 'freeze' | 'run' | 'gone';
+  timer: number;
+  /** Seconds into the current little hop or the bolt. */
+  hop: number;
+}
+
 interface Fox {
   g: THREE.Group;
   x: number;
@@ -293,6 +339,7 @@ export class Wildlife {
   private beaver: Beaver | null = null;
   private squirrel: Squirrel | null = null;
   private fox: Fox | null = null;
+  private hare: Hare | null = null;
   /** At dusk and at night an owl now and then glides low and silent across the clearing. */
   private owl = bird(0x6a5a48, 0x5e5040, 0.75, 0x7a6a56);
   private owlFlight: { from: THREE.Vector3; to: THREE.Vector3; t: number; length: number } | null = null;
@@ -359,6 +406,13 @@ export class Wildlife {
       this.root.add(g);
     }
 
+    if (area.id === 'woods' || area.id === 'camp') {
+      const g = hare(winter);
+      g.visible = false;
+      this.hare = { g, x: 0, z: 0, heading: 0, state: 'gone', timer: rand(20, 60), hop: 0 };
+      this.root.add(g);
+    }
+
     if (winter) {
       const g = fox();
       g.visible = false;
@@ -389,6 +443,7 @@ export class Wildlife {
       ...(this.deer ? [{ kind: 'deer', at: this.deer.g.position.clone(), visible: this.deer.g.visible }] : []),
       { kind: 'owl', at: this.owl.position.clone(), visible: this.owl.visible },
       ...(this.squirrel ? [{ kind: 'squirrel', at: this.squirrel.g.position.clone(), visible: this.squirrel.g.visible }] : []),
+      ...(this.hare ? [{ kind: 'hare', at: this.hare.g.position.clone(), visible: this.hare.g.visible }] : []),
       ...(this.fox ? [{ kind: 'fox', at: this.fox.g.position.clone(), visible: this.fox.g.visible }] : []),
       ...(this.beaver ? [{ kind: 'beaver', at: this.beaver.g.position.clone(), visible: this.beaver.g.visible }] : []),
     ];
@@ -400,6 +455,7 @@ export class Wildlife {
     if (this.beaver?.state === 'gone') this.beaver.timer = 0;
     if (this.squirrel?.state === 'gone') this.squirrel.timer = 0;
     if (this.fox?.state === 'gone') this.fox.timer = 0;
+    if (this.hare?.state === 'gone') this.hare.timer = 0;
     if (!this.owlFlight) this.owlWait = 0;
   }
 
@@ -496,6 +552,7 @@ export class Wildlife {
     if (this.beaver) this.updateBeaver(this.beaver, dt, t, s);
     if (this.squirrel) this.updateSquirrel(this.squirrel, dt, t, s);
     if (this.fox) this.updateFox(this.fox, dt, t, s);
+    if (this.hare) this.updateHare(this.hare, dt, t, s);
     this.updateOwl(dt, t, s);
 
     // Voices from the trees you cannot see.
@@ -798,6 +855,94 @@ export class Wildlife {
     if (q.timer <= 0) {
       q.state = 'gone';
       q.timer = rand(40, 100);
+    }
+  }
+
+  /** Sits at the edge of the clearing nibbling and now and then hopping; inside 8 m it freezes, inside 5 m (or when its nerve goes) it bolts in a zigzag. */
+  private updateHare(h: Hare, dt: number, t: number, s: LifeState): void {
+    const g = h.g;
+    const el = g.getObjectByName('el')!;
+    const er = g.getObjectByName('er')!;
+    const out = s.day > 0.05 && !WET.has(s.weather) && s.weather !== 'storm' && !s.silent;
+    if (h.state === 'gone') {
+      g.visible = false;
+      h.timer -= dt;
+      if (h.timer > 0 || !out) {
+        if (h.timer <= 0) h.timer = rand(30, 70);
+        return;
+      }
+      const a = rand(0, Math.PI * 2);
+      const r = this.area.walkRadius + rand(-1, 2);
+      h.x = Math.cos(a) * r;
+      h.z = Math.sin(a) * r;
+      if ((this.area.shoreZ !== undefined && h.z < this.area.shoreZ + 2) || Math.hypot(h.x - s.player.x, h.z - s.player.z) < 10) {
+        h.timer = rand(3, 8);
+        return;
+      }
+      h.heading = rand(0, Math.PI * 2);
+      h.state = 'sit';
+      h.timer = rand(50, 110);
+      h.hop = 9;
+      g.visible = true;
+    }
+    const near = Math.hypot(h.x - s.player.x, h.z - s.player.z);
+    const y = this.ground(h.x, h.z);
+    if (h.state === 'run') {
+      h.hop += dt;
+      // each bound a little off the last, the zigzag that throws off a fox
+      if (Math.floor(h.hop * 3) !== Math.floor((h.hop - dt) * 3)) h.heading += rand(-0.7, 0.7);
+      const speed = 7;
+      h.x += -Math.sin(h.heading) * speed * dt;
+      h.z += -Math.cos(h.heading) * speed * dt;
+      g.position.set(h.x, this.ground(h.x, h.z) + Math.abs(Math.sin(h.hop * 9.4)) * 0.3, h.z);
+      g.rotation.set(Math.cos(h.hop * 9.4) * 0.25, h.heading, 0);
+      el.rotation.x = er.rotation.x = 0.9; // ears laid back
+      if (h.hop > 3) {
+        h.state = 'gone';
+        h.timer = rand(60, 150);
+      }
+      return;
+    }
+    if (near < 5 || (h.state === 'freeze' && h.timer <= 0) || !out) {
+      h.state = 'run';
+      h.hop = 0;
+      h.heading = Math.atan2(-(h.x - s.player.x), -(h.z - s.player.z));
+      if (near < 9) this.call('hare', g.position);
+      return;
+    }
+    if (h.state === 'freeze') {
+      // stock still, ears straight up and on you
+      h.timer -= dt;
+      g.position.set(h.x, y, h.z);
+      el.rotation.set(0, 0, 0.08);
+      er.rotation.set(0, 0, -0.08);
+      if (near > 11) h.state = 'sit';
+      return;
+    }
+    if (near < 8) {
+      h.state = 'freeze';
+      h.timer = rand(1.5, 4);
+      return;
+    }
+    // sitting: nibbling, ears turning, now and then a lazy hop or two
+    h.timer -= dt;
+    h.hop += dt;
+    if (h.hop > 9 && Math.random() < dt * 0.25) {
+      h.hop = 0;
+      h.heading += rand(-1.2, 1.2);
+    }
+    const hopping = h.hop < 0.35;
+    if (hopping) {
+      h.x += -Math.sin(h.heading) * 1.6 * dt;
+      h.z += -Math.cos(h.heading) * 1.6 * dt;
+    }
+    g.position.set(h.x, this.ground(h.x, h.z) + (hopping ? Math.sin((h.hop / 0.35) * Math.PI) * 0.1 : 0), h.z);
+    g.rotation.set(hopping ? 0 : Math.sin(t * 9) * 0.02, h.heading, 0);
+    el.rotation.set(0.25 + Math.sin(t * 0.7) * 0.2, 0, 0.15);
+    er.rotation.set(0.25 + Math.sin(t * 0.9 + 1) * 0.2, 0, -0.15);
+    if (h.timer <= 0) {
+      h.state = 'run';
+      h.hop = 0;
     }
   }
 

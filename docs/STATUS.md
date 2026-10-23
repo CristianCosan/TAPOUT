@@ -152,6 +152,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.44** adds snow sliding off the boughs in winter: now and then a load drops off a tree near you in a soft curtain of powder, with a hiss and a muffled whump.
 
+**Build 0.0.45** adds a snowshoe hare at the edge of the clearing at camp and in the woods: brown in autumn, white in winter, it freezes when you come close and then bolts in a zigzag (D-060).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

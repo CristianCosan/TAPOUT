@@ -157,6 +157,11 @@ export class Ambience {
         }
         break;
       }
+      case 'hare': {
+        // A hare going: the soft drum of its hind feet on the ground, quick and fading.
+        for (let i = 0; i < 5; i++) burst(out, { at: i * 0.11, len: 0.06, peak: 0.16 * (1 - i / 6), freq: 180, to: 90, type: 'lowpass', attack: 0.004 });
+        break;
+      }
       case 'fox': {
         // The red fox's bark: a hoarse, rising-then-falling yap, two or three times.
         const n = 2 + Math.floor(r() * 2);
