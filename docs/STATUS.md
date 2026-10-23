@@ -150,6 +150,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.43** adds a red fox in winter that trots across the snow, now and then stops to listen and pounces, and barks and runs if you come close (D-059).
 
+**Build 0.0.44** adds snow sliding off the boughs in winter: now and then a load drops off a tree near you in a soft curtain of powder, with a hiss and a muffled whump.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

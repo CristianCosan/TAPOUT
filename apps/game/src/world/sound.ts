@@ -210,6 +210,13 @@ export class Ambience {
     burst(this.out, { at: 0.8 + far, len: 3, peak: loud * 0.5, freq: 160, to: 40, type: 'lowpass', brown: true, attack: 0.6 });
   }
 
+  /** A load of snow sliding off a bough: a soft hiss and a muffled whump into the drift below. */
+  whump(loud: number): void {
+    if (!this.out) return;
+    burst(this.out, { len: 0.6, peak: loud * 0.07, freq: 3000, to: 1500, q: 0.6, attack: 0.08 });
+    burst(this.out, { at: 0.45, len: 0.35, peak: loud * 0.3, freq: 220, to: 70, type: 'lowpass', brown: true, attack: 0.01 });
+  }
+
   /** A fish rising: a small wet plop off the water. */
   plop(loud: number): void {
     if (!this.out) return;

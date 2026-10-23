@@ -64,6 +64,8 @@ const LEAVES = 160;
 const RINGS = 48;
 const SPARKS = 60;
 const DRIFT = 1200;
+/** Flakes in one load of snow sliding off a bough. */
+const SLIDE = 150;
 const UP = new THREE.Vector3(0, 1, 0);
 const PRINTS = 200;
 const FLASH = new THREE.Color(0xdfe6ff);
@@ -159,6 +161,13 @@ export class World {
   private sparkLife = new Float32Array(SPARKS);
   /** Snow blowing low along the ground in winter snow and storms. */
   private drift: THREE.Points;
+  /** In winter, now and then a load of snow slides off a bough near you and comes down in a soft curtain. */
+  private slide: THREE.Points;
+  private slideVel = new Float32Array(SLIDE * 3);
+  private slideAge = 9;
+  private slideWait = 10;
+  /** Where the conifers of this area stand, for the snow to slide off. */
+  private boughs: Array<{ x: number; z: number; s: number }> = [];
   private sparkVel = new Float32Array(SPARKS * 3);
   private breath: THREE.Sprite[] = [];
   private breathAt = 0;
@@ -344,6 +353,13 @@ export class World {
     this.drift.frustumCulled = false;
     this.scene.add(this.drift);
 
+    const slideGeo = new THREE.BufferGeometry();
+    slideGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SLIDE * 3), 3));
+    this.slide = new THREE.Points(slideGeo, new THREE.PointsMaterial({ map: softTexture(), color: 0xf4f7f9, size: 0.32, transparent: true, opacity: 0, depthWrite: false }));
+    this.slide.frustumCulled = false;
+    this.slide.visible = false;
+    this.scene.add(this.slide);
+
     const sparkGeo = new THREE.BufferGeometry();
     sparkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
     sparkGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
@@ -401,7 +417,7 @@ export class World {
   /** Where the scenery birds are. For tests and screenshots. */
   where() {
     const r = this.renderer.info.render;
-    return { x: this.pos.x, z: this.pos.z, prints: this.prints.count, calls: r.calls, triangles: r.triangles, rings: this.rings?.children.filter((c) => c.visible).length ?? 0, shoreZ: this.input?.area.shoreZ };
+    return { x: this.pos.x, z: this.pos.z, prints: this.prints.count, calls: r.calls, triangles: r.triangles, rings: this.rings?.children.filter((c) => c.visible).length ?? 0, shoreZ: this.input?.area.shoreZ, slide: this.slide.visible ? { x: this.slide.geometry.getAttribute('position').getX(0), y: this.slide.geometry.getAttribute('position').getY(0), z: this.slide.geometry.getAttribute('position').getZ(0) } : null };
   }
 
   birds() {
@@ -555,6 +571,7 @@ export class World {
     }
 
     const conifers = spots.filter((t) => !t.birch);
+    this.boughs = conifers.filter((t) => Math.hypot(t.x, t.z) < area.trees.outer);
     const birches = spots.filter((t) => t.birch);
     const foliage = mergeGeometries([0, 1, 2, 3].map((i) => rough(new THREE.ConeGeometry(2.3 - i * 0.45, 3.6 - i * 0.5, 7), 0.25, i + 1).translate(0, 2.6 + i * 1.6 + (3.6 - i * 0.5) / 2, 0)));
     const trunk = new THREE.CylinderGeometry(0.16, 0.26, 3.2, 6).translate(0, 1.6, 0);
@@ -1156,6 +1173,58 @@ export class World {
     this.drift.position.set(eye.x, this.ground(this.input!.area, eye.x, eye.z), eye.z);
   }
 
+  private updateSlide(dt: number, eye: THREE.Vector3, w: string): void {
+    const m = this.slide.material as THREE.PointsMaterial;
+    const pos = this.slide.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const p = pos.array as Float32Array;
+    const v = this.slideVel;
+    if (this.slideAge > 4) {
+      this.slide.visible = false;
+      this.slideWait -= dt;
+      if (this.slideWait > 0 || !this.input!.winter || w === 'storm' || !this.boughs.length) return;
+      this.slideWait = 12 + Math.random() * 30;
+      // a tree you can see, not too close and not too far
+      const near = this.boughs.filter((t) => {
+        const d = Math.hypot(t.x - eye.x, t.z - eye.z);
+        return d > 6 && d < 22;
+      });
+      if (!near.length) return;
+      const t = near[Math.floor(Math.random() * near.length)]!;
+      const a = Math.random() * Math.PI * 2;
+      const h = this.ground(this.input!.area, t.x, t.z) + t.s * (3 + Math.random() * 2);
+      const r = t.s * (2.2 + Math.random() * 0.4); // off the tip of a bough, outside the foliage
+      const cx = t.x + Math.cos(a) * r;
+      const cz = t.z + Math.sin(a) * r;
+      for (let i = 0; i < SLIDE; i++) {
+        const o = i * 3;
+        p[o] = cx + (Math.random() - 0.5) * 0.8;
+        p[o + 1] = h + (Math.random() - 0.5) * 0.4;
+        p[o + 2] = cz + (Math.random() - 0.5) * 0.8;
+        v[o] = Math.cos(a) * 0.4 + (Math.random() - 0.5) * 0.5;
+        v[o + 1] = -Math.random() * 1.5;
+        v[o + 2] = Math.sin(a) * 0.4 + (Math.random() - 0.5) * 0.5;
+      }
+      this.slideAge = 0;
+      this.slide.visible = true;
+      this.sound.whump(1 / (1 + Math.hypot(cx - eye.x, cz - eye.z) / 8));
+    }
+    this.slideAge += dt;
+    m.opacity = Math.min(1, this.slideAge * 6) * Math.max(0, 1 - this.slideAge / 4) * 0.9;
+    const floor = this.ground(this.input!.area, p[0]!, p[2]!);
+    for (let i = 0; i < SLIDE; i++) {
+      const o = i * 3;
+      // the clump falls, then the fine powder hangs and drifts
+      const fine = i % 3 !== 0;
+      v[o + 1] = Math.max(fine ? -1.6 : -7, v[o + 1]! - 9.8 * dt);
+      v[o] = v[o]! * (1 - (fine ? 1.2 : 0.2) * dt);
+      v[o + 2] = v[o + 2]! * (1 - (fine ? 1.2 : 0.2) * dt);
+      p[o] = p[o]! + v[o]! * dt;
+      p[o + 1] = Math.max(floor, p[o + 1]! + v[o + 1]! * dt);
+      p[o + 2] = p[o + 2]! + v[o + 2]! * dt;
+    }
+    pos.needsUpdate = true;
+  }
+
   private updateSparks(dt: number, base: THREE.Vector3 | null): void {
     const pos = this.sparks.geometry.getAttribute('position') as THREE.BufferAttribute;
     const col = this.sparks.geometry.getAttribute('color') as THREE.BufferAttribute;
@@ -1335,6 +1404,7 @@ export class World {
     }
     this.updateLeaves(dt, eye, w);
     this.updateDrift(dt, eye, w);
+    this.updateSlide(dt, eye, w);
     this.updateLightning(dt, w);
     this.updateWet(dt, w);
     this.updateMist(this.preview.hour ?? this.input!.hour, w);
