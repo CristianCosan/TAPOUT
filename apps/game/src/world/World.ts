@@ -64,6 +64,30 @@ const LEAVES = 160;
 const RINGS = 48;
 const SPARKS = 60;
 const DRIFT = 1200;
+/** The moon lit by a sun that swings round it with the phase: 0 new, 0.5 full. A faint earthshine on the dark side, and a few darker seas. */
+const MOON_VERT = `
+varying vec3 vN;
+varying vec3 vObj;
+void main() {
+  vN = normalize(normalMatrix * normal);
+  vObj = normal;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+const MOON_FRAG = `
+uniform float phase;
+uniform float opacity;
+varying vec3 vN;
+varying vec3 vObj;
+void main() {
+  float a = phase * 6.2831853;
+  vec3 L = normalize(vec3(sin(a), 0.0, -cos(a)));
+  float lit = smoothstep(-0.06, 0.06, dot(normalize(vN), L));
+  float seas = smoothstep(0.55, 0.9, sin(vObj.x * 5.0 + 1.3) * sin(vObj.y * 4.0 + 0.4) + sin(vObj.z * 3.0) * 0.5);
+  vec3 col = mix(vec3(0.93, 0.94, 0.96), vec3(0.72, 0.74, 0.78), seas * 0.6);
+  vec3 dark = vec3(0.05, 0.06, 0.09);
+  gl_FragColor = vec4(mix(dark, col, lit), opacity * (0.25 + 0.75 * max(lit, 0.0)));
+}`;
+
 /** Flakes in one load of snow sliding off a bough. */
 const SLIDE = 150;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -141,7 +165,9 @@ export class World {
   private fireLight = new THREE.PointLight(0xff8a3a, 0, 0, 1.7);
   private sky: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
   private stars: THREE.Points;
-  private moon: THREE.Mesh;
+  private moon: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial>;
+  /** A soft glow round the moon, bigger and brighter as it fills. */
+  private moonHalo: THREE.Sprite;
   /** Now and then on a clear night, a meteor streaks across the sky. */
   private meteor: THREE.Mesh;
   private meteorAt = 25;
@@ -191,8 +217,8 @@ export class World {
   /** How much daylight the sky showed last frame, 0 to 1. */
   private daylight = 1;
   /** Screenshot and test aid: show another hour or weather without touching the run. */
-  private previewing: { hour?: number; weather?: string; tempC?: number; aurora?: boolean } = {};
-  set preview(p: { hour?: number; weather?: string; tempC?: number; aurora?: boolean }) {
+  private previewing: { hour?: number; weather?: string; tempC?: number; aurora?: boolean; day?: number } = {};
+  set preview(p: { hour?: number; weather?: string; tempC?: number; aurora?: boolean; day?: number }) {
     this.previewing = p;
     this.shownHour = -1;
     this.wetSnap = true;
@@ -290,8 +316,17 @@ export class World {
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
     this.stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xdfe8ff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
     this.scene.add(this.stars);
-    this.moon = new THREE.Mesh(new THREE.SphereGeometry(9, 16, 10), new THREE.MeshBasicMaterial({ color: 0xe8ecf4, fog: false, transparent: true }));
+    this.moon = new THREE.Mesh(new THREE.SphereGeometry(9, 24, 16), new THREE.ShaderMaterial({
+      uniforms: { phase: { value: 0.5 }, opacity: { value: 1 } },
+      transparent: true,
+      depthWrite: false,
+      vertexShader: MOON_VERT,
+      fragmentShader: MOON_FRAG,
+    }));
     this.scene.add(this.moon);
+    this.moonHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: softTexture(), color: 0xc8d4ec, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+    this.moonHalo.scale.setScalar(80);
+    this.scene.add(this.moonHalo);
     // a thin streak, bright at the head (its top end) and fading down the tail
     const streak = new THREE.CylinderGeometry(1.1, 0.05, 1, 4, 1, true).translate(0, -0.5, 0);
     this.meteor = new THREE.Mesh(streak, new THREE.MeshBasicMaterial({ color: 0xf4f6ff, transparent: true, opacity: 0, fog: false, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -1127,11 +1162,14 @@ export class World {
     const sunDir = new THREE.Vector3(Math.cos(az), Math.max(0.05, e + 0.05), Math.abs(Math.sin(az)) * 0.6 + 0.3).normalize();
     const moonDir = new THREE.Vector3(-0.4, 0.55, -0.7).normalize();
     const lightDir = day > 0.05 ? sunDir : moonDir;
+    // The moon goes through its phases over the run: a thin crescent the first evening, full by about day 11.
+    const phase = ((((this.preview.day ?? input.props.day) - 1) / 29.5 + 0.15) % 1 + 1) % 1;
+    const full = (1 - Math.cos(phase * Math.PI * 2)) / 2;
     u.sunDir!.value.copy(sunDir);
     this.sun.position.copy(this.pos).addScaledVector(lightDir, 80);
     this.sun.target.position.copy(this.pos);
     this.sun.color.setHex(day > 0.05 ? 0xfff0da : 0x9ab0e0).lerp(new THREE.Color(0xffa060), twilight * 0.6);
-    this.sun.intensity = day > 0.05 ? day * 3.2 * (1 - grey * 0.88) : 0.6 * (1 - grey * 0.8);
+    this.sun.intensity = day > 0.05 ? day * 3.2 * (1 - grey * 0.88) : (0.15 + full * 0.55) * (1 - grey * 0.8);
     this.hemi.color.copy(top).lerp(new THREE.Color(0xffffff), 0.35);
     this.hemi.groundColor.setHex(input.winter ? 0x8a9298 : 0x3a3222).multiplyScalar(0.3 + day * 0.7);
     this.hemi.intensity = 0.42 + day * (1.0 + grey * 0.5) + this.flash * 2.5;
@@ -1141,7 +1179,11 @@ export class World {
     this.updateMeteor(dt, day < 0.1 && grey < 0.1);
     this.moon.visible = day < 0.4 && grey < 0.7;
     this.moon.position.copy(this.pos).addScaledVector(moonDir, 520);
-    (this.moon.material as THREE.MeshBasicMaterial).opacity = 1 - day * 2.5;
+    this.moon.material.uniforms.opacity!.value = Math.max(0, 1 - day * 2.5);
+    this.moon.material.uniforms.phase!.value = phase;
+    this.moonHalo.visible = this.moon.visible;
+    this.moonHalo.position.copy(this.moon.position);
+    (this.moonHalo.material as THREE.SpriteMaterial).opacity = Math.max(0, 1 - day * 2.5) * full * 0.22 * (1 - grey);
     this.sky.position.copy(this.pos);
     this.stars.position.copy(this.pos);
 

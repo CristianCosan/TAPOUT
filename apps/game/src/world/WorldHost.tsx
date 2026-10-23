@@ -7,7 +7,7 @@ declare global {
   var __tapoutWorld:
     | {
         lookAt: (id: string) => boolean;
-        preview: (p: { hour?: number; weather?: string; tempC?: number; aurora?: boolean }) => void;
+        preview: (p: { hour?: number; weather?: string; tempC?: number; aurora?: boolean; day?: number }) => void;
         birds: () => { kind: string; at: { x: number; y: number; z: number }; visible: boolean }[];
         stand: (x: number, z: number, at: { x: number; y: number; z: number }) => void;
         where: () => { x: number; z: number; prints: number; calls: number; triangles: number; rings: number; shoreZ?: number };
