@@ -207,6 +207,8 @@ export class World {
   /** Sparks off a burning fire: additive points whose colour fades to black as they die. */
   private sparks: THREE.Points;
   private sparkLife = new Float32Array(SPARKS);
+  /** 1 while the fire burns, running down to 0 over two minutes after it goes out. */
+  private smoulder = 0;
   /** Snow blowing low along the ground in winter snow and storms. */
   private drift: THREE.Points;
   /** In winter, now and then a load of snow slides off a bough near you and comes down in a soft curtain. */
@@ -538,6 +540,7 @@ export class World {
     this.rings = null;
     this.prints.count = 0;
     this.printNext = 0;
+    this.smoulder = 0;
     this.wetSnap = true;
     const { area, winter } = input;
     this.areaRoot.add(this.terrain(area, winter));
@@ -1407,17 +1410,28 @@ export class World {
     });
     const base = node?.group.position;
     this.updateSparks(dt, lit && base && node?.group.visible ? base : null);
+    // A fire that goes out keeps smouldering a while: a thin wisp from the ashes.
+    const showing = !!base && !!node?.group.visible;
+    if (lit) this.smoulder = 1;
+    else this.smoulder = Math.max(0, this.smoulder - dt / 120);
+    const thick = lit ? 1 : this.smoulder * 0.45;
+    // The smoke leans with the wind and stays lower in it.
+    const wind = SWAY.swayWind.value;
     for (const puff of this.smoke) {
       const m = puff.material as THREE.MeshLambertMaterial;
-      if (!lit || !base || !node?.group.visible) {
+      if (!showing || thick <= 0.01) {
         m.opacity = 0;
         continue;
       }
-      const k = (puff.userData.t as number) + this.time * 0.09;
+      const k = (puff.userData.t as number) + this.time * (0.09 + wind * 0.05);
       const life = k - Math.floor(k);
-      puff.position.set(base.x + Math.sin(k * 9) * 0.25 + life * 1.2, base.y + 1.0 + life * 7, base.z + Math.cos(k * 7) * 0.25);
-      puff.scale.setScalar(0.5 + life * 2.4);
-      m.opacity = 0.32 * (1 - life) * Math.min(1, life * 6);
+      puff.position.set(
+        base!.x + Math.sin(k * 9) * 0.25 + life * (1.2 + wind * 7),
+        base!.y + (lit ? 1.0 : 0.3) + life * 7 * (1 - wind * 0.55),
+        base!.z + Math.cos(k * 7) * 0.25 + life * wind * 1.5,
+      );
+      puff.scale.setScalar((0.5 + life * 2.4) * (lit ? 1 : 0.6));
+      m.opacity = 0.32 * thick * (1 - life) * Math.min(1, life * 6);
     }
   }
 

@@ -160,6 +160,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.48** lays a glittering moon path on the open lake on moonlit nights, brighter as the moon fills.
 
+**Build 0.0.49** makes the campfire smoke lean with the wind and stay low in storms, and leaves a thin smouldering wisp for a couple of minutes after the fire goes out (D-062).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
