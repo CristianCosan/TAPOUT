@@ -1031,7 +1031,8 @@ export class World {
 
   private lowGraphics: boolean | null = null;
 
-  /** High: full 1920x1080 with 2048 sun shadows and fire shadows. Lighter: 1280x720, 1024, none. */
+  /** High: full 1920x1080 with 2048 sun shadows and fire shadows. Lighter: 1280x720, 1024, none,
+   *  and thinner weather: less rain, snow and blowing drift, and no morning ground fog. */
   private applyGraphics(): void {
     const low = settings().lowGraphics;
     if (low === this.lowGraphics) return;
@@ -1250,6 +1251,7 @@ export class World {
     m.opacity += ((on ? (w === 'storm' ? 0.45 : 0.25) : 0) - m.opacity) * Math.min(1, dt * 0.8);
     this.drift.visible = m.opacity > 0.01;
     if (!this.drift.visible) return;
+    this.drift.geometry.setDrawRange(0, this.lowGraphics ? DRIFT / 3 : DRIFT);
     const pos = this.drift.geometry.getAttribute('position') as THREE.BufferAttribute;
     const p = pos.array as Float32Array;
     const speed = w === 'storm' ? 9 : 4;
@@ -1491,7 +1493,7 @@ export class World {
     this.rain.visible = raining && !snowing;
     this.snow.visible = snowing;
     if (this.rain.visible) {
-      const count = w === 'storm' ? 2400 : 1400;
+      const count = (w === 'storm' ? 2400 : 1400) * (this.lowGraphics ? 0.5 : 1);
       this.rain.geometry.setDrawRange(0, count * 2);
       const pos = this.rain.geometry.getAttribute('position') as THREE.BufferAttribute;
       const arr = pos.array as Float32Array;
@@ -1512,7 +1514,7 @@ export class World {
       this.rain.position.set(eye.x, eye.y - 8, eye.z);
     }
     if (this.snow.visible) {
-      const count = w === 'storm' ? 3000 : 1800;
+      const count = Math.floor((w === 'storm' ? 3000 : 1800) * (this.lowGraphics ? 0.5 : 1));
       this.snow.geometry.setDrawRange(0, count);
       const pos = this.snow.geometry.getAttribute('position') as THREE.BufferAttribute;
       const arr = pos.array as Float32Array;
@@ -1573,7 +1575,7 @@ export class World {
     if (!this.groundFog) return;
     const h = ((hour % 24) + 24) % 24;
     const morning = Math.max(0, 1 - Math.abs(h - 6.8) / 2.6);
-    const k = morning * (w === 'storm' ? 0.15 : w === 'rain' ? 0.6 : 1);
+    const k = this.lowGraphics ? 0 : morning * (w === 'storm' ? 0.15 : w === 'rain' ? 0.6 : 1);
     this.groundFog.visible = k > 0.01;
     const lit = 0.3 + this.daylight * 0.55;
     for (const m of this.groundFog.children as THREE.Sprite[]) {
