@@ -148,6 +148,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.42** adds a woodpecker drumming in the woods by day and an owl that glides across the sky on calm nights, now and then hooting as it goes (D-058). Scenery and sound only.
 
+**Build 0.0.43** adds a red fox in winter that trots across the snow, now and then stops to listen and pounces, and barks and runs if you come close (D-059).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

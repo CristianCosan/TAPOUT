@@ -157,6 +157,16 @@ export class Ambience {
         }
         break;
       }
+      case 'fox': {
+        // The red fox's bark: a hoarse, rising-then-falling yap, two or three times.
+        const n = 2 + Math.floor(r() * 2);
+        for (let i = 0; i < n; i++) {
+          const f = 620 + r() * 120;
+          tone(out, { at: i * 0.5, len: 0.2, type: 'sawtooth', freqs: [[0, f], [0.06, f * 1.5], [0.2, f * 0.8]], peak: 0.05, attack: 0.01 });
+          burst(out, { at: i * 0.5, len: 0.18, peak: 0.12, freq: 1400, to: 900, q: 1.2, attack: 0.01 });
+        }
+        break;
+      }
       case 'squirrel': {
         // The red squirrel's scold: a fast dry rattle that slows and drops at the end.
         const n = 14 + Math.floor(r() * 10);

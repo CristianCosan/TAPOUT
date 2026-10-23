@@ -1,14 +1,15 @@
 // Birds that are only scenery: ravens turning high overhead, geese going south in autumn, a pair
 // of loons on open water, chickadees hopping about that scatter when you walk up; and in the
 // woods a deer at the tree line that snorts and bounds off if you come too close; and at the shore
-// a beaver swimming its line now and then, that slaps its tail and dives if you come down to the water. None of them
+// a beaver swimming its line now and then, that slaps its tail and dives if you come down to the water;
+// and in winter a red fox trotting across the snow, that stops to listen and pounces on a vole. None of them
 // is a station and none touches the run; they come and go with the light and the weather.
 
 import * as THREE from 'three';
 import type { WorldArea } from '@tapout/content';
 import { mat } from './kit.ts';
 
-export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver' | 'squirrel' | 'woodpecker';
+export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver' | 'squirrel' | 'woodpecker' | 'fox';
 
 export interface Call {
   kind: CallKind;
@@ -155,6 +156,67 @@ function squirrel(): THREE.Group {
   return g;
 }
 
+/** A red fox facing -z: legs, head and tail named so they can move. */
+function fox(): THREE.Group {
+  const coat = 0xb4561e;
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.42, 3, 7), mat(coat));
+  body.rotation.x = Math.PI / 2;
+  body.position.y = 0.38;
+  g.add(body);
+  const head = new THREE.Group();
+  head.name = 'head';
+  head.position.set(0, 0.48, -0.33);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.1, 7, 5), mat(coat));
+  skull.scale.set(1, 0.9, 1.1);
+  head.add(skull);
+  const snout = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 5), mat(0xe8e0d4));
+  snout.rotation.x = -Math.PI / 2;
+  snout.position.set(0, -0.03, -0.14);
+  head.add(snout);
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.11, 4), mat(0x2a1a12));
+    ear.position.set(side * 0.055, 0.1, 0);
+    head.add(ear);
+  }
+  g.add(head);
+  const legs: Array<[number, number, string]> = [[-0.07, -0.2, 'fl'], [0.07, -0.2, 'fr'], [-0.07, 0.2, 'bl'], [0.07, 0.2, 'br']];
+  for (const [x, z, name] of legs) {
+    const geo = new THREE.CylinderGeometry(0.022, 0.018, 0.32, 4);
+    geo.translate(0, -0.16, 0);
+    const leg = new THREE.Mesh(geo, mat(0x1e1612));
+    leg.position.set(x, 0.32, z);
+    leg.name = name;
+    g.add(leg);
+  }
+  const tail = new THREE.Group();
+  tail.name = 'tail';
+  tail.position.set(0, 0.38, 0.32);
+  const brush = new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.3, 2, 6), mat(coat));
+  brush.rotation.x = Math.PI / 2;
+  brush.position.z = 0.2;
+  tail.add(brush);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 4), mat(0xf0ece4));
+  tip.position.z = 0.42;
+  tail.add(tip);
+  tail.rotation.x = 0.35;
+  g.add(tail);
+  return g;
+}
+
+interface Fox {
+  g: THREE.Group;
+  x: number;
+  z: number;
+  heading: number;
+  state: 'trot' | 'listen' | 'pounce' | 'look' | 'flee' | 'gone';
+  timer: number;
+  /** How far is left to go across. */
+  left: number;
+  /** Whether it has stopped to hunt on this crossing yet. */
+  hunted: boolean;
+}
+
 interface Squirrel {
   g: THREE.Group;
   x: number;
@@ -230,6 +292,7 @@ export class Wildlife {
   private deer: Deer | null = null;
   private beaver: Beaver | null = null;
   private squirrel: Squirrel | null = null;
+  private fox: Fox | null = null;
   /** At dusk and at night an owl now and then glides low and silent across the clearing. */
   private owl = bird(0x6a5a48, 0x5e5040, 0.75, 0x7a6a56);
   private owlFlight: { from: THREE.Vector3; to: THREE.Vector3; t: number; length: number } | null = null;
@@ -296,6 +359,13 @@ export class Wildlife {
       this.root.add(g);
     }
 
+    if (winter) {
+      const g = fox();
+      g.visible = false;
+      this.fox = { g, x: 0, z: 0, heading: 0, state: 'gone', timer: rand(20, 60), left: 0, hunted: false };
+      this.root.add(g);
+    }
+
     this.owl.visible = false;
     this.root.add(this.owl);
 
@@ -319,6 +389,7 @@ export class Wildlife {
       ...(this.deer ? [{ kind: 'deer', at: this.deer.g.position.clone(), visible: this.deer.g.visible }] : []),
       { kind: 'owl', at: this.owl.position.clone(), visible: this.owl.visible },
       ...(this.squirrel ? [{ kind: 'squirrel', at: this.squirrel.g.position.clone(), visible: this.squirrel.g.visible }] : []),
+      ...(this.fox ? [{ kind: 'fox', at: this.fox.g.position.clone(), visible: this.fox.g.visible }] : []),
       ...(this.beaver ? [{ kind: 'beaver', at: this.beaver.g.position.clone(), visible: this.beaver.g.visible }] : []),
     ];
   }
@@ -328,6 +399,7 @@ export class Wildlife {
     if (this.deer?.state === 'gone') this.deer.timer = 0;
     if (this.beaver?.state === 'gone') this.beaver.timer = 0;
     if (this.squirrel?.state === 'gone') this.squirrel.timer = 0;
+    if (this.fox?.state === 'gone') this.fox.timer = 0;
     if (!this.owlFlight) this.owlWait = 0;
   }
 
@@ -423,6 +495,7 @@ export class Wildlife {
     if (this.deer) this.updateDeer(this.deer, dt, t, s);
     if (this.beaver) this.updateBeaver(this.beaver, dt, t, s);
     if (this.squirrel) this.updateSquirrel(this.squirrel, dt, t, s);
+    if (this.fox) this.updateFox(this.fox, dt, t, s);
     this.updateOwl(dt, t, s);
 
     // Voices from the trees you cannot see.
@@ -725,6 +798,105 @@ export class Wildlife {
     if (q.timer <= 0) {
       q.state = 'gone';
       q.timer = rand(40, 100);
+    }
+  }
+
+  /** Trots across the snow edge to edge; once on the way it may stop, listen and pounce; it notices you inside 10 m, looks, barks and runs. */
+  private updateFox(f: Fox, dt: number, t: number, s: LifeState): void {
+    const g = f.g;
+    const head = g.getObjectByName('head')!;
+    const tail = g.getObjectByName('tail')!;
+    const legs = ['fl', 'fr', 'bl', 'br'].map((n) => g.getObjectByName(n)!);
+    if (f.state === 'gone') {
+      g.visible = false;
+      f.timer -= dt;
+      if (f.timer > 0 || s.day < 0.1 || s.weather === 'storm' || s.silent) {
+        if (f.timer <= 0) f.timer = rand(30, 80);
+        return;
+      }
+      const a = rand(0, Math.PI * 2);
+      const r = this.area.walkRadius + 6;
+      const b = a + Math.PI + rand(-0.7, 0.7);
+      f.x = Math.cos(a) * r;
+      f.z = Math.sin(a) * r;
+      const tx = Math.cos(b) * r;
+      const tz = Math.sin(b) * r;
+      if (this.area.shoreZ !== undefined && (f.z < this.area.shoreZ + 1 || tz < this.area.shoreZ + 1)) {
+        f.timer = rand(2, 6);
+        return;
+      }
+      f.heading = Math.atan2(-(tx - f.x), -(tz - f.z));
+      f.left = Math.hypot(tx - f.x, tz - f.z);
+      f.hunted = Math.random() < 0.4;
+      f.state = 'trot';
+      g.visible = true;
+    }
+    const near = Math.hypot(f.x - s.player.x, f.z - s.player.z);
+    if (near < 10 && (f.state === 'trot' || f.state === 'listen')) {
+      f.state = 'look';
+      f.timer = rand(1.2, 2.2);
+      if (Math.random() < 0.5) this.call('fox', g.position);
+    }
+    const y = this.ground(f.x, f.z);
+    if (f.state === 'trot' || f.state === 'flee') {
+      const speed = f.state === 'flee' ? 6.5 : 2.2;
+      const step = speed * dt;
+      f.x += -Math.sin(f.heading) * step;
+      f.z += -Math.cos(f.heading) * step;
+      f.left -= step;
+      const gait = t * (f.state === 'flee' ? 16 : 10);
+      legs.forEach((l, i) => (l.rotation.x = Math.sin(gait + (i === 0 || i === 3 ? 0 : Math.PI)) * 0.5));
+      g.position.set(f.x, y + Math.abs(Math.sin(gait)) * (f.state === 'flee' ? 0.08 : 0.025), f.z);
+      g.rotation.set(0, f.heading, 0);
+      head.rotation.set(f.state === 'flee' ? 0.1 : 0.25, 0, 0);
+      tail.rotation.x = f.state === 'flee' ? 0.05 : 0.35;
+      f.timer -= dt;
+      if (f.state === 'trot' && !f.hunted && f.left < 18) {
+        f.hunted = true;
+        f.state = 'listen';
+        f.timer = rand(2, 4);
+      }
+      if ((f.state === 'trot' && f.left <= 0) || (f.state === 'flee' && f.timer <= 0)) {
+        f.state = 'gone';
+        f.timer = rand(90, 240);
+      }
+      return;
+    }
+    legs.forEach((l) => (l.rotation.x = 0));
+    f.timer -= dt;
+    if (f.state === 'listen') {
+      // stock still, head down and cocked, ears on something under the snow
+      g.position.set(f.x, y, f.z);
+      head.rotation.set(0.7, 0, Math.sin(t * 1.3) * 0.35);
+      if (f.timer <= 0) {
+        f.state = 'pounce';
+        f.timer = 0.7;
+      }
+      return;
+    }
+    if (f.state === 'pounce') {
+      // a high arc, and nose-first into the snow
+      const k = 1 - f.timer / 0.7;
+      f.x += -Math.sin(f.heading) * 1.8 * dt;
+      f.z += -Math.cos(f.heading) * 1.8 * dt;
+      f.left -= 1.8 * dt;
+      g.position.set(f.x, y + Math.sin(Math.min(1, k) * Math.PI) * 0.7, f.z);
+      g.rotation.set(-0.5 + k * 1.3, f.heading, 0);
+      head.rotation.set(0.6, 0, 0);
+      tail.rotation.x = -0.3;
+      if (f.timer <= 0) {
+        g.rotation.set(0, f.heading, 0);
+        f.state = 'trot';
+      }
+      return;
+    }
+    // looking at you, then away it goes
+    g.position.set(f.x, y, f.z);
+    head.rotation.set(0, Math.atan2(-(s.player.x - f.x), -(s.player.z - f.z)) - f.heading, 0);
+    if (f.timer <= 0) {
+      f.state = 'flee';
+      f.timer = 4;
+      f.heading = Math.atan2(f.x - s.player.x, f.z - s.player.z) + Math.PI + rand(-0.4, 0.4);
     }
   }
 
