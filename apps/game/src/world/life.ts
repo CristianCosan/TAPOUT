@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import type { WorldArea } from '@tapout/content';
 import { mat } from './kit.ts';
 
-export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver' | 'squirrel';
+export type CallKind = 'chickadee' | 'raven' | 'goose' | 'loon' | 'jay' | 'owl' | 'wolf' | 'deer' | 'beaver' | 'squirrel' | 'woodpecker';
 
 export interface Call {
   kind: CallKind;
@@ -230,6 +230,10 @@ export class Wildlife {
   private deer: Deer | null = null;
   private beaver: Beaver | null = null;
   private squirrel: Squirrel | null = null;
+  /** At dusk and at night an owl now and then glides low and silent across the clearing. */
+  private owl = bird(0x6a5a48, 0x5e5040, 0.75, 0x7a6a56);
+  private owlFlight: { from: THREE.Vector3; to: THREE.Vector3; t: number; length: number } | null = null;
+  private owlWait = rand(30, 90);
 
   constructor(
     private readonly area: WorldArea,
@@ -292,6 +296,9 @@ export class Wildlife {
       this.root.add(g);
     }
 
+    this.owl.visible = false;
+    this.root.add(this.owl);
+
     const hoppers = area.id === 'shore' ? 3 : 5;
     for (let i = 0; i < hoppers; i++) {
       const g = bird(0x9a948a, 0x101010, 0.16, 0x6e6a64);
@@ -310,6 +317,7 @@ export class Wildlife {
       ...this.loons.map((l) => ({ kind: 'loon', at: l.g.position.clone(), visible: l.g.visible })),
       ...this.hoppers.map((h) => ({ kind: 'chickadee', at: h.g.position.clone(), visible: h.g.visible })),
       ...(this.deer ? [{ kind: 'deer', at: this.deer.g.position.clone(), visible: this.deer.g.visible }] : []),
+      { kind: 'owl', at: this.owl.position.clone(), visible: this.owl.visible },
       ...(this.squirrel ? [{ kind: 'squirrel', at: this.squirrel.g.position.clone(), visible: this.squirrel.g.visible }] : []),
       ...(this.beaver ? [{ kind: 'beaver', at: this.beaver.g.position.clone(), visible: this.beaver.g.visible }] : []),
     ];
@@ -320,6 +328,7 @@ export class Wildlife {
     if (this.deer?.state === 'gone') this.deer.timer = 0;
     if (this.beaver?.state === 'gone') this.beaver.timer = 0;
     if (this.squirrel?.state === 'gone') this.squirrel.timer = 0;
+    if (!this.owlFlight) this.owlWait = 0;
   }
 
   /** Calls made since the last frame, for the sound to play. */
@@ -414,6 +423,7 @@ export class Wildlife {
     if (this.deer) this.updateDeer(this.deer, dt, t, s);
     if (this.beaver) this.updateBeaver(this.beaver, dt, t, s);
     if (this.squirrel) this.updateSquirrel(this.squirrel, dt, t, s);
+    this.updateOwl(dt, t, s);
 
     // Voices from the trees you cannot see.
     this.nextCall -= dt;
@@ -424,7 +434,8 @@ export class Wildlife {
       const at = new THREE.Vector3(Math.cos(a) * far, 4, Math.sin(a) * far);
       const roll = Math.random();
       if (daytime && !wet && !s.silent) {
-        if (roll < 0.62) this.call('chickadee', at);
+        if (this.area.id === 'woods' && Math.random() < 0.18) this.call('woodpecker', at.setY(7));
+        else if (roll < 0.62) this.call('chickadee', at);
         else if (roll < 0.85) this.call('raven', this.soarers[0]!.g.position);
         else this.call('jay', at);
       } else if (s.day < 0.1 && s.weather !== 'storm') {
@@ -714,6 +725,40 @@ export class Wildlife {
     if (q.timer <= 0) {
       q.state = 'gone';
       q.timer = rand(40, 100);
+    }
+  }
+
+  private updateOwl(dt: number, t: number, s: LifeState): void {
+    if (!this.owlFlight) {
+      this.owl.visible = false;
+      this.owlWait -= dt;
+      if (this.owlWait > 0) return;
+      if (s.day > 0.35 || s.weather === 'storm' || WET.has(s.weather)) {
+        this.owlWait = rand(30, 60);
+        return;
+      }
+      const a = rand(0, Math.PI * 2);
+      const r = this.area.walkRadius + 14;
+      const h = rand(5, 8);
+      const from = new THREE.Vector3(Math.cos(a) * r, h, Math.sin(a) * r);
+      const b = a + Math.PI + rand(-0.6, 0.6);
+      const to = new THREE.Vector3(Math.cos(b) * r, h + rand(-1, 2), Math.sin(b) * r);
+      this.owlFlight = { from, to, t: 0, length: from.distanceTo(to) / 6.5 };
+    }
+    const f = this.owlFlight;
+    f.t += dt;
+    const k = f.t / f.length;
+    this.owl.visible = true;
+    this.owl.position.lerpVectors(f.from, f.to, k);
+    this.owl.position.y += Math.sin(k * Math.PI) * -1.5; // dips low over the middle
+    face(this.owl, f.to.x - f.from.x, f.to.z - f.from.z);
+    // a few deep, slow beats, then a long glide
+    const beating = (f.t % 2.4) < 0.9;
+    flap(this.owl, beating ? Math.sin(t * 7) * 0.55 : 0.08);
+    if (k >= 1) {
+      this.owlFlight = null;
+      this.owlWait = rand(120, 300);
+      if (Math.random() < 0.6) this.call('owl', f.to);
     }
   }
 }

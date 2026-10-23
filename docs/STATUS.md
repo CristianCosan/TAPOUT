@@ -146,6 +146,8 @@ lifting by mid-morning, thin in rain, almost none in storms, none in winter), li
 you, flicks its tail and scolds you with a dry rattle every few seconds, and dashes off into the trees if you
 come within a few metres. Not in rain, at night, or when the birds go silent.
 
+**Build 0.0.42** adds a woodpecker drumming in the woods by day and an owl that glides across the sky on calm nights, now and then hooting as it goes (D-058). Scenery and sound only.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

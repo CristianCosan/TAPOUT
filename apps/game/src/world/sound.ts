@@ -147,6 +147,16 @@ export class Ambience {
         [0, 0.55, 0.75, 1.3, 1.85].forEach((t, i) => tone(out, { at: t, len: i === 1 ? 0.14 : 0.32, freqs: [[0, f * 1.05], [0.3, f]], peak: 0.1, attack: 0.06 }));
         break;
       }
+      case 'woodpecker': {
+        // Drumming on a dead trunk: a fast roll of hollow knocks that fades out, sometimes twice.
+        const rolls = r() < 0.35 ? 2 : 1;
+        for (let k = 0; k < rolls; k++) {
+          const n = 14 + Math.floor(r() * 8);
+          const f = 700 + r() * 300;
+          for (let i = 0; i < n; i++) burst(out, { at: k * 2.2 + i * 0.058, len: 0.035, peak: 0.28 * (1 - i / (n * 1.3)), freq: f, q: 4, attack: 0.001 });
+        }
+        break;
+      }
       case 'squirrel': {
         // The red squirrel's scold: a fast dry rattle that slows and drops at the end.
         const n = 14 + Math.floor(r() * 10);
