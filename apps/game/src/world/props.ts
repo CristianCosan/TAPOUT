@@ -136,6 +136,23 @@ function fire(s: PropState): THREE.Group {
     }
     g.add(flames);
     g.add(mesh(new THREE.CircleGeometry(0.45, 8), new THREE.MeshBasicMaterial({ color: 0xff5a10 }), 0, 0.03, 0, -Math.PI / 2));
+  } else {
+    // Coals in the ash, dark until the screen says a fire has just gone out; then they glow and fade.
+    const embers = new THREE.Group();
+    embers.name = 'embers';
+    const rnd = seeded(12);
+    for (let i = 0; i < 11; i++) {
+      const a = rnd() * Math.PI * 2;
+      const r = Math.sqrt(rnd()) * 0.38;
+      const e = new THREE.Mesh(
+        rough(new THREE.IcosahedronGeometry(0.035 + rnd() * 0.03, 0), 0.01, i),
+        new THREE.MeshBasicMaterial({ color: i % 3 ? 0xff4a10 : 0xff8a2a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
+      );
+      e.position.set(Math.cos(a) * r, 0.04, Math.sin(a) * r);
+      e.userData.phase = rnd() * 6;
+      embers.add(e);
+    }
+    g.add(embers);
   }
   return g;
 }

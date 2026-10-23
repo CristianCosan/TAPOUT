@@ -162,6 +162,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.49** makes the campfire smoke lean with the wind and stay low in storms, and leaves a thin smouldering wisp for a couple of minutes after the fire goes out (D-062).
 
+**Build 0.0.50** leaves glowing coals in the ash after the fire goes out, pulsing and fading over a couple of minutes.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

@@ -1415,6 +1415,10 @@ export class World {
     if (lit) this.smoulder = 1;
     else this.smoulder = Math.max(0, this.smoulder - dt / 120);
     const thick = lit ? 1 : this.smoulder * 0.45;
+    node?.group.getObjectByName('embers')?.children.forEach((e) => {
+      const glow = Math.sin(t * (1.3 + (e.userData.phase as number) * 0.2) + (e.userData.phase as number)) * 0.5 + 0.5;
+      ((e as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = Math.min(1, this.smoulder * 1.4) * (0.35 + glow * 0.65);
+    });
     // The smoke leans with the wind and stays lower in it.
     const wind = SWAY.swayWind.value;
     for (const puff of this.smoke) {
