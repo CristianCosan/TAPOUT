@@ -14,6 +14,10 @@ export interface SoundState {
   waterDistance: number;
   /** Metres to lake ice; Infinity when the lake here is open or there is none. */
   iceDistance: number;
+  /** Metres to the shelter at camp; Infinity elsewhere. */
+  shelterDistance: number;
+  /** Whether the shelter's roof is the tarp (taut and loud in rain) rather than boughs or logs. */
+  tarpRoof: boolean;
   frozen: boolean;
   winter: boolean;
 }
@@ -251,6 +255,18 @@ export class Ambience {
     ease(this.fire.gain, near * 0.18);
     // Crackles and pops, more of them close up.
     if (near > 0 && Math.random() < dt * (3 + near * 9)) burst(this.out, { len: 0.03 + Math.random() * 0.05, peak: near * (0.12 + Math.random() * 0.25), freq: 1800 + Math.random() * 2600 });
+    // Rain on the roof when you are under or beside the shelter: a quick patter on the tarp,
+    // a softer one on boughs or logs, and now and then a fat drip off the edge.
+    const wet = RAIN[s.weather] ? (s.weather === 'storm' ? 1 : 0.6) : 0;
+    const roof = Number.isFinite(s.shelterDistance) ? Math.max(0, 1 - s.shelterDistance / 4) : 0;
+    if (wet > 0 && roof > 0) {
+      if (Math.random() < dt * 40 * wet * roof) {
+        burst(this.out, s.tarpRoof
+          ? { len: 0.02, peak: roof * (0.04 + Math.random() * 0.08), freq: 2600 + Math.random() * 2200, q: 2.5, attack: 0.001 }
+          : { len: 0.03, peak: roof * (0.03 + Math.random() * 0.05), freq: 900 + Math.random() * 900, type: 'lowpass', attack: 0.002 });
+      }
+      if (Math.random() < dt * 1.5 * wet * roof) burst(this.out, { len: 0.06, peak: roof * 0.1, freq: 1200 + Math.random() * 500, to: 600, q: 3, attack: 0.002 });
+    }
     // The ice sings: now and then a crack runs across the lake and comes back as a falling "pew".
     if (Number.isFinite(s.iceDistance)) {
       this.nextIce -= dt;

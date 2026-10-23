@@ -1091,12 +1091,15 @@ export class World {
     this.updateFrost(dt);
     this.updateLife(dt);
     const fire = this.stations.get('fire');
+    const shelter = this.stations.get('shelter');
     const w = { ...input, ...this.preview };
     this.sound.update(dt, {
       weather: w.weather,
       fireDistance: this.fireLight.visible && fire ? fire.group.position.distanceTo(this.pos) : Infinity,
       waterDistance: input.area.shoreZ !== undefined && !input.winter ? Math.max(0, this.pos.z - input.area.shoreZ) : Infinity,
       iceDistance: input.area.shoreZ !== undefined && input.winter ? Math.max(0, this.pos.z - input.area.shoreZ) : Infinity,
+      shelterDistance: shelter?.group.visible && !input.props.dugout ? Math.hypot(shelter.group.position.x - this.pos.x, shelter.group.position.z - this.pos.z) : Infinity,
+      tarpRoof: input.props.structure === 0,
       frozen: input.frozen,
       winter: input.winter,
     });

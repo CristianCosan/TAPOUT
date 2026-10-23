@@ -164,6 +164,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.50** leaves glowing coals in the ash after the fire goes out, pulsing and fading over a couple of minutes.
 
+**Build 0.0.51** adds the sound of rain on the shelter roof when you stand under or beside it: a taut patter on the tarp, softer on boughs or logs (D-063).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
