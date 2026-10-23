@@ -63,6 +63,7 @@ interface StationNode {
 const LEAVES = 160;
 const RINGS = 48;
 const SPARKS = 60;
+const DRIFT = 1200;
 const UP = new THREE.Vector3(0, 1, 0);
 const PRINTS = 200;
 const FLASH = new THREE.Color(0xdfe6ff);
@@ -156,6 +157,8 @@ export class World {
   /** Sparks off a burning fire: additive points whose colour fades to black as they die. */
   private sparks: THREE.Points;
   private sparkLife = new Float32Array(SPARKS);
+  /** Snow blowing low along the ground in winter snow and storms. */
+  private drift: THREE.Points;
   private sparkVel = new Float32Array(SPARKS * 3);
   private breath: THREE.Sprite[] = [];
   private breathAt = 0;
@@ -328,6 +331,18 @@ export class World {
       this.smoke.push(puff);
       this.scene.add(puff);
     }
+
+    const driftPos = new Float32Array(DRIFT * 3);
+    for (let i = 0; i < DRIFT; i++) {
+      driftPos[i * 3] = (rnd() - 0.5) * 30;
+      driftPos[i * 3 + 1] = rnd() * rnd() * rnd() * 0.8;
+      driftPos[i * 3 + 2] = (rnd() - 0.5) * 30;
+    }
+    const driftGeo = new THREE.BufferGeometry();
+    driftGeo.setAttribute('position', new THREE.BufferAttribute(driftPos, 3));
+    this.drift = new THREE.Points(driftGeo, new THREE.PointsMaterial({ map: softTexture(), color: 0xf2f6f8, size: 0.2, transparent: true, opacity: 0, depthWrite: false }));
+    this.drift.frustumCulled = false;
+    this.scene.add(this.drift);
 
     const sparkGeo = new THREE.BufferGeometry();
     sparkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
@@ -1119,6 +1134,26 @@ export class World {
     fog.far = far * (0.45 + day * 0.55);
   }
 
+  private updateDrift(dt: number, eye: THREE.Vector3, w: string): void {
+    const on = this.input!.winter && (w === 'snow' || w === 'storm');
+    const m = this.drift.material as THREE.PointsMaterial;
+    m.opacity += ((on ? (w === 'storm' ? 0.45 : 0.25) : 0) - m.opacity) * Math.min(1, dt * 0.8);
+    this.drift.visible = m.opacity > 0.01;
+    if (!this.drift.visible) return;
+    const pos = this.drift.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const p = pos.array as Float32Array;
+    const speed = w === 'storm' ? 9 : 4;
+    for (let i = 0; i < DRIFT; i++) {
+      const o = i * 3;
+      let x = p[o]! + speed * (0.7 + (i % 7) * 0.08) * dt;
+      if (x > 15) x -= 30;
+      p[o] = x;
+      p[o + 2] = p[o + 2]! + Math.sin(this.time * 2 + i) * 0.4 * dt;
+    }
+    pos.needsUpdate = true;
+    this.drift.position.set(eye.x, this.ground(this.input!.area, eye.x, eye.z), eye.z);
+  }
+
   private updateSparks(dt: number, base: THREE.Vector3 | null): void {
     const pos = this.sparks.geometry.getAttribute('position') as THREE.BufferAttribute;
     const col = this.sparks.geometry.getAttribute('color') as THREE.BufferAttribute;
@@ -1297,6 +1332,7 @@ export class World {
       this.snow.position.set(eye.x, eye.y - 6, eye.z);
     }
     this.updateLeaves(dt, eye, w);
+    this.updateDrift(dt, eye, w);
     this.updateLightning(dt, w);
     this.updateWet(dt, w);
     this.updateMist(this.preview.hour ?? this.input!.hour, w);

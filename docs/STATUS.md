@@ -136,6 +136,9 @@ across it every 12 to 47 seconds, a sharp tick, a falling "pew" and a low boom (
 line along the shore with a V of wake behind it; go down to the water's edge near it and it slaps its tail
 (a flat crack with an echo) and dives. Not in winter, storms, or when the birds go silent.
 
+**Build 0.0.39** blows snow low along the ground in winter snow and snowstorms: fine drift racing past
+your ankles with the wind, thicker and faster in a storm, easing in and out as the weather turns.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
