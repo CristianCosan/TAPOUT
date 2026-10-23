@@ -154,6 +154,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 **Build 0.0.45** adds a snowshoe hare at the edge of the clearing at camp and in the woods: brown in autumn, white in winter, it freezes when you come close and then bolts in a zigzag (D-060).
 
+**Build 0.0.46** hangs icicles from the lean-to's front pole and the timber shelter's eaves in winter.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

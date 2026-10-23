@@ -153,6 +153,19 @@ function water(): THREE.Group {
   return g;
 }
 
+/** A row of icicles hanging from a drip edge, from a to b, longest where the melt runs off. */
+function icicles(g: THREE.Group, a: THREE.Vector3, b: THREE.Vector3, seed: number) {
+  const rnd = seeded(seed);
+  const n = Math.round(a.distanceTo(b) * 7);
+  const ice = mat(0xd4e8f0, { rough: 0.15, metal: 0.1 });
+  for (let i = 0; i < n; i++) {
+    if (rnd() < 0.3) continue;
+    const p = a.clone().lerp(b, (i + rnd() * 0.6) / n);
+    const len = 0.06 + rnd() * rnd() * 0.42;
+    g.add(mesh(new THREE.ConeGeometry(0.012 + len * 0.06, len, 4), ice, p.x, p.y - len / 2, p.z, Math.PI, rnd() * 3, 0));
+  }
+}
+
 function shelter(s: PropState): THREE.Group {
   const g = new THREE.Group();
   // Bedding on the ground, whatever the tier.
@@ -190,6 +203,7 @@ function shelter(s: PropState): THREE.Group {
       }
       const roof = mesh(rough(new THREE.BoxGeometry(3.0, 0.16, 2.7, 4, 1, 4), 0.12, 2), mat(s.winter ? C.snow : C.bough), 0, 0.92, -0.4, 0.88, 0, 0);
       g.add(roof);
+      if (s.winter) icicles(g, v(-1.45, 1.6, 0.66), v(1.45, 1.6, 0.66), 31);
       break;
     }
     case 2: {
@@ -223,6 +237,7 @@ function shelter(s: PropState): THREE.Group {
       }
       for (const side of [-1, 1]) {
         g.add(mesh(new THREE.BoxGeometry(2.1, 0.12, d + 0.8), mat(s.winter ? C.snow : C.woodDark), side * 0.92, 2.0, 0, 0, 0, side * -0.5));
+        if (s.winter) icicles(g, v(side * 1.85, 1.46, -d / 2 - 0.35), v(side * 1.85, 1.46, d / 2 + 0.35), 40 + side);
       }
       break;
     }
