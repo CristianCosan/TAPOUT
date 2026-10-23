@@ -448,6 +448,7 @@ export class World {
     this.stations.clear();
     this.water = null;
     this.mist = null;
+    this.groundFog = null;
     this.rings = null;
     this.prints.count = 0;
     this.printNext = 0;
@@ -470,6 +471,7 @@ export class World {
         this.areaRoot.add(this.makeRings());
       }
     }
+    if (area.shoreZ === undefined && !winter) this.areaRoot.add(this.makeGroundFog(area));
     this.areaRoot.add(this.trees(area, winter));
     this.areaRoot.add(this.rocks(area, winter));
     this.areaRoot.add(this.undergrowth(area, winter));
@@ -1336,6 +1338,7 @@ export class World {
     this.updateLightning(dt, w);
     this.updateWet(dt, w);
     this.updateMist(this.preview.hour ?? this.input!.hour, w);
+    this.updateGroundFog(this.preview.hour ?? this.input!.hour, w);
     this.updateRings(dt, eye, w);
     SWAY.swayTime.value = this.time;
     SWAY.swayWind.value += ((WIND[w] ?? 0.2) - SWAY.swayWind.value) * Math.min(1, dt * 0.5);
@@ -1345,6 +1348,43 @@ export class World {
   }
 
   private mist: THREE.Group | null = null;
+  private groundFog: THREE.Group | null = null;
+
+  /** Low fog lying between the trees of the woods in the early morning, lifting by mid-morning. */
+  private makeGroundFog(area: WorldArea): THREE.Group {
+    const tex = softTexture();
+    const group = new THREE.Group();
+    const rnd = seeded(91);
+    for (let i = 0; i < 26; i++) {
+      const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: 0xdfe5e6, transparent: true, opacity: 0, depthWrite: false, fog: true }));
+      const a = rnd() * Math.PI * 2;
+      const r = 5 + rnd() * 26;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      const w = 9 + rnd() * 8;
+      m.scale.set(w, w * 0.22, 1);
+      m.position.set(x, this.ground(area, x, z) + 0.5 + rnd() * 0.5, z);
+      m.userData.base = x;
+      m.userData.drift = 0.5 + rnd();
+      group.add(m);
+    }
+    this.groundFog = group;
+    return group;
+  }
+
+  private updateGroundFog(hour: number, w: string): void {
+    if (!this.groundFog) return;
+    const h = ((hour % 24) + 24) % 24;
+    const morning = Math.max(0, 1 - Math.abs(h - 6.8) / 2.6);
+    const k = morning * (w === 'storm' ? 0.15 : w === 'rain' ? 0.6 : 1);
+    this.groundFog.visible = k > 0.01;
+    const lit = 0.3 + this.daylight * 0.55;
+    for (const m of this.groundFog.children as THREE.Sprite[]) {
+      m.material.opacity = 0.3 * k;
+      m.material.color.setRGB(0.87 * lit, 0.9 * lit, 0.9 * lit);
+      m.position.x = m.userData.base + Math.sin(this.time * 0.05 * m.userData.drift) * 2.5;
+    }
+  }
 
   /** Soft banks of mist lying on open water: thick at dawn, a little at dusk, none by day. */
   private makeMist(shoreZ: number): THREE.Group {

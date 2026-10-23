@@ -139,6 +139,9 @@ line along the shore with a V of wake behind it; go down to the water's edge nea
 **Build 0.0.39** blows snow low along the ground in winter snow and snowstorms: fine drift racing past
 your ankles with the wind, thicker and faster in a storm, easing in and out as the weather turns.
 
+**Build 0.0.40** lays low fog between the trees of the woods in the early morning (thickest around 06:50,
+lifting by mid-morning, thin in rain, almost none in storms, none in winter), lit by the hour.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
