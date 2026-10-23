@@ -129,6 +129,9 @@ minute to a minute and a half.
 **Build 0.0.36** lets frost creep in at the edges of the view in hard cold (D-055): none above -6 °C,
 thickest by -24 °C, coming and going over a few seconds.
 
+**Build 0.0.37** makes the frozen lake sing: in winter, near the ice at camp and the shore, a crack runs
+across it every 12 to 47 seconds, a sharp tick, a falling "pew" and a low boom (made in code, louder close).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

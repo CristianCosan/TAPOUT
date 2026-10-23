@@ -989,6 +989,7 @@ export class World {
       weather: w.weather,
       fireDistance: this.fireLight.visible && fire ? fire.group.position.distanceTo(this.pos) : Infinity,
       waterDistance: input.area.shoreZ !== undefined && !input.winter ? Math.max(0, this.pos.z - input.area.shoreZ) : Infinity,
+      iceDistance: input.area.shoreZ !== undefined && input.winter ? Math.max(0, this.pos.z - input.area.shoreZ) : Infinity,
       frozen: input.frozen,
       winter: input.winter,
     });

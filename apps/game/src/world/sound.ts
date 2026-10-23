@@ -12,6 +12,8 @@ export interface SoundState {
   fireDistance: number;
   /** Metres to open water; Infinity when there is none. */
   waterDistance: number;
+  /** Metres to lake ice; Infinity when the lake here is open or there is none. */
+  iceDistance: number;
   frozen: boolean;
   winter: boolean;
 }
@@ -31,6 +33,7 @@ export class Ambience {
   private sources: AudioBufferSourceNode[] = [];
   private t = 0;
   private lastStep = 0;
+  private nextIce = 8;
 
   start(): void {
     audio.unlock();
@@ -201,5 +204,23 @@ export class Ambience {
     ease(this.fire.gain, near * 0.18);
     // Crackles and pops, more of them close up.
     if (near > 0 && Math.random() < dt * (3 + near * 9)) burst(this.out, { len: 0.03 + Math.random() * 0.05, peak: near * (0.12 + Math.random() * 0.25), freq: 1800 + Math.random() * 2600 });
+    // The ice sings: now and then a crack runs across the lake and comes back as a falling "pew".
+    if (Number.isFinite(s.iceDistance)) {
+      this.nextIce -= dt;
+      if (this.nextIce <= 0) {
+        this.nextIce = 12 + Math.random() * 35;
+        this.ice(Math.max(0.25, 1 - s.iceDistance / 80));
+      }
+    }
+  }
+
+  private ice(loud: number): void {
+    const out = this.out!;
+    const hi = 2600 + Math.random() * 1400;
+    burst(out, { len: 0.06, peak: loud * 0.25, freq: 3200, q: 0.7, attack: 0.002 });
+    tone(out, { at: 0.02, len: 0.7, freqs: [[0, hi], [0.15, hi * 0.35], [0.7, 180]], peak: loud * 0.07, attack: 0.01 });
+    tone(out, { at: 0.12, len: 0.9, freqs: [[0, hi * 0.8], [0.25, hi * 0.25], [0.9, 140]], peak: loud * 0.04, attack: 0.02 });
+    burst(out, { at: 0.05, len: 1.4, peak: loud * 0.18, freq: 140, to: 50, type: 'lowpass', brown: true, attack: 0.08 });
+    burst(out, { at: 0.6, len: 1.8, peak: loud * 0.08, freq: 110, to: 45, type: 'lowpass', brown: true, attack: 0.3 });
   }
 }
