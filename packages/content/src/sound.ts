@@ -55,6 +55,8 @@ export const CREDITS_TEXT = {
   ],
   people: 'Design and direction: Sir. Built with Claude.',
   close: 'Back',
+  licences: 'Open-source licences',
+  licencesMissing: 'The licence list could not be opened.',
 } as const;
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LOCATIONS, type LocationId } from '@tapout/content';
 import { Session, type View } from '../session.ts';
-import { offersFor } from './offers.ts';
+import { hudText, offersFor } from './offers.ts';
 
 // Plays whole runs through the same offers the screen shows (plan §12, M10): every action v12
 // shows is on a station you can click, and every offer resolves without an error.
@@ -90,5 +90,19 @@ describe('fishing spots', () => {
     // Other spots still offer a line of their own.
     const point = LOCATIONS.shore.stations.find((s) => s.id === 'point')!;
     expect(offersFor(point, view).find((o) => o.key === 'a-lines')!.handler).toBe("placeLineAt('point')");
+  });
+});
+
+describe('the weather pill', () => {
+  const hud = (wx: string, temp: string) =>
+    new Map([
+      ['pillWx', { id: 'pillWx', text: wx, html: '' }],
+      ['pillTemp', { id: 'pillTemp', text: temp, html: '' }],
+    ]) as unknown as Parameters<typeof hudText>[0];
+  it('calls a mild cold day a raw chill, and a cold one a cold snap', () => {
+    expect(hudText(hud('❄️ Cold snap', '🌡 20°C'), 'pillWx')).toBe('❄️ Raw chill');
+    expect(hudText(hud('❄️ Cold snap', '🌡 5°C'), 'pillWx')).toBe('❄️ Cold snap');
+    expect(hudText(hud('❄️ Cold snap', '🌡 -12°C'), 'pillWx')).toBe('❄️ Cold snap');
+    expect(hudText(hud('☀️ Clear', '🌡 20°C'), 'pillWx')).toBe('☀️ Clear');
   });
 });

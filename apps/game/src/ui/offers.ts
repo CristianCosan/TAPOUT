@@ -2,12 +2,16 @@
 // Presentation only: availability, labels and costs all come from the core.
 
 import { rationsLeft, type HudElement, type PanelEntry } from '@tapout/core';
-import { LOCATIONS, type SpecialAction, type Station } from '@tapout/content';
+import { LOCATIONS, WEATHER_TEXT, type SpecialAction, type Station } from '@tapout/content';
 import type { View } from '../session.ts';
 
 export function hudText(hud: ReadonlyMap<string, HudElement>, id: string): string {
   const el = hud.get(id);
-  return el ? el.html || el.text : '';
+  const text = el ? el.html || el.text : '';
+  if (id !== 'pillWx' || !text.includes(WEATHER_TEXT.coldSnap)) return text;
+  // A 'cold' day that is not cold on the thermometer: name the chill, not a snap.
+  const temp = Number(/(-?\d+)\s*°C/.exec(hudText(hud, 'pillTemp'))?.[1]);
+  return temp > WEATHER_TEXT.coldSnapAtOrBelow ? text.replace(WEATHER_TEXT.coldSnap, WEATHER_TEXT.rawChill) : text;
 }
 
 // ---- what a station offers right now

@@ -20,7 +20,7 @@ await page.setContent(`<style>
        font: 400 84px Georgia, 'Times New Roman', serif; letter-spacing: 0.1em; text-shadow: 0 2px 18px rgba(0,0,0,0.6); }
   p { position: absolute; bottom: 30px; width: 100%; margin: 0; text-align: center; color: #ece5d2;
       font: 400 21px 'Segoe UI', system-ui, sans-serif; letter-spacing: 0.06em; opacity: 0.92; }
-</style><div class="bg"></div><div class="shade"></div><h1>TAP / OUT</h1><p>Outlast nine strangers, and the North.</p>`);
+</style><div class="bg"></div><div class="shade"></div><h1>TAP / OUT</h1><p>Nine rivals, one cold lake, and the North.</p>`);
 await page.screenshot({ path: `${root}docs/store/cover-630x500.png` });
 await browser.close();
 console.log('docs/store/cover-630x500.png from', shot);

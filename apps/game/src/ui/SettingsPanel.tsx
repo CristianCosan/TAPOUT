@@ -155,6 +155,14 @@ function PlaytestNotes() {
 
 export function CreditsPanel({ onClose }: { onClose: () => void }) {
   const C = CREDITS_TEXT;
+  const [licences, setLicences] = useState<string | null>(null);
+  const showLicences = () => {
+    // Bundled, not fetched: the desktop build cannot fetch its own files.
+    import('../legal/licences.txt?raw').then(
+      (m: { default: string }) => setLicences(m.default),
+      () => setLicences(C.licencesMissing),
+    );
+  };
   return (
     <div className="overlay" onClick={onClose}>
       <div className="sound-panel settings-panel" onClick={(e) => e.stopPropagation()}>
@@ -173,6 +181,13 @@ export function CreditsPanel({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <p className="credits-line">{C.people}</p>
+        {licences === null ? (
+          <button className="hud-btn" onClick={showLicences}>
+            {C.licences}
+          </button>
+        ) : (
+          <textarea className="notes-text licences-text" readOnly value={licences} />
+        )}
         <button className="big-btn primary" onClick={onClose}>
           {C.close}
         </button>

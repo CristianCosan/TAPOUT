@@ -1,6 +1,6 @@
 {
   "name": "tap-out",
-  "version": "0.0.60",
+  "version": "0.0.61",
   "private": true,
   "type": "module",
   "description": "TAP / OUT - a wilderness survival competition game for Windows.",
@@ -25,7 +25,8 @@
     "soak": "tsx packages/harness/src/tools/soak.cli.ts",
     "voice:lines": "tsx packages/harness/src/tools/voice-lines.cli.ts",
     "icon": "node scripts/icon/make-icon.mjs",
-    "cover": "node scripts/icon/make-cover.mjs"
+    "cover": "node scripts/icon/make-cover.mjs",
+    "notices": "node scripts/legal/notices.mjs"
   },
   "engines": {
     "node": ">=22"
