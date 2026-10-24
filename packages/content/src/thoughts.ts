@@ -13,6 +13,8 @@ export type ThoughtWhen =
   // Moments, the first time they happen in a run.
   | 'arriveShore' | 'arriveWoods' | 'firstNight' | 'frost' | 'snow' | 'storm' | 'finalTwo'
   | 'rivalGone' | 'firstFire' | 'firstFish' | 'firstSnare' | 'firstKill' | 'predator' | 'wavering'
+  // When he is low: sad, worn down, resolve wavering.
+  | 'low'
   // The body, when a bar runs low.
   | 'cold' | 'hungry' | 'thirsty' | 'tired' | 'wet'
   // Looking at something (a station id in the world).
@@ -70,6 +72,24 @@ export const THOUGHTS: readonly Thought[] = [
   { id: 'waver-1', when: 'wavering', say: 'What am I doing here? // No. / I know what I\'m doing here.' },
   { id: 'waver-2', when: 'wavering', say: 'The phone is right there. // It\'s just a button. / That\'s the problem.' },
 
+  // ---- low
+  { id: 'low-1', when: 'low', say: 'I don\'t know how much more of this I\'ve got in me. // Today. / Just today.', speed: 0.84 },
+  { id: 'low-2', when: 'low', say: 'Nobody has said my name out loud in days. // I\'m starting to forget what it sounds like.', speed: 0.84 },
+  { id: 'low-3', when: 'low', say: 'I keep picturing the front door at home. // The key sticks. / You have to lift it a little.', speed: 0.85 },
+  { id: 'low-4', when: 'low', say: 'This is the part where I always quit. // Every single time. / The gym. / The band. / The degree.', speed: 0.85 },
+  { id: 'low-5', when: 'low', say: '~ I miss people. // Just people. / Noise. / Somebody being annoying in the next room.' },
+  { id: 'low-6', when: 'low', say: 'I talked to a squirrel for ten minutes this morning. // It didn\'t say much back.' },
+  { id: 'low-7', when: 'low', say: 'Mara would know what to say right now. // She always does. / Even when it\'s nothing.', speed: 0.85 },
+  { id: 'low-8', when: 'low', say: 'Bad day. // Not dangerous. / Just bad. // There\'s a difference. / I think.' },
+  { id: 'low-9', when: 'low', say: 'Everything hurts a little. / All the time. // You stop noticing, / and then you notice.', speed: 0.85 },
+  { id: 'low-10', when: 'low', say: 'I\'m so tired of my own thoughts. // I\'d give anything for someone else\'s.', speed: 0.85 },
+  { id: 'low-11', when: 'low', say: 'The quiet out here has weight. // It sits on your chest at night.', speed: 0.84 },
+  { id: 'low-12', when: 'low', say: 'I used to think I was good company. // Turns out, / I\'m all right. / For about a week.' },
+  { id: 'low-13', when: 'low', night: true, say: 'Can\'t sleep. // Just me, / and the fire, / and the dark, being enormous.', speed: 0.84 },
+  { id: 'low-14', when: 'low', say: 'I keep checking the sky for the plane. // Like it would come early. / Like anybody\'s coming.', speed: 0.85 },
+  { id: 'low-15', when: 'low', say: 'Some days the lake looks beautiful. // Today it just looks cold.' },
+  { id: 'low-16', when: 'low', say: '~ Okay. // Okay. / Breathe. // You\'ve been lower than this. / Probably.', speed: 0.85 },
+
   // ---- the body
   { id: 'cold-1', when: 'cold', say: 'Can\'t feel my fingers. / ~ Come on.' },
   { id: 'cold-2', when: 'cold', say: 'I\'m so cold, it\'s hard to think straight.' },
@@ -123,19 +143,24 @@ export const THOUGHTS: readonly Thought[] = [
   { id: 'q-why', when: 'quiet', fromDay: 3, say: 'If I went home now, / I\'d have to tell everyone why. // I don\'t even know why.' },
 ];
 
-/** How often he speaks, in real seconds (the "rare" choice, D-067). */
+/**
+ * How often he speaks (Sir, 2026-10-24), in game hours. A thought is due every four to five days;
+ * every two to three while he is low. Moments (a first, a rival gone, the snow) can speak between,
+ * but not within a day of the last thing he said.
+ */
 export const THOUGHT_TIMING = {
-  /** Nothing in the first stretch of a session. */
-  firstDelay: 90,
-  /** Between a quiet, body or looking thought and the one before it. */
-  gap: 600,
-  /** Between any two thoughts, moments included. */
-  minGap: 60,
-  /** A moment that cannot be said yet waits this long, then is dropped. */
-  holdMoment: 90,
-  /** Once the gap has passed, how often a quiet moment is considered, and the chance it speaks. */
-  quietEvery: 20,
-  quietChance: 0.3,
+  /** Game hours between thoughts on a steady stretch: from, to. */
+  steady: [96, 120],
+  /** Game hours between thoughts while he is low. */
+  lowStretch: [48, 72],
+  /** A moment speaks only this many game hours after the last thing he said. */
+  momentGap: 18,
+  /** A due thought waits this many real seconds for him to look at something worth a line. */
+  lookWait: 45,
+  /** Between any two things he says, in real seconds. */
+  minGap: 30,
+  /** He counts as low: morale at or below this, or resolve wavering, or a body bar low. */
+  lowMorale: 35,
   /** A body bar at or below this counts as running low. */
   low: 25,
   /** Wetness at or above this counts as soaked. */
@@ -144,6 +169,8 @@ export const THOUGHT_TIMING = {
   tired: 0.2,
   /** How far the rest of the sound dips while he speaks, 0 to 1. */
   duck: 0.45,
+  /** Between the pieces of what he says to the camera, real seconds. */
+  confessGap: 0.15,
 } as const;
 
 export const THOUGHT_TEXT = {

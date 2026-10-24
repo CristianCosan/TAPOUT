@@ -178,6 +178,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 0.0.57 (2026-10-24): Dan's inner voice, spoken (D-067). 73 recorded thoughts for moments, the body, things you look at and quiet times, rare by design; a Voice volume and optional subtitles. Re-record with `npm run voice:lines` and `scripts/voice/render.py`.
 
+0.0.58 (2026-10-24): inner voice paced in game days (every 4-5, or 2-3 when low), 16 low-day lines, and every talk to the camera spoken (D-068).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

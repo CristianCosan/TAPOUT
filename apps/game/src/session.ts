@@ -17,7 +17,7 @@ import {
   type Run,
   type RunSnapshot,
 } from '@tapout/core';
-import { CAST, GAME_VERSION, P1 } from '@tapout/content';
+import { CAST, GAME_VERSION, P1, THOUGHT_TIMING } from '@tapout/content';
 import { logError } from './crash.ts';
 import { RESTORED_FROM, RUN_KEY, SaveStore } from './saves.ts';
 
@@ -68,6 +68,8 @@ interface SaveBody {
   elements: Array<[string, Omit<PageElement, 'classes'> & { classes: string[] }]>;
   /** Dan's thoughts already heard this run (D-067); older saves have none. */
   thoughts?: string[];
+  /** When he last said something, in game hours, and the roll for how long until the next. */
+  thoughtAt?: [number, number];
 }
 const HISTORY_KEY = 'tapout.history';
 const HISTORY_MAX = 30;
@@ -90,6 +92,7 @@ export class Session {
   private run: Run | null = null;
   private modal: string | null = null;
   private thoughts: string[] = [];
+  private thoughtAt: [number, number] = [-THOUGHT_TIMING.momentGap, Math.random()];
   private elements = new Map<string, PageElement>();
   private listeners = new Set<() => void>();
   private callListeners = new Set<(fn: string) => void>();
@@ -159,6 +162,7 @@ export class Session {
     this.run = restoreRun(save.run);
     this.modal = save.modal;
     this.thoughts = save.thoughts ?? [];
+    this.thoughtAt = save.thoughtAt ?? [-THOUGHT_TIMING.momentGap, Math.random()];
     for (const [id, el] of save.elements) this.elements.set(id, { ...el, classes: new Set(el.classes) });
     // A damaged save was replaced by an older copy: say so, once, on the result card.
     if (found.source !== 'save') this.result = { id: -1, lines: [{ msg: RESTORED_FROM[found.source], cls: 'warn' }], bars: {}, stores: {}, minutes: 0 };
@@ -278,6 +282,7 @@ export class Session {
     this.result = null;
     this.modal = null;
     this.thoughts = [];
+    this.thoughtAt = [-THOUGHT_TIMING.momentGap, Math.random()];
     this.elements.clear();
   }
 
@@ -286,9 +291,15 @@ export class Session {
     return this.thoughts;
   }
 
-  markThought(id: string): void {
+  /** When he last said something (game hours) and a 0..1 roll for how long until the next. */
+  lastThought(): readonly [number, number] {
+    return this.thoughtAt;
+  }
+
+  markThought(id: string, atHours: number): void {
     if (this.thoughts.includes(id)) return;
     this.thoughts = [...this.thoughts, id];
+    this.thoughtAt = [atHours, Math.random()];
     this.autosave();
   }
 
@@ -405,6 +416,7 @@ export class Session {
         modal: this.modal,
         elements: [...this.elements].map(([id, el]) => [id, { ...el, classes: [...el.classes] }]),
         thoughts: this.thoughts,
+        thoughtAt: this.thoughtAt,
       };
       this.saves.write(body, this.run.state.day, new Date().toISOString());
     } catch (error) {

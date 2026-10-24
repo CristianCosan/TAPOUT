@@ -1,13 +1,15 @@
-// Chooses when Dan thinks out loud (D-067). Moments (first frost, a rival gone, the first fish)
-// speak soon after they happen; the body, looking at things and quiet moments speak rarely, about
-// once every ten minutes. Each line is heard once per run. Reads v12 state only to choose a line;
-// nothing here changes the run, and no line is advice.
+// Chooses when Dan thinks out loud (D-067, D-068). A thought is due every four to five game days,
+// every two to three while he is low, and then waits for a quiet moment (or for him to look at
+// something worth a line). Moments (first frost, a rival gone, the first fish) speak between, but
+// not within a day of the last thing he said. What he says to the camera is always spoken. Each
+// line is heard once per run. Reads v12 state only to choose a line; nothing here changes the run,
+// and no line is advice.
 
 import { useEffect, useRef } from 'react';
-import { THOUGHTS, THOUGHT_TIMING as T, type Thought, type ThoughtWhen } from '@tapout/content';
+import { confessionClips, THOUGHTS, THOUGHT_TIMING as T, type Thought, type ThoughtWhen } from '@tapout/content';
 import { dawnHour, duskHour } from '@tapout/core';
 import { session, type View } from '../session.ts';
-import { noticeLook, onLook, speak, speaking, stopThought } from './thoughts.ts';
+import { noticeLook, onLook, speak, speaking, speakPieces, stopThought } from './thoughts.ts';
 
 /** Moments that only ever get one thought per run, however often they happen. */
 const ONCE = new Set<ThoughtWhen>(['arriveShore', 'arriveWoods', 'firstNight', 'firstFire', 'firstFish', 'firstSnare', 'firstKill', 'wavering']);
@@ -26,6 +28,7 @@ interface Marks {
   kills: number;
   predator: boolean;
   wavering: boolean;
+  confessions: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,6 +48,7 @@ function marks(S: any): Marks {
     kills: tot.animalsKilled ?? 0,
     predator: !!S.predatorPending,
     wavering: !!S.resolveState && S.resolveState !== 'Steady',
+    confessions: S.confessionals?.length ?? 0,
   };
 }
 
@@ -91,6 +95,25 @@ function body(S: any): ThoughtWhen[] {
   return out;
 }
 
+/** Game hours since the run began. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hours(S: any): number {
+  return (S.day - 1) * 24 + S.hour;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isLow(S: any): boolean {
+  return S.morale <= T.lowMorale || (!!S.resolveState && S.resolveState !== 'Steady') || body(S).length > 0;
+}
+
+/** Whether a thought is due: four to five days since the last, two to three while he is low. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function due(S: any): boolean {
+  const [at, roll] = session.lastThought();
+  const [from, to] = isLow(S) ? T.lowStretch : T.steady;
+  return hours(S) - at >= from + (to - from) * roll;
+}
+
 function pick<X>(xs: readonly X[]): X | undefined {
   return xs[Math.floor(Math.random() * xs.length)];
 }
@@ -100,69 +123,70 @@ export function useThoughts(view: View, quiet: boolean): void {
   const S = view.state;
   const live = useRef({ S, quiet });
   live.current = { S, quiet };
-  const clock = useRef({ start: performance.now(), lastAny: -Infinity, lastRare: -Infinity, held: [] as Array<{ when: ThoughtWhen; at: number }> });
+  const clock = useRef({ start: performance.now(), lastAny: -Infinity, dueSince: null as number | null, held: [] as Array<{ when: ThoughtWhen; at: number }> });
   const prev = useRef<Marks | null>(null);
 
   const now = () => (performance.now() - clock.current.start) / 1000;
 
   /** Says one unheard line for `when` (fitting the moment), if any. */
-  const say = (when: ThoughtWhen, rare: boolean): boolean => {
+  const say = (when: ThoughtWhen): boolean => {
     const heard = session.heardThoughts();
-    if (ONCE.has(when) && THOUGHTS.some((t) => t.when === when && heard.includes(t.id))) return true;
+    if (ONCE.has(when) && THOUGHTS.some((t) => t.when === when && heard.includes(t.id))) return false;
     const line = pick(THOUGHTS.filter((t) => t.when === when && !heard.includes(t.id) && fits(t, live.current.S)));
-    if (!line) return !rare;
-    if (!speak(line.id, line.say)) return false;
-    session.markThought(line.id);
+    if (!line || !speak(line.id, line.say)) return false;
+    session.markThought(line.id, hours(live.current.S));
     clock.current.lastAny = now();
-    if (rare) clock.current.lastRare = now();
+    clock.current.dueSince = null;
     return true;
   };
 
-  const ready = (rare: boolean): boolean => {
-    const t = now();
-    const c = clock.current;
-    if (!live.current.quiet || document.hidden || speaking()) return false;
-    if (t - c.lastAny < T.minGap) return false;
-    return !rare || (t >= T.firstDelay && t - c.lastRare >= T.gap);
-  };
+  const ready = (): boolean =>
+    live.current.quiet && !live.current.S.over && !document.hidden && !speaking() && now() - clock.current.lastAny >= T.minGap;
 
-  // Moments, as v12 state changes.
+  // Moments and confessionals, as v12 state changes.
   useEffect(() => {
     const n = marks(S);
     const p = prev.current;
     prev.current = n;
     if (!p || S.over) return;
+    if (n.confessions > p.confessions) {
+      const text = S.confessionals.at(-1)?.text ?? '';
+      if (speakPieces(confessionClips(text).map((c) => c.id), text, T.confessGap)) clock.current.lastAny = now();
+    }
     for (const when of moments(p, n)) clock.current.held.push({ when, at: now() });
     // v12 mutates its state in place; the view version marks a change.
   }, [S, view.version]);
 
-  // Held moments every two seconds; the body and quiet moments on a slower beat.
+  // Every two seconds: a held moment, or a due thought.
   useEffect(() => {
-    let beat = 0;
     const tick = window.setInterval(() => {
       const c = clock.current;
-      c.held = c.held.filter((m) => now() - m.at < T.holdMoment);
-      if (c.held.length && ready(false)) {
+      const S = live.current.S;
+      c.held = c.held.filter((m) => now() - m.at < 90);
+      if (!ready()) return;
+      if (c.held.length) {
         const m = c.held.shift()!;
-        if (!say(m.when, false)) c.held.unshift(m);
+        if (hours(S) - session.lastThought()[0] >= T.momentGap) say(m.when);
         return;
       }
-      beat += 2;
-      if (beat < T.quietEvery) return;
-      beat = 0;
-      if (live.current.S.over || !ready(true) || Math.random() > T.quietChance) return;
-      const low = body(live.current.S);
-      for (const when of low.sort(() => Math.random() - 0.5)) if (say(when, true)) return;
-      say('quiet', true);
+      if (!due(S)) {
+        c.dueSince = null;
+        return;
+      }
+      c.dueSince ??= now();
+      // Give him a little while to look at something worth a line first.
+      if (now() - c.dueSince < T.lookWait) return;
+      const pools: ThoughtWhen[] = isLow(S) ? ['low', ...body(S).sort(() => Math.random() - 0.5), 'quiet'] : [...(Math.random() < 0.5 ? body(S) : []), 'quiet'];
+      for (const when of pools) if (say(when)) return;
     }, 2000);
     return () => window.clearInterval(tick);
   }, []);
 
-  // Looking at something.
+  // Looking at something, when a thought is due.
   useEffect(
     () =>
       onLook((id) => {
-        if (id && ready(true)) say(`look:${id}`, true);
+        if (id && ready() && due(live.current.S)) say(`look:${id}`);
       }),
     [],
   );

@@ -32,10 +32,21 @@ export function plainWords(say: string): string {
 
 /** Starts a thought; false if one is already playing or the voice is turned off. */
 export function speak(id: string, say: string): boolean {
+  return play([id], plainWords(say), 0, id);
+}
+
+/** Says the pieces one after another (a confessional to the camera), cutting off any thought. */
+export function speakPieces(ids: readonly string[], text: string, gap: number): boolean {
+  stopThought();
+  return ids.length > 0 && play(ids, text, gap, ids.join('+'));
+}
+
+function play(ids: readonly string[], text: string, gap: number, key: string): boolean {
   if (current || audio.volume('voice') === 0) return false;
-  const el = new Audio(`${import.meta.env.BASE_URL}voice/${id}.ogg`);
+  const queue = [...ids];
+  const el = new Audio();
   el.volume = volume();
-  const me = { id, text: plainWords(say), el };
+  const me = { id: key, text, el };
   current = me;
   const end = () => {
     if (current !== me) return;
@@ -43,12 +54,20 @@ export function speak(id: string, say: string): boolean {
     audio.setSpeech(0);
     emit();
   };
-  el.addEventListener('ended', end);
-  el.addEventListener('error', end);
-  el.play().then(
-    () => audio.setSpeech(THOUGHT_TIMING.duck),
-    () => end(),
-  );
+  const next = () => {
+    if (current !== me) return;
+    const id = queue.shift();
+    if (!id) return end();
+    el.src = `${import.meta.env.BASE_URL}voice/${id}.ogg`;
+    el.play().then(
+      () => audio.setSpeech(THOUGHT_TIMING.duck),
+      // Sound not allowed yet ends it; a missing piece is skipped by the error event below.
+      (e: unknown) => (e as { name?: string })?.name === 'NotAllowedError' && end(),
+    );
+  };
+  el.addEventListener('ended', () => (queue.length ? window.setTimeout(next, gap * 1000) : end()));
+  el.addEventListener('error', () => next());
+  next();
   emit();
   return true;
 }

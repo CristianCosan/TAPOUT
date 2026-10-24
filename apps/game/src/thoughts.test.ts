@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { THOUGHTS } from '@tapout/content';
+import { CONFESSION_CLIPS, THOUGHTS } from '@tapout/content';
 import { plainWords } from './audio/thoughts.ts';
 
 const dir = new URL('../public/voice/', import.meta.url);
@@ -8,12 +8,14 @@ const dir = new URL('../public/voice/', import.meta.url);
 describe("Dan's thoughts (D-067)", () => {
   it('has one recording for every line, and no stray ones', () => {
     const manifest = JSON.parse(readFileSync(new URL('manifest.json', dir), 'utf8')) as Record<string, unknown>;
-    for (const t of THOUGHTS) expect(existsSync(new URL(`${t.id}.ogg`, dir)), t.id).toBe(true);
-    expect(Object.keys(manifest).sort()).toEqual(THOUGHTS.map((t) => t.id).sort());
+    const ids = [...THOUGHTS, ...CONFESSION_CLIPS].map((t) => t.id);
+    for (const id of ids) expect(existsSync(new URL(`${id}.ogg`, dir)), id).toBe(true);
+    expect(Object.keys(manifest).sort()).toEqual(ids.sort());
   });
 
   it('gives every line its own id', () => {
-    expect(new Set(THOUGHTS.map((t) => t.id)).size).toBe(THOUGHTS.length);
+    const ids = [...THOUGHTS, ...CONFESSION_CLIPS].map((t) => t.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('shows subtitles without the recording marks', () => {

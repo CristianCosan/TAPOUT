@@ -39,6 +39,8 @@ GAP_LONG = 1.05       # ' // '
 COMMA_MIN = 0.30      # every pause the model leaves inside a sentence is at least this long
 LEAD, TAIL = 0.12, 0.40
 TARGET_RMS_DB = -21.0
+ALOUD_SPEED = 0.95    # said to the camera: out loud, closer to normal speech
+ALOUD_RMS_DB = -19.0
 
 
 def tokens(say):
@@ -111,15 +113,16 @@ def breath(rng):
     return (b / (np.abs(b).max() + 1e-9) * 0.035).astype(np.float32)
 
 
-def colour(a):
-    """Inside the head: cut the rumble below 90 Hz, soften above 7 kHz, even loudness."""
+def colour(a, aloud=False):
+    """Inside the head: cut the rumble below 90 Hz, soften above 7 kHz, even loudness.
+    Out loud (to the camera): the full top end, a little louder."""
     spec = np.fft.rfft(a)
     f = np.fft.rfftfreq(len(a), 1 / SR)
     hp = 1 / (1 + (90 / np.maximum(f, 1)) ** 4)
-    lp = 1 / (1 + (f / 7000) ** 4)
+    lp = 1 if aloud else 1 / (1 + (f / 7000) ** 4)
     a = np.fft.irfft(spec * hp * lp, n=len(a))
     rms = np.sqrt((a[np.abs(a) > 0.01 * np.abs(a).max()] ** 2).mean())
-    a = a * (10 ** (TARGET_RMS_DB / 20) / max(rms, 1e-9))
+    a = a * (10 ** ((ALOUD_RMS_DB if aloud else TARGET_RMS_DB) / 20) / max(rms, 1e-9))
     peak = np.abs(a).max()
     if peak > 0.89:
         a = a * (0.89 / peak)
@@ -136,7 +139,8 @@ def fade(a, s=0.008):
 
 
 def record(k, line):
-    speed = line.get('speed') or SPEED
+    aloud = line.get('style') == 'aloud'
+    speed = line.get('speed') or (ALOUD_SPEED if aloud else SPEED)
     toks = tokens(line['say'])
     last_text = max(i for i, t in enumerate(toks) if t[0] == 'text')
     rng = np.random.default_rng(int(hashlib.sha1(line['id'].encode()).hexdigest()[:8], 16))
@@ -153,7 +157,7 @@ def record(k, line):
             assert sr == SR
             parts.append(fade(stretch_pauses(trim(a.astype(np.float32)))))
     parts.append(np.zeros(int(TAIL * SR), np.float32))
-    return colour(np.concatenate(parts))
+    return colour(np.concatenate(parts), aloud)
 
 
 def main():
@@ -171,7 +175,7 @@ def main():
     keep = set()
     for line in lines:
         keep.add(line['id'])
-        h = hashlib.sha1(json.dumps([RENDER_VERSION, VOICE, line['say'], line.get('speed')]).encode()).hexdigest()[:12]
+        h = hashlib.sha1(json.dumps([RENDER_VERSION, VOICE, line['say'], line.get('speed')] + ([line['style']] if line.get('style') else [])).encode()).hexdigest()[:12]
         target = os.path.join(args.out, line['id'] + '.ogg')
         if args.only and line['id'] not in args.only:
             continue
