@@ -2,6 +2,8 @@
 // moved verbatim apart from: exports, imports, Math.random -> rand(), and presentation
 // calls routed through ./ui.ts. Parity with the original is enforced by tests.
 
+import { letterPanel } from './letters.ts';
+import { RULES } from './rules.ts';
 import { fireCap } from './camp.ts';
 import { ambientTempC, eCost, eTime, shiveringActive } from './cost.ts';
 import { berryCount, cookedMealSpoiled, meatCount, oldestBerriesSpoiled, oldestMeatSpoiled } from './food.ts';
@@ -534,7 +536,7 @@ export function actionPanel(): PanelEntry[] {
         enabled: !el.disabled && !S.over,
         detail: recording.get(b.id + '-sub')?.textContent ?? '',
       };
-    });
+    }).concat(letterPanel());
   } finally {
     recording = null;
   }
@@ -589,7 +591,7 @@ function panelPass(){
   const eb = $('bar-energy');
   eb.style.width = (clamp(S.energy,0,120)/120*100) + '%';
   eb.classList.toggle('crit', S.energy/S.maxEnergy < 0.22);
-  $('val-energy').textContent = `${roundDisplay(S.energy)}/${S.maxEnergy}`;
+  $('val-energy').textContent = `${roundDisplay(S.energy)}/${RULES.wholeNumbers ? roundDisplay(S.maxEnergy) : S.maxEnergy}`;
 
   const fc = $('chip-fire');
   fc.innerHTML = S.fireH > 0 ? `🔥 Fire: <b>~${S.fireH.toFixed(1)}h</b>/${fireCap()}` : `🔥 Fire: <b>out</b>`;

@@ -1,7 +1,7 @@
 // npm run balance -- --seeds 200 --days 70
 // Plays the same seeds under v12's rules, under TAP / OUT's, and under each single change on its
 // own, and prints how the run outcomes move. M8's change report is built from this.
-import { TAPOUT_RULES, V12_RULES, type RuleSet } from '@tapout/core';
+import { KIT_POOL, TAPOUT_RULES, V12_RULES, type RuleSet } from '@tapout/core';
 import { CAST } from '@tapout/content';
 import { runSolo, type SoloResult } from '../parity/lockstep.ts';
 
@@ -13,8 +13,12 @@ function arg(name: string, fallback: string): string {
 const seeds = Number(arg('seeds', '100'));
 const days = Number(arg('days', '70'));
 const prefix = arg('prefix', 'balance');
-const persona = arg('persona', 'survivor') as 'random' | 'survivor';
+const persona = arg('persona', 'survivor') as 'random' | 'survivor' | 'competent';
 const singles = arg('singles', 'yes') !== 'no';
+// 'std' is the usual ten a player packs. 'harness' is the parity runner's kit, which names four
+// items v12 does not know (so no sleeping bag and no snare wire); the M8 report used it.
+const STD_KIT = (KIT_POOL as Array<{ id: string; std?: boolean }>).filter((k) => k.std).map((k) => k.id);
+const kit = arg('kit', 'std') === 'harness' ? undefined : STD_KIT;
 
 interface Row {
   name: string;
@@ -23,7 +27,7 @@ interface Row {
 
 function sweep(name: string, rules: Readonly<RuleSet>): Row {
   const runs: SoloResult[] = [];
-  for (let i = 0; i < seeds; i += 1) runs.push(runSolo({ seed: `${prefix}-${i}` }, { days, persona }, rules, CAST));
+  for (let i = 0; i < seeds; i += 1) runs.push(runSolo({ seed: `${prefix}-${i}`, kit }, { days, persona }, rules, CAST));
   return { name, runs };
 }
 
@@ -57,7 +61,7 @@ if (singles) {
   }
 }
 
-process.stdout.write(`${seeds} ${persona} runs per row, same seeds, up to day ${days}.\n\n`);
+process.stdout.write(`${seeds} ${persona} runs per row (${kit ? 'usual ten' : 'harness'} kit), same seeds, up to day ${days}.\n\n`);
 process.stdout.write('| Rules | Dead | Med pull | Tapped out | of which forced | Won | Still in | Median end day |\n');
 process.stdout.write('|---|---|---|---|---|---|---|---|\n');
 for (const row of rows) process.stdout.write(`| ${line(row)} |\n`);

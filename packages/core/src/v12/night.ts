@@ -15,6 +15,7 @@ import { clamp, hh, nowAbs, pick, roundDisplay } from './helpers.ts';
 import { hasTrait, pickDailyMonologue, pickDawnLine, pickDream } from './interior.ts';
 import { maybeEnvironmentalArc, medicalArcDailyTick } from './medical.ts';
 import { pruneExpiredModifiers } from './modifiers.ts';
+import { homeCardTick, homeThreadTick } from './home.ts';
 import { crowNamingTick, jayDailyTick, maybeCallbackLine, maybeWriteLetter, smokedCount, takeSmoked } from './person.ts';
 import { recordDailySnapshot } from './recorder.ts';
 import { checkBreakingPoint, checkPromise, maybeGeneratePromise, resolveDelta } from './resolve.ts';
@@ -479,7 +480,7 @@ export function finishNight(notes?){
     S.maxEnergy = Math.max(20, S.maxEnergy - debtAtDawn);
     notes.push(`🔋 Yesterday's borrowed energy (${roundDisplay(debtAtDawn)}) comes due - max energy trimmed to ${roundDisplay(S.maxEnergy)} today.`);
   }
-  if (S.maxEnergy !== prevMax) notes.push(`⚡ ${S.maxEnergy>prevMax?'A better stretch shows - max energy has risen to':'The toll of the weeks shows - max energy has slipped to'} ${S.maxEnergy}.`);
+  if (S.maxEnergy !== prevMax) notes.push(`⚡ ${S.maxEnergy>prevMax?'A better stretch shows - max energy has risen to':'The toll of the weeks shows - max energy has slipped to'} ${RULES.wholeNumbers ? roundDisplay(S.maxEnergy) : S.maxEnergy}.`);
   S.peakMax = Math.max(S.peakMax, S.maxEnergy);
   if (S.day % 2 === 0) S.forageDep = Math.max(0, S.forageDep - 1);
   S.huntPressure = Math.max(0, S.huntPressure - 2);
@@ -717,6 +718,7 @@ export function finishNight(notes?){
 
   directorTick(notes);
   checkThreads(notes);
+  if (RULES.homeThread) homeThreadTick(notes);
   checkAnkleSalvage(notes);
   if (S.over) return;
 
@@ -734,6 +736,7 @@ export function finishNight(notes?){
   morningEvent(notes);
   maybeResightLostAnimal(notes);
   cardSchedulerTick(notes);
+  if (RULES.homeThread) homeCardTick();
   breakdownDailyTick(notes);
 
   const dawnLine = pickDawnLine();

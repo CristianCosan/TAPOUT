@@ -64,7 +64,8 @@ describe('the location screens', () => {
       results += run.results;
     }
     // A random player uses most of what camp offers.
-    const campActions = LOCATIONS.camp.stations.flatMap((s) => [...s.actions, ...(s.special ?? [])]);
+    // Dropping off the pack happens on arrival now (autoUnload), so the button rarely shows.
+    const campActions = LOCATIONS.camp.stations.flatMap((s) => [...s.actions, ...(s.special ?? [])]).filter((a) => a !== 'a-dropoff');
     const usedAtCamp = campActions.filter((a) => used.has(a));
     expect(usedAtCamp.length).toBeGreaterThan(campActions.length * 0.4);
     expect(results).toBeGreaterThan(50);

@@ -1,6 +1,6 @@
 {
   "name": "@tapout/desktop",
-  "version": "0.0.2",
+  "version": "0.0.60",
   "private": true,
   "description": "TAP / OUT desktop shell",
   "author": "TAP / OUT",
@@ -14,19 +14,23 @@
     "appId": "com.tapout.game",
     "productName": "TAP OUT",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "main.cjs",
       "preload.cjs",
       "store.cjs",
-      "renderer/**"
+      "crashlog.cjs",
+      "renderer/**",
+      "build/icon.png"
     ],
     "win": {
-      "signAndEditExecutable": false,
+      "signAndEditExecutable": true,
       "target": [
         "portable"
-      ]
+      ],
+      "icon": "build/icon.ico"
     },
     "portable": {
       "artifactName": "TAP-OUT-${version}.exe"

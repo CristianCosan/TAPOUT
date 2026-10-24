@@ -3,8 +3,9 @@ import { session } from '../session.ts';
 import { GameScreen } from './GameScreen.tsx';
 import { KitDraft } from './KitDraft.tsx';
 import { TitleScreen } from './TitleScreen.tsx';
+import { Intro } from '../intro/Intro.tsx';
 
-type Screen = 'title' | 'confirmNew' | 'draft';
+type Screen = 'title' | 'confirmNew' | 'intro' | 'draft';
 
 export function App() {
   const view = useSyncExternalStore(session.subscribe, session.getView);
@@ -29,13 +30,24 @@ export function App() {
             className="big-btn primary"
             onClick={() => {
               session.abandonRun();
-              setScreen('draft');
+              setScreen('intro');
             }}
           >
             Start over
           </button>
         </div>
       </div>
+    );
+  }
+  if (screen === 'intro') {
+    return (
+      <Intro
+        onSkip={() => setScreen('draft')}
+        onBegin={(kit) => {
+          session.newRun(kit);
+          setScreen('title');
+        }}
+      />
     );
   }
   if (screen === 'draft') {
@@ -54,7 +66,7 @@ export function App() {
       canContinue={session.hasSave()}
       history={session.history()}
       onContinue={() => session.continueRun()}
-      onNewRun={() => setScreen(session.hasSave() ? 'confirmNew' : 'draft')}
+      onNewRun={() => setScreen(session.hasSave() ? 'confirmNew' : 'intro')}
     />
   );
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BUTTONS } from '@tapout/core';
-import { LOCATIONS, SAFE, type LocationId } from './index.ts';
+import { BUTTONS, LETTER_BUTTONS } from '@tapout/core';
+import { LOCATIONS, SAFE, WORLD, type LocationId } from './index.ts';
 
 const ids = Object.keys(LOCATIONS) as LocationId[];
 
@@ -17,7 +17,7 @@ describe('location layouts', () => {
     });
 
     it(`${id}: actions belong here`, () => {
-      const here = new Set(BUTTONS.filter((b) => b.loc === id || b.loc === 'all').map((b) => b.id));
+      const here = new Set([...BUTTONS, ...LETTER_BUTTONS].filter((b) => b.loc === id || b.loc === 'all').map((b) => b.id));
       const stray = layout.stations.flatMap((s) => s.actions).filter((a) => !here.has(a));
       expect(stray).toEqual([]);
     });
@@ -38,6 +38,17 @@ describe('location layouts', () => {
     it(`${id}: exits lead to the other two locations`, () => {
       const exits = layout.stations.filter((s) => s.exitTo).map((s) => s.exitTo).sort();
       expect(exits).toEqual(ids.filter((other) => other !== id).sort());
+    });
+
+    it(`${id}: every station but "you" stands somewhere in the first-person area`, () => {
+      const area = WORLD[id];
+      const placed = Object.keys(area.stations).sort();
+      expect(placed).toEqual(layout.stations.map((s) => s.id).filter((s) => s !== 'you').sort());
+      for (const [sid, st] of Object.entries(area.stations)) {
+        // Far-off things (the open water) may sit beyond the walkable circle; nothing else does.
+        if (sid === 'duck') continue;
+        expect(Math.hypot(st.x, st.z), sid).toBeLessThanOrEqual(area.walkRadius);
+      }
     });
   }
 });

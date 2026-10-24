@@ -5,6 +5,7 @@
 import { rand } from './runtime.ts';
 import { berryCount, cookedMealSpoiled, discardSpoiledBerries, discardSpoiledMeat, meatCount, oldestBerriesSpoiled, oldestMeatSpoiled, spoilageSting, takeBerries, takeMeat } from './food.ts';
 import { clamp, nowAbs, pick } from './helpers.ts';
+import { homeConfess, homeSit } from './home.ts';
 import { hasTrait } from './interior.ts';
 import { applyPoulticeDose, triggerMedicalArc } from './medical.ts';
 import { takeSmoked } from './person.ts';
@@ -194,6 +195,18 @@ export function actDropOff(){
   log(`You unload your pack: +${S.carry.wood} logs, +${S.carry.rocks} rocks, +${S.carry.moss} moss, +${S.carry.clay} clay to camp stock.`, 'good');
   S.carry.wood = 0; S.carry.rocks = 0; S.carry.moss = 0; S.carry.clay = 0;
   afterAction('dropoff');
+}
+// TAP / OUT (autoUnload): walking into camp empties the pack, with one line saying what came back.
+export function unloadOnArrival(){
+  const c = S.carry;
+  if (c.wood+c.rocks+c.moss+c.clay <= 0) return;
+  const parts = [[c.wood,'log','logs'],[c.rocks,'rock','rocks'],[c.moss,'bundle of moss','bundles of moss'],[c.clay,'lump of clay','lumps of clay']]
+    .filter(([n]) => n > 0).map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
+  const list = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length-1] : parts[0];
+  S.stock.wood += c.wood; S.stock.rocks += c.rocks; S.stock.moss += c.moss; S.stock.clay += c.clay;
+  c.wood = 0; c.rocks = 0; c.moss = 0; c.clay = 0;
+  S.acts.dropoff = (S.acts.dropoff||0) + 1;
+  log(`📦 You brought back ${list} and stack it with the camp stock.`, 'good');
 }
 export function actCampSnares(){
   if (S.campSnares || !S.hadFirstRaid || S.stock.wood<2) return;
@@ -450,7 +463,8 @@ export function actConfess(){
     `Doing this for ${whoLabel('anyone, really')}, when it comes down to it.`,
     `Some days ${FEAR_LABEL[S.backstory.fear]||'the fear'} feels closer than others. Today it was close.`,
   ];
-  const text = `${pick(openers)} ${pick(stateLines)} ${pick(closers)}`;
+  let text = `${pick(openers)} ${pick(stateLines)} ${pick(closers)}`;
+  if (RULES.homeThread){ const home = homeConfess(); if (home) text += ` ${home}`; }
   S.confessionals.push({day:S.day, text});
   const dm = 3 + Math.floor(rand()*4);
   S.morale = clamp(S.morale + dm); S.stress = clamp(S.stress - 5);
@@ -564,6 +578,7 @@ export function actSitWatch(){
   } else {
     const gain = hasTrait('restless') ? 0 : 1;
     S.morale = clamp(S.morale + gain);
+    if (RULES.homeThread) homeSit();
     msg = pick(SIT_WATCH_POOL) + (gain ? ' +1 morale' : say(' (not really his thing)', ' (not really your thing)'));
     if (rand() < 0.15){
       if (S.loc === 'shore' && S.shoreSpots.length){
