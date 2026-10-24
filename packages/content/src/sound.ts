@@ -34,6 +34,7 @@ export const SETTINGS_TEXT = {
     ['J', 'Journal'],
     ['Esc', 'Free the mouse, close what is open'],
     ['F11', 'Full screen'],
+    ['F8', 'Write a playtest note'],
   ],
   close: 'Done',
 } as const;

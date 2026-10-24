@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { CREDITS_TEXT, SETTINGS_TEXT, SOUND_SETTINGS, THOUGHT_TEXT, TIPS_TEXT } from '@tapout/content';
+import { CREDITS_TEXT, PLAYTEST_TEXT, SETTINGS_TEXT, SOUND_SETTINGS, THOUGHT_TEXT, TIPS_TEXT } from '@tapout/content';
 import { audio, type Channel } from '../audio/engine.ts';
 import { setSetting, useSettings } from '../settings.ts';
+import { notesText } from '../notes.ts';
+import { session } from '../session.ts';
 
 type Desktop = { fullscreen?: (on?: boolean) => boolean };
 const desktop = () => (window as { tapoutDesktop?: Desktop }).tapoutDesktop;
@@ -89,6 +91,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         }} />
         <Toggle {...T.reduceFlashing} on={s.reduceFlashing} set={(on) => setSetting('reduceFlashing', on)} />
         <Toggle {...T.lowGraphics} on={s.lowGraphics} set={(on) => setSetting('lowGraphics', on)} />
+        <PlaytestNotes />
         <h4>{T.keys}</h4>
         <div className="key-list">
           {T.keyList.map(([k, what]) => (
@@ -103,6 +106,50 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** The F8 notes: copy them all for a chat, or clear them. */
+function PlaytestNotes() {
+  const P = PLAYTEST_TEXT;
+  const [count, setCount] = useState(() => session.notes().length);
+  const [said, setSaid] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const [shown, setShown] = useState<string | null>(null);
+  const copy = () => {
+    const text = notesText(session.notes());
+    navigator.clipboard.writeText(text).then(
+      () => setSaid(P.copied),
+      () => {
+        setSaid(P.copyFailed);
+        setShown(text);
+      },
+    );
+  };
+  const clear = () => {
+    if (!confirm) return setConfirm(true);
+    session.clearNotes();
+    setCount(0);
+    setConfirm(false);
+    setShown(null);
+    setSaid(null);
+  };
+  return (
+    <>
+      <h4>{P.section}</h4>
+      <div className="sound-row notes-row">
+        <span className="sound-name">
+          <em>{said ?? P.sectionHint(count)}</em>
+        </span>
+        <button className="hud-btn" disabled={count === 0} onClick={copy}>
+          {P.copy}
+        </button>
+        <button className="hud-btn" disabled={count === 0} onClick={clear}>
+          {confirm ? P.clearConfirm : P.clear}
+        </button>
+      </div>
+      {shown && <textarea className="notes-text" readOnly value={shown} onFocus={(e) => e.currentTarget.select()} />}
+    </>
   );
 }
 

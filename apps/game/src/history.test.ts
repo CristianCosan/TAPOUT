@@ -85,3 +85,26 @@ describe('saves through the session', () => {
     expect((reader.getView() as View).state.day).toBe(1);
   });
 });
+
+describe('playtest notes', () => {
+  it('keeps notes with where the run was, across runs, until cleared', async () => {
+    const { notesText } = await import('./notes.ts');
+    const storage = new MemoryStorage() as unknown as Storage;
+    const session = new Session(storage);
+    expect(session.addNote('   ')).toBe(false);
+    expect(session.addNote('the title music is too loud')).toBe(true);
+    session.newRun(['axe', 'saw', 'pot', 'bag', 'ferro', 'bow', 'line', 'wire', 'mace', 'multitool'], 'notes');
+    expect(session.addNote('  could not find the woodpile  ')).toBe(true);
+    // A fresh session (the game reopened) still has them.
+    const notes = new Session(storage).notes();
+    expect(notes.map((n) => n.text)).toEqual(['the title music is too loud', 'could not find the woodpile']);
+    expect(notes[0]!.run).toBeNull();
+    expect(notes[1]!.run).toMatchObject({ day: 1, loc: 'camp', shelter: 0, rivals: 9 });
+    const text = notesText(notes);
+    expect(text).toContain('playtest notes (2');
+    expect(text).toContain('1. the title music is too loud\n   outside a run');
+    expect(text).toMatch(/2\. could not find the woodpile\n {3}Day 1, \d\d:\d\d, camp, /);
+    session.clearNotes();
+    expect(session.notes()).toEqual([]);
+  });
+});

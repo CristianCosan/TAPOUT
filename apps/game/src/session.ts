@@ -6,6 +6,7 @@
 
 import {
   actionPanel,
+  ambientTempC,
   hudRecord,
   type HudElement,
   parseHandler,
@@ -73,6 +74,8 @@ interface SaveBody {
 }
 const HISTORY_KEY = 'tapout.history';
 const HISTORY_MAX = 30;
+const NOTES_KEY = 'tapout.notes';
+const NOTES_MAX = 300;
 
 /** One finished run, for the title screen's list of past runs. */
 export interface RunRecord {
@@ -370,6 +373,57 @@ export class Session {
     }
   }
 
+  /** Playtest notes (F8), oldest first. Kept across runs until cleared. */
+  notes(): PlaytestNote[] {
+    try {
+      const raw = this.storage?.getItem(NOTES_KEY);
+      const list = raw ? (JSON.parse(raw) as PlaytestNote[]) : [];
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Saves a note with where the run is; false if it could not be written. */
+  addNote(text: string): boolean {
+    const words = text.trim();
+    if (!words || !this.storage) return false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const S: any = this.run?.state;
+    const note: PlaytestNote = {
+      at: new Date().toISOString(),
+      version: GAME_VERSION,
+      text: words,
+      run: S
+        ? {
+            day: S.day,
+            hour: Math.round((((S.hour % 24) + 24) % 24) * 10) / 10,
+            loc: S.loc,
+            weather: S.weather,
+            tempC: Math.round(ambientTempC()),
+            body: { health: Math.round(S.health), food: Math.round(S.hunger), water: Math.round(S.thirst), warmth: Math.round(S.warmth), energy: Math.round(S.energy), morale: Math.round(S.morale) },
+            shelter: S.structure,
+            rivals: S.rivals,
+          }
+        : null,
+    };
+    try {
+      this.storage.setItem(NOTES_KEY, JSON.stringify([...this.notes(), note].slice(-NOTES_MAX)));
+      return true;
+    } catch (error) {
+      logError('Could not save a note', error);
+      return false;
+    }
+  }
+
+  clearNotes(): void {
+    try {
+      this.storage?.removeItem(NOTES_KEY);
+    } catch (error) {
+      logError('Could not clear the notes', error);
+    }
+  }
+
   private record(): void {
     this.recorded = true;
     if (this.throwaway || !this.run) return;
@@ -487,3 +541,19 @@ function safeStorage(): Storage | null {
 }
 
 export const session = new Session(safeStorage());
+
+export interface PlaytestNote {
+  at: string;
+  version: string;
+  text: string;
+  run: {
+    day: number;
+    hour: number;
+    loc: string;
+    weather: string;
+    tempC: number;
+    body: Record<string, number>;
+    shelter: number;
+    rivals: number;
+  } | null;
+}

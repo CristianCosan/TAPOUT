@@ -186,6 +186,8 @@ Balance pass and slow-PC check (D-070, docs/reports/M22_BALANCE_AND_SLOW_PC.md):
 
 **Build 0.0.59** has its own icon (D-071) on the .exe, window, taskbar and tab, plus an itch.io cover image in docs/store.
 
+**Build 0.0.60** adds playtest notes (D-072): F8 to jot something down mid-run, Settings to copy them all.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

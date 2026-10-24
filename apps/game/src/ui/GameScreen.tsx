@@ -15,6 +15,7 @@ import { ThoughtSubtitle } from './ThoughtSubtitle.tsx';
 import { playUi } from '../audio/effects.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
+import { NoteBox } from './NoteBox.tsx';
 
 const BARS = [
   ['health', 'Health'],
@@ -470,6 +471,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      // Typing a note is not a shortcut.
+      if (e.target instanceof HTMLInputElement) return;
       if (e.key === 'Alt') {
         e.preventDefault();
         setLabels(true);
@@ -646,6 +649,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           )}
           <Tips view={view} hidden={frozen || !!station} />
           <ThoughtSubtitle />
+          <NoteBox />
           {sound && <SettingsPanel onClose={() => setSound(false)} />}
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
