@@ -182,6 +182,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 M23 started (2026-10-24): store page draft and six screenshots in docs/store (D-069). Still to make: capsule and header images, optional trailer, price.
 
+Balance pass and slow-PC check (D-070, docs/reports/M22_BALANCE_AND_SLOW_PC.md): no rule changes; balance runs now use the real kit; a careful-player bot (`--persona competent`) lasts a median of 17 days; every area stays under 300 draw calls.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
