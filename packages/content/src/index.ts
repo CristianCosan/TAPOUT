@@ -5,3 +5,4 @@ export * from './build.ts';
 export * from './intro.ts';
 export * from './sound.ts';
 export * from './home.ts';
+export * from './thoughts.ts';

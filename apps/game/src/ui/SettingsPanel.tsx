@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CREDITS_TEXT, SETTINGS_TEXT, SOUND_SETTINGS, TIPS_TEXT } from '@tapout/content';
+import { CREDITS_TEXT, SETTINGS_TEXT, SOUND_SETTINGS, THOUGHT_TEXT, TIPS_TEXT } from '@tapout/content';
 import { audio, type Channel } from '../audio/engine.ts';
 import { setSetting, useSettings } from '../settings.ts';
 
@@ -81,6 +81,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <h4>{T.game}</h4>
         <Toggle {...T.rivalNews} on={s.rivalNews} set={(on) => setSetting('rivalNews', on)} />
         <Toggle {...TIPS_TEXT.setting} on={s.tips} set={(on) => setSetting('tips', on)} />
+        <Toggle {...THOUGHT_TEXT.subtitles} on={s.thoughtSubtitles} set={(on) => setSetting('thoughtSubtitles', on)} />
         <h4>{T.display}</h4>
         <Toggle {...T.fullscreen} on={full} set={(on) => {
           setFullscreen(on);

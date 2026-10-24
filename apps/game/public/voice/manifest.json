@@ -1,0 +1,294 @@
+{
+ "cam-1": {
+  "hash": "8b366b198e41",
+  "seconds": 5.8
+ },
+ "cam-2": {
+  "hash": "73ce0d635726",
+  "seconds": 6.76
+ },
+ "cold-1": {
+  "hash": "3eabac24a712",
+  "seconds": 3.85
+ },
+ "cold-2": {
+  "hash": "1f71847063ce",
+  "seconds": 3.31
+ },
+ "cold-3": {
+  "hash": "9886459c0d5c",
+  "seconds": 2.24
+ },
+ "fire-1": {
+  "hash": "fd66707269f2",
+  "seconds": 5.05
+ },
+ "fire-2": {
+  "hash": "a14929a2d8ce",
+  "seconds": 6.31
+ },
+ "fireL-1": {
+  "hash": "9f633a334193",
+  "seconds": 3.79
+ },
+ "fireL-2": {
+  "hash": "049c9dd80cb6",
+  "seconds": 4.2
+ },
+ "fish-1": {
+  "hash": "7155fa6cd9b8",
+  "seconds": 6.17
+ },
+ "fish-2": {
+  "hash": "fcd30c70d5be",
+  "seconds": 4.69
+ },
+ "frost-1": {
+  "hash": "c9208a340c37",
+  "seconds": 4.0
+ },
+ "frost-2": {
+  "hash": "362cae061bbd",
+  "seconds": 5.79
+ },
+ "gone-1": {
+  "hash": "b67788d34116",
+  "seconds": 10.23
+ },
+ "gone-2": {
+  "hash": "fc6449312be6",
+  "seconds": 8.07
+ },
+ "gone-3": {
+  "hash": "6d1aac5f5c43",
+  "seconds": 4.35
+ },
+ "hungry-1": {
+  "hash": "5faaca082941",
+  "seconds": 2.29
+ },
+ "hungry-2": {
+  "hash": "e176ef19df29",
+  "seconds": 5.25
+ },
+ "hungry-3": {
+  "hash": "9925420e9d3e",
+  "seconds": 3.61
+ },
+ "jay-1": {
+  "hash": "18570b5002b3",
+  "seconds": 5.15
+ },
+ "kill-1": {
+  "hash": "9b67874a46f5",
+  "seconds": 5.89
+ },
+ "night1-1": {
+  "hash": "62e03a1a7b1e",
+  "seconds": 5.68
+ },
+ "night1-2": {
+  "hash": "8179c3b2a586",
+  "seconds": 4.34
+ },
+ "pack-1": {
+  "hash": "f70b7ac7ba7c",
+  "seconds": 6.76
+ },
+ "pack-2": {
+  "hash": "d71a7aade01f",
+  "seconds": 5.59
+ },
+ "pack-3": {
+  "hash": "5940ee51a906",
+  "seconds": 7.86
+ },
+ "point-1": {
+  "hash": "52aafcdb46db",
+  "seconds": 4.91
+ },
+ "pred-1": {
+  "hash": "7b2973e9c4f9",
+  "seconds": 5.66
+ },
+ "pred-2": {
+  "hash": "7d5eb0bcd9c1",
+  "seconds": 6.09
+ },
+ "q-day": {
+  "hash": "efcc16d52ca7",
+  "seconds": 4.85
+ },
+ "q-finish": {
+  "hash": "0b49704ed053",
+  "seconds": 5.27
+ },
+ "q-groan": {
+  "hash": "8393f9ac2347",
+  "seconds": 5.12
+ },
+ "q-heart": {
+  "hash": "f72794da8b01",
+  "seconds": 4.39
+ },
+ "q-leaves": {
+  "hash": "4fa301584c0e",
+  "seconds": 6.61
+ },
+ "q-loons": {
+  "hash": "7b31ee12430e",
+  "seconds": 7.87
+ },
+ "q-mara": {
+  "hash": "272e1b84825a",
+  "seconds": 6.87
+ },
+ "q-minus": {
+  "hash": "6767f4f085d8",
+  "seconds": 4.28
+ },
+ "q-mist": {
+  "hash": "9c355911abc1",
+  "seconds": 5.4
+ },
+ "q-money": {
+  "hash": "64dbca67bd49",
+  "seconds": 8.23
+ },
+ "q-night": {
+  "hash": "aeaf57adc98b",
+  "seconds": 6.64
+ },
+ "q-noise": {
+  "hash": "780fb3ac0950",
+  "seconds": 6.46
+ },
+ "q-plane": {
+  "hash": "ed8ba68e3b1d",
+  "seconds": 6.22
+ },
+ "q-rain": {
+  "hash": "8b71184f15f7",
+  "seconds": 8.61
+ },
+ "q-sit": {
+  "hash": "5d920b3a956d",
+  "seconds": 8.55
+ },
+ "q-stars": {
+  "hash": "19145b11d6b6",
+  "seconds": 6.31
+ },
+ "q-ten": {
+  "hash": "8d1d00193b0f",
+  "seconds": 6.73
+ },
+ "q-trees": {
+  "hash": "0e4c586ec8e1",
+  "seconds": 6.68
+ },
+ "q-twenty": {
+  "hash": "9402803e21a9",
+  "seconds": 5.24
+ },
+ "q-white": {
+  "hash": "dbe0739c3111",
+  "seconds": 7.38
+ },
+ "q-why": {
+  "hash": "dd85d91ff109",
+  "seconds": 6.66
+ },
+ "raven-1": {
+  "hash": "82202fc1b084",
+  "seconds": 6.28
+ },
+ "ridge-1": {
+  "hash": "adea5fd11b06",
+  "seconds": 7.91
+ },
+ "shelter-1": {
+  "hash": "ae0cbcd97b26",
+  "seconds": 6.28
+ },
+ "shore-1": {
+  "hash": "233ddcedf7a9",
+  "seconds": 4.3
+ },
+ "shore-2": {
+  "hash": "11f3e1dc21db",
+  "seconds": 7.16
+ },
+ "snare-1": {
+  "hash": "b86348dbe34b",
+  "seconds": 6.47
+ },
+ "snow-1": {
+  "hash": "11c3f10ea629",
+  "seconds": 8.03
+ },
+ "snow-2": {
+  "hash": "6397f48bb8fa",
+  "seconds": 4.26
+ },
+ "storm-1": {
+  "hash": "588dda34677f",
+  "seconds": 6.02
+ },
+ "storm-2": {
+  "hash": "fb7b4df0fda8",
+  "seconds": 4.99
+ },
+ "thirst-1": {
+  "hash": "0d22cb0bac42",
+  "seconds": 2.44
+ },
+ "thirst-2": {
+  "hash": "463622087e1a",
+  "seconds": 4.8
+ },
+ "tired-1": {
+  "hash": "075b84fb55da",
+  "seconds": 2.86
+ },
+ "tired-2": {
+  "hash": "5f28b6df9443",
+  "seconds": 2.15
+ },
+ "two-1": {
+  "hash": "c0918e798ed8",
+  "seconds": 7.86
+ },
+ "two-2": {
+  "hash": "641cad4ad93c",
+  "seconds": 5.61
+ },
+ "water-1": {
+  "hash": "1e54ec20fd30",
+  "seconds": 6.92
+ },
+ "waver-1": {
+  "hash": "130ecf065785",
+  "seconds": 5.52
+ },
+ "waver-2": {
+  "hash": "41b23902d122",
+  "seconds": 5.83
+ },
+ "wet-1": {
+  "hash": "d353b9cb6014",
+  "seconds": 5.36
+ },
+ "wet-2": {
+  "hash": "b1935a63fde3",
+  "seconds": 3.68
+ },
+ "woods-1": {
+  "hash": "7b9614ed4c47",
+  "seconds": 4.76
+ },
+ "woods-2": {
+  "hash": "13dfe7b85770",
+  "seconds": 5.75
+ }
+}

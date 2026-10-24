@@ -4,10 +4,11 @@
 // unlocks on the first one.
 
 export type Bus = 'ambience' | 'effects' | 'music';
-export type Channel = 'master' | Bus;
+/** `voice` is Dan's thoughts, which play as recordings beside the engine (audio/thoughts.ts). */
+export type Channel = 'master' | Bus | 'voice';
 
 const VOLUME_KEY = 'tapout.volume';
-const DEFAULT_VOLUME: Record<Channel, number> = { master: 0.8, ambience: 1, effects: 0.9, music: 0.7 };
+const DEFAULT_VOLUME: Record<Channel, number> = { master: 0.8, ambience: 1, effects: 0.9, music: 0.7, voice: 1 };
 
 function loadVolumes(): Record<Channel, number> {
   try {
@@ -31,6 +32,9 @@ class Engine {
   brown!: AudioBuffer;
   private volumes = loadVolumes();
   private listeners = new Set<() => void>();
+  private volumeListeners = new Set<() => void>();
+  /** How far everything dips while Dan is thinking out loud, 0 to 1. */
+  private speech = 0;
 
   /** Starts the engine if the browser lets it. Safe to call often. */
   unlock(): void {
@@ -89,6 +93,7 @@ class Engine {
   setVolume(ch: Channel, v: number): void {
     this.volumes[ch] = Math.max(0, Math.min(1, v));
     this.applyVolumes();
+    for (const f of this.volumeListeners) f();
     try {
       localStorage.setItem(VOLUME_KEY, JSON.stringify(this.volumes));
     } catch {
@@ -96,13 +101,29 @@ class Engine {
     }
   }
 
+  /** A volume as heard: a gentle curve, so the low half of a slider is still usable. */
+  level(ch: Channel): number {
+    const v = this.volumes[ch];
+    return v * v;
+  }
+
+  onVolume(f: () => void): () => void {
+    this.volumeListeners.add(f);
+    return () => this.volumeListeners.delete(f);
+  }
+
   private applyVolumes(): void {
     if (!this.ctx) return;
     for (const [ch, g] of this.gains) {
-      // A gentle curve, so the low half of a slider is still usable.
-      const v = this.volumes[ch];
-      g.gain.setTargetAtTime(v * v, this.ctx.currentTime, 0.05);
+      const dip = ch === 'master' ? 1 - this.speech : 1;
+      g.gain.setTargetAtTime(this.level(ch) * dip, this.ctx.currentTime, ch === 'master' ? 0.35 : 0.05);
     }
+  }
+
+  /** Dips everything under Dan's voice: 0 is none. */
+  setSpeech(amount: number): void {
+    this.speech = amount;
+    this.applyVolumes();
   }
 
   /** Ambience under a card or a music cue: 0 is none, 1 is about −6 dB. */

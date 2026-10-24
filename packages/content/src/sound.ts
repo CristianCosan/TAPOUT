@@ -7,6 +7,7 @@ export const SOUND_SETTINGS = {
     { id: 'ambience', label: 'Ambience', hint: 'Wind, rain, water, fire, birds' },
     { id: 'effects', label: 'Effects', hint: 'Chopping, building, fishing, eating' },
     { id: 'music', label: 'Music', hint: 'Quiet background and big moments' },
+    { id: 'voice', label: 'Voice', hint: 'Dan thinking out loud' },
   ],
   close: 'Done',
 } as const;
@@ -42,12 +43,14 @@ export const CREDITS_TEXT = {
   lines: [
     'TAP / OUT is built on the v12 prototype, its rules kept and proven by tests.',
     'Every model, sound and piece of music is made in code. No image, sound or music files.',
+    'Dan\'s voice is recorded with the free Kokoro voice model (Apache-2.0).',
   ],
   libraries: [
     ['three.js', '3D rendering', 'MIT'],
     ['React', 'Screens and panels', 'MIT'],
     ['Phaser', 'Layout guides', 'MIT'],
     ['Electron', 'The Windows app', 'MIT'],
+    ['Kokoro-82M', 'Dan\'s voice', 'Apache-2.0'],
   ],
   people: 'Design and direction: Sir. Built with Claude.',
   close: 'Back',

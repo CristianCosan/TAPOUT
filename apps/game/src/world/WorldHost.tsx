@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { SLOW_TEXT } from '@tapout/content';
 import { playUi } from '../audio/effects.ts';
+import { noticeLook } from '../audio/thoughts.ts';
 import { setSetting } from '../settings.ts';
 import { World, type Hover, type WorldEvents, type WorldInput } from './World.ts';
 
@@ -34,6 +35,7 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
     select: (id) => latest.current.events.select(id),
     clear: () => latest.current.events.clear(),
     hover: (h) => {
+      noticeLook(h?.near ? h.id : null);
       setHover((prev) => {
         if (h && h.near && (prev?.id !== h.id || !prev.near)) playUi('hover');
         return h;

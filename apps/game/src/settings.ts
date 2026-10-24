@@ -15,6 +15,8 @@ export interface Settings {
   lowGraphics: boolean;
   /** Storm lightning flashes softly instead of lighting up the whole sky. */
   reduceFlashing: boolean;
+  /** Show the words of Dan's spoken thoughts. */
+  thoughtSubtitles: boolean;
   /** The running-slowly offer has been shown once. */
   slowAsked: boolean;
   /** Tips already shown. */
@@ -22,7 +24,7 @@ export interface Settings {
 }
 
 const KEY = 'tapout.settings';
-const DEFAULTS: Settings = { mouseSpeed: 1, invertY: false, headBob: true, rivalNews: true, tips: true, lowGraphics: false, reduceFlashing: false, slowAsked: false, tipsSeen: [] };
+const DEFAULTS: Settings = { mouseSpeed: 1, invertY: false, headBob: true, rivalNews: true, tips: true, lowGraphics: false, reduceFlashing: false, slowAsked: false, thoughtSubtitles: false, tipsSeen: [] };
 
 function load(): Settings {
   try {

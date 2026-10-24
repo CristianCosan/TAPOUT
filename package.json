@@ -1,6 +1,6 @@
 {
   "name": "tap-out",
-  "version": "0.0.56",
+  "version": "0.0.57",
   "private": true,
   "type": "module",
   "description": "TAP / OUT - a wilderness survival competition game for Windows.",
@@ -22,7 +22,8 @@
     "parity": "tsx packages/harness/src/tools/parity.cli.ts",
     "balance": "tsx packages/harness/src/tools/balance.cli.ts",
     "home:rarity": "tsx packages/harness/src/tools/home-rarity.cli.ts",
-    "soak": "tsx packages/harness/src/tools/soak.cli.ts"
+    "soak": "tsx packages/harness/src/tools/soak.cli.ts",
+    "voice:lines": "tsx packages/harness/src/tools/voice-lines.cli.ts"
   },
   "engines": {
     "node": ">=22"

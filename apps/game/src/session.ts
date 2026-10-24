@@ -66,6 +66,8 @@ interface SaveBody {
   run: RunSnapshot;
   modal: string | null;
   elements: Array<[string, Omit<PageElement, 'classes'> & { classes: string[] }]>;
+  /** Dan's thoughts already heard this run (D-067); older saves have none. */
+  thoughts?: string[];
 }
 const HISTORY_KEY = 'tapout.history';
 const HISTORY_MAX = 30;
@@ -87,6 +89,7 @@ function newElement(id: string): PageElement {
 export class Session {
   private run: Run | null = null;
   private modal: string | null = null;
+  private thoughts: string[] = [];
   private elements = new Map<string, PageElement>();
   private listeners = new Set<() => void>();
   private callListeners = new Set<(fn: string) => void>();
@@ -155,6 +158,7 @@ export class Session {
     this.reset();
     this.run = restoreRun(save.run);
     this.modal = save.modal;
+    this.thoughts = save.thoughts ?? [];
     for (const [id, el] of save.elements) this.elements.set(id, { ...el, classes: new Set(el.classes) });
     // A damaged save was replaced by an older copy: say so, once, on the result card.
     if (found.source !== 'save') this.result = { id: -1, lines: [{ msg: RESTORED_FROM[found.source], cls: 'warn' }], bars: {}, stores: {}, minutes: 0 };
@@ -273,7 +277,19 @@ export class Session {
     this.baseline = null;
     this.result = null;
     this.modal = null;
+    this.thoughts = [];
     this.elements.clear();
+  }
+
+  /** Dan's thoughts already heard this run: each is heard at most once. */
+  heardThoughts(): readonly string[] {
+    return this.thoughts;
+  }
+
+  markThought(id: string): void {
+    if (this.thoughts.includes(id)) return;
+    this.thoughts = [...this.thoughts, id];
+    this.autosave();
   }
 
   private element(id: string): PageElement {
@@ -388,6 +404,7 @@ export class Session {
         run: snapshotRun(this.run),
         modal: this.modal,
         elements: [...this.elements].map(([id, el]) => [id, { ...el, classes: [...el.classes] }]),
+        thoughts: this.thoughts,
       };
       this.saves.write(body, this.run.state.day, new Date().toISOString());
     } catch (error) {

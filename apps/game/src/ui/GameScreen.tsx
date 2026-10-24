@@ -10,6 +10,8 @@ import { WorldHost } from '../world/WorldHost.tsx';
 import type { WorldInput } from '../world/World.ts';
 import type { PropState } from '../world/props.ts';
 import { useSoundCues } from '../audio/cues.ts';
+import { useThoughts } from '../audio/useThoughts.ts';
+import { ThoughtSubtitle } from './ThoughtSubtitle.tsx';
 import { playUi } from '../audio/effects.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
@@ -558,6 +560,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   }, [S, view.version]);
   const frozen = !!(view.modal || journal || map || night || keepsake || sound || curtain !== null);
   useSoundCues(view, curtain !== null);
+  useThoughts(view, !frozen && !view.endScreen && !guide);
   const worldInput: WorldInput = useMemo(
     () => ({
       area: WORLD[loc],
@@ -642,6 +645,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
             <div className="night-curtain" key={curtain} onAnimationEnd={() => setCurtain(null)} />
           )}
           <Tips view={view} hidden={frozen || !!station} />
+          <ThoughtSubtitle />
           {sound && <SettingsPanel onClose={() => setSound(false)} />}
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
