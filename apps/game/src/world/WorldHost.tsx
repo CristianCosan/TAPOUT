@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { SLOW_TEXT } from '@tapout/content';
 import { playUi } from '../audio/effects.ts';
+import { setSetting } from '../settings.ts';
 import { World, type Hover, type WorldEvents, type WorldInput } from './World.ts';
 
 declare global {
@@ -24,6 +26,7 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
   const world = useRef<World | null>(null);
   const [hover, setHover] = useState<Hover | null>(null);
   const [looking, setLooking] = useState(false);
+  const [slow, setSlow] = useState(false);
   const latest = useRef({ input, events });
   latest.current = { input, events };
 
@@ -37,6 +40,7 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
       });
     },
     looking: setLooking,
+    slow: () => setSlow(true),
   });
 
   useEffect(() => {
@@ -56,6 +60,12 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
     world.current?.configure(input, fullEvents.current);
   }, [input]);
 
+  const answerSlow = (lighter: boolean) => {
+    setSetting('slowAsked', true);
+    if (lighter) setSetting('lowGraphics', true);
+    setSlow(false);
+  };
+
   return (
     <div className="world" ref={parent}>
       {looking && !input.frozen && <div className={`crosshair${hover?.near ? ' on' : ''}`} />}
@@ -63,6 +73,16 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
         <div className={`look-label${hover.near ? '' : ' far'}`} style={{ left: hover.x, top: hover.y + 34 }}>
           <b>{hover.label}</b>
           <span>{hover.near ? 'Click to use' : 'Walk closer'}</span>
+        </div>
+      )}
+      {slow && (
+        <div className="tip-card slow-card">
+          <b>{SLOW_TEXT.title}</b>
+          <p>{SLOW_TEXT.text}</p>
+          <div className="slow-btns">
+            <button className="hud-btn" onClick={() => answerSlow(true)}>{SLOW_TEXT.yes}</button>
+            <button className="hud-btn" onClick={() => answerSlow(false)}>{SLOW_TEXT.no}</button>
+          </div>
         </div>
       )}
       {!looking && !input.frozen && !input.selected && (

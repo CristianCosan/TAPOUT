@@ -174,6 +174,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 0.0.55 (2026-10-23): a bald eagle circles over the lake on clear days at the shore, dives for a fish with a splash ring, and climbs away (D-065).
 
+0.0.56 (2026-10-24): low-end hardening. If the game stutters in its first seconds on full graphics, it offers Lighter graphics once; the player decides (D-066).
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

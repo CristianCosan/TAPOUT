@@ -72,6 +72,17 @@ export const TIPS_TEXT = {
   setting: { label: 'Tips for a first run', hint: 'Short notes on how things work, each shown once' },
 } as const;
 
+/** Offered once if the picture stutters on this computer (plan M22). Turning it down is the player's call. */
+export const SLOW_TEXT = {
+  title: 'Running slowly',
+  text: 'The picture is stuttering on this computer. Lighter graphics lowers the resolution, the shadows and the rain and snow. You can change it back in Settings.',
+  yes: 'Use lighter graphics',
+  no: 'Keep it as it is',
+} as const;
+
+/** How slow counts as stuttering: average frames per second over the first seconds of play. */
+export const SLOW_CHECK = { fps: 28, seconds: 12 } as const;
+
 /** The screen shown if the game itself breaks (plan M22). Calm, and says the run is safe. */
 export const CRASH_TEXT = {
   title: 'Something broke',

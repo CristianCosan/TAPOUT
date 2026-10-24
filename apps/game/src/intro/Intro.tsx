@@ -225,7 +225,7 @@ function DropoffStage({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     if (!host.current) return;
     const w = new World(host.current);
-    w.configure(input, { select: () => undefined, clear: () => undefined, hover: () => undefined, looking: () => undefined });
+    w.configure(input, { select: () => undefined, clear: () => undefined, hover: () => undefined, looking: () => undefined, slow: () => undefined });
     const plane = floatPlane();
     plane.position.set(5, -0.15, -7);
     plane.rotation.y = Math.PI / 2 + 0.4;

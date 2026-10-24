@@ -326,6 +326,8 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .tip-card b { font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ember); }
 .tip-card p { margin: 0; font-size: 19px; line-height: 1.45; color: var(--bone); }
 .tip-card .hud-btn { align-self: flex-end; }
+.slow-card { bottom: auto; top: 110px; left: calc(50% - 250px); }
+.slow-btns { display: flex; gap: 10px; justify-content: flex-end; }
 
 /* frost at the edges of the view in hard cold (World.updateFrost sets the opacity) */
 .frost { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 1;

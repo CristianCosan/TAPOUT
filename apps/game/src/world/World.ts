@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { FIRST_PERSON, type LocationLayout, type WorldArea } from '@tapout/content';
+import { FIRST_PERSON, SLOW_CHECK, type LocationLayout, type WorldArea } from '@tapout/content';
 import { mat, noise, rough, seeded } from './kit.ts';
 import { buildProp, propKey, type PropState } from './props.ts';
 import { audio } from '../audio/engine.ts';
@@ -51,6 +51,8 @@ export interface WorldEvents {
   hover: (hover: Hover | null) => void;
   /** Pointer lock came or went: whether you are looking around with the mouse. */
   looking: (on: boolean) => void;
+  /** The picture has been stuttering since the world opened (asked once, on full graphics). */
+  slow: () => void;
 }
 
 interface StationNode {
@@ -1046,10 +1048,32 @@ export class World {
     this.fireLight.castShadow = !low;
   }
 
+  /** Frames and seconds counted for the running-slowly check; null once it has been decided. */
+  private pace: { frames: number; seconds: number } | null = { frames: 0, seconds: 0 };
+
+  private checkPace(raw: number): void {
+    if (!this.pace) return;
+    const s = settings();
+    if (s.lowGraphics || s.slowAsked) {
+      this.pace = null;
+      return;
+    }
+    // A hidden window or a long hitch (a save, a card) says nothing about the computer.
+    if (document.hidden || raw > 0.5) return;
+    this.pace.frames++;
+    this.pace.seconds += raw;
+    if (this.pace.seconds < SLOW_CHECK.seconds) return;
+    const fps = this.pace.frames / this.pace.seconds;
+    this.pace = null;
+    if (fps < SLOW_CHECK.fps) this.events?.slow();
+  }
+
   private frame(): void {
     this.applyGraphics();
     if (this.disposed || !this.input) return;
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const raw = this.clock.getDelta();
+    this.checkPace(raw);
+    const dt = Math.min(0.05, raw);
     this.time += dt;
     const input = this.input;
 
