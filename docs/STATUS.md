@@ -180,6 +180,8 @@ come within a few metres. Not in rain, at night, or when the birds go silent.
 
 0.0.58 (2026-10-24): inner voice paced in game days (every 4-5, or 2-3 when low), 16 low-day lines, and every talk to the camera spoken (D-068).
 
+M23 started (2026-10-24): store page draft and six screenshots in docs/store (D-069). Still to make: capsule and header images, optional trailer, price.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3
