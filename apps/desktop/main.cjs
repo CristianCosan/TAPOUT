@@ -43,6 +43,7 @@ function createWindow() {
     minHeight: 540,
     backgroundColor: '#000000',
     title: 'TAP / OUT',
+    icon: path.join(__dirname, 'build', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),

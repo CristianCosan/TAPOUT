@@ -184,6 +184,8 @@ M23 started (2026-10-24): store page draft and six screenshots in docs/store (D-
 
 Balance pass and slow-PC check (D-070, docs/reports/M22_BALANCE_AND_SLOW_PC.md): no rule changes; balance runs now use the real kit; a careful-player bot (`--persona competent`) lasts a median of 17 days; every area stays under 300 draw calls.
 
+**Build 0.0.59** has its own icon (D-071) on the .exe, window, taskbar and tab, plus an itch.io cover image in docs/store.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

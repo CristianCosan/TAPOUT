@@ -75,3 +75,8 @@ the fire at night, winter, a storm.
 - A capsule image (the small banner stores show in lists) and a header image.
 - A short trailer is optional for itch.io and recommended for Steam.
 - Price: Sir's call.
+
+## Cover and icon
+
+- itch.io cover (630x500): `docs/store/cover-630x500.png` (`npm run cover`).
+- Icon (512x512 and .ico): `apps/desktop/build/icon.png`, `icon.ico` (`npm run icon`).

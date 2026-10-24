@@ -15,7 +15,8 @@ Assets must be CC0 or free for commercial use with no payment (D-031).
 ## Models, textures, sounds
 
 None. As of build 0.0.3 every model, sign and sound is generated in code
-(`apps/game/src/world/`).
+(`apps/game/src/world/`). The icon is a hand-written SVG (`scripts/icon/icon.svg`), and
+the store cover is a screenshot of the game with the title over it.
 
 ## Voice
 
