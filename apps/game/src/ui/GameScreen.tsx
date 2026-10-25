@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { GAME, dawnHour, duskHour, roundDisplay } from '@tapout/core';
-import { HUNT_TRAIL_LABELS, LOCATIONS, STAGE, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay } from '@tapout/core';
+import { HUNT_TRAIL_LABELS, KEEPSAKES, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
 import { TableauHost } from '../scene/TableauHost.tsx';
 import type { SceneInput } from '../scene/LocationScene.ts';
+import { WorldHost } from '../world/WorldHost.tsx';
+import type { WorldInput } from '../world/World.ts';
+import type { PropState } from '../world/props.ts';
+import { useSoundCues } from '../audio/cues.ts';
+import { useThoughts } from '../audio/useThoughts.ts';
+import { ThoughtSubtitle } from './ThoughtSubtitle.tsx';
+import { playUi } from '../audio/effects.ts';
+import { SettingsPanel } from './SettingsPanel.tsx';
+import { Tips } from './Tips.tsx';
+import { NoteBox } from './NoteBox.tsx';
 
 const BARS = [
   ['health', 'Health'],
@@ -57,7 +67,7 @@ function onHandlerClick(event: MouseEvent) {
 
 // ---- rails and bars
 
-function TopBar({ view, onJournal, onMap }: { view: View; onJournal: () => void; onMap: () => void }) {
+function TopBar({ view, onJournal, onMap, onSound }: { view: View; onJournal: () => void; onMap: () => void; onSound: () => void }) {
   const { hud } = view;
   return (
     <header className="hud-top">
@@ -75,6 +85,9 @@ function TopBar({ view, onJournal, onMap }: { view: View; onJournal: () => void;
       <button className="hud-btn" onClick={onJournal} title="Journal (J)">
         Journal
       </button>
+      <button className="hud-btn" onClick={onSound} title="Sound, mouse, keys">
+        Settings
+      </button>
       <button className="hud-btn phone" disabled={hud.get('tapBtn')?.disabled} onClick={() => session.click('confirmTapOut()')}>
         📞 Sat phone
       </button>
@@ -89,7 +102,7 @@ function BodyRail({ view }: { view: View }) {
     <div className="rail-bar" key={key}>
       <div className="rail-bar-head">
         <span>{label}</span>
-        <b>{max === 100 ? roundDisplay(value) : `${roundDisplay(value)}/${max}`}</b>
+        <b>{max === 100 ? roundDisplay(value) : `${roundDisplay(value)}/${roundDisplay(max)}`}</b>
       </div>
       <div className="bar">
         <div className={`bar-fill ${key}${crit ? ' crit' : ''}`} style={{ width: `${Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100))}%` }} />
@@ -163,15 +176,18 @@ function BottomBar({ view, onJournal }: { view: View; onJournal: () => void }) {
 
 // ---- the context panel, next to the station you clicked
 
-function ContextPanel({ station, view, onClose, onAct }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void }) {
+function ContextPanel({ station, view, onClose, onAct, onKeepsake, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onKeepsake: (note: IntroNote) => void; beside?: boolean }) {
   const offers = offersFor(station, view);
   const stores = STATION_STORES[station.id] ?? [];
   const xs = station.id === 'you' ? [1000] : station.hotspot.map((p) => p.x);
   const right = Math.max(...xs);
   const left = Math.min(...xs);
   const width = 520;
-  const x = right + 24 + width < 1700 ? right + 24 : Math.max(180, left - 24 - width);
-  const y = Math.max(90, Math.min(STAGE.height - 120 - (110 + offers.length * 78), (station.id === 'you' ? 700 : Math.min(...station.hotspot.map((p) => p.y))) - 20));
+  // In first person the thing you clicked is in the middle of the view; the panel sits beside it.
+  const x = beside ? 1110 : right + 24 + width < 1700 ? right + 24 : Math.max(180, left - 24 - width);
+  const y = beside
+    ? Math.max(90, Math.min(STAGE.height - 120 - (110 + offers.length * 78), 200))
+    : Math.max(90, Math.min(STAGE.height - 120 - (110 + offers.length * 78), (station.id === 'you' ? 700 : Math.min(...station.hotspot.map((p) => p.y))) - 20));
   return (
     <div className="context" style={{ left: x, top: y, width }} onClick={(e) => e.stopPropagation()}>
       <div className="context-head">
@@ -192,8 +208,17 @@ function ContextPanel({ station, view, onClose, onAct }: { station: Station; vie
           ))}
         </div>
       )}
+      {station.id === 'pack' && (
+        <div className="keepsakes">
+          {Object.values(KEEPSAKES).map((note) => (
+            <button key={note.title} className="hud-btn" onClick={() => onKeepsake(note)}>
+              {note.title}
+            </button>
+          ))}
+        </div>
+      )}
       {offers.length === 0 ? (
-        <p className="context-empty">Nothing to do here right now.</p>
+        station.id !== 'pack' && <p className="context-empty">Nothing to do here right now.</p>
       ) : (
         offers.map((offer) => (
           <button key={offer.key} className="context-act" disabled={!offer.enabled} onClick={() => onAct(offer)}>
@@ -238,7 +263,14 @@ function ResultCard({ result }: { result: ActionResult }) {
     );
   });
   return (
-    <div className="result-card" key={result.id} onClick={() => session.dismissResult()} title="Click to put this away">
+    <div
+      className="result-card"
+      key={result.id}
+      onClick={() => session.dismissResult()}
+      // It fades by itself after a few seconds; hovering holds it.
+      onAnimationEnd={(e) => e.animationName === 'result-out' && session.dismissResult()}
+      title="Click to put this away"
+    >
       {result.minutes > 0 && <span className="result-time">{duration(result.minutes)}</span>}
       {result.lines.slice(-3).map((line, i) => (
         <div key={i} className={`ln ${line.cls}`}>
@@ -378,6 +410,16 @@ function liveLayout(layout: LocationLayout, S: View['state']): LocationLayout {
   };
 }
 
+/** What the signposts at each exit say. */
+/** Scenery: northern lights on some clear nights from day 8, and on the night of v12's aurora awe. */
+function auroraTonight(S: { day: number; weather: string; aweSeen?: string[]; aweLastDay?: number }): boolean {
+  if (S.aweSeen?.includes('aurora') && S.aweLastDay === S.day) return true;
+  if (S.day < 8 || (S.weather !== 'clear' && S.weather !== 'cold')) return false;
+  return (Math.imul(S.day, 2654435761) >>> 0) % 4 === 0;
+}
+
+const EXIT_SIGNS: Record<string, string> = { toShore: 'SHORE', toWoods: 'WOODS', toCamp: 'CAMP', trailhead: 'TRAPLINE' };
+
 function darkness(hour: number): number {
   const h = ((hour % 24) + 24) % 24;
   const dusk = duskHour();
@@ -400,6 +442,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [journal, setJournal] = useState(false);
   const [map, setMap] = useState(false);
   const [night, setNight] = useState<Offer | null>(null);
+  const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
+  const [sound, setSound] = useState(false);
   // A new day starts behind a curtain: the night passes, then the dawn report.
   const [curtain, setCurtain] = useState<number | null>(null);
   const lastDay = useRef<number>(S.day);
@@ -408,18 +452,39 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     lastDay.current = S.day;
   }, [S.day]);
 
+  // Quiet interface sounds: a panel opening or closing, a card arriving, the journal.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    const open = selected !== null;
+    if (open !== wasOpen.current) playUi(open ? 'open' : 'close');
+    wasOpen.current = open;
+  }, [selected]);
+  useEffect(() => {
+    if (view.modal) playUi('card');
+  }, [view.modal]);
+  useEffect(() => {
+    if (journal || map) playUi('page');
+  }, [journal, map]);
+
   // A new location starts with nothing open.
   useEffect(() => setSelected(null), [loc]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      // Typing a note is not a shortcut.
+      if (e.target instanceof HTMLInputElement) return;
       if (e.key === 'Alt') {
         e.preventDefault();
         setLabels(true);
       } else if (e.key === 'Escape') {
         setSelected(null);
+        setKeepsake(null);
+        setSound(false);
         setJournal(false);
         setMap(false);
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        setSelected((current) => (current === 'you' ? null : 'you'));
       } else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
       else if (e.key === 'm' || e.key === 'M') setMap((open) => !open);
       else if (e.key === 'F3') {
@@ -459,6 +524,65 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     setSelected((current) => (current === id ? null : id));
   }, []);
   const events = useMemo(() => ({ select }), [select]);
+  const worldEvents = useMemo(() => ({ select: (id: string) => setSelected(id), clear: () => setSelected(null) }), []);
+
+  const props: PropState = useMemo(() => {
+    const hunt = S.hunt as { state: string; species?: string } | undefined;
+    return {
+      structure: S.structure,
+      dugout: !!S.dugout,
+      insulation: S.insulation,
+      bed: !!S.bed,
+      firepitTier: S.firepitTier,
+      fireLit: S.fireH > 0,
+      rackTier: S.rackTier,
+      hugeRack: !!S.hugeRack,
+      cacheTier: S.cacheTier,
+      chair: !!S.chair,
+      table: !!S.table,
+      day: S.day,
+      winter: !!S.winter,
+      species: hunt && hunt.state !== 'none' ? (hunt.species ?? '') : '',
+      logs: Math.floor(S.stock?.wood ?? 0),
+      firewood: Math.floor(S.stock?.firewood ?? 0),
+      meat: Math.ceil((S.meatQ ?? []).reduce((a: number, e: { n: number }) => a + e.n, 0)),
+      berries: Math.ceil((S.berryQ ?? []).reduce((a: number, e: { n: number }) => a + e.n, 0)),
+      rocks: Math.floor(S.stock?.rocks ?? 0),
+      moss: S.stock?.moss ?? 0,
+      clay: Math.floor(S.stock?.clay ?? 0),
+      tinder: S.tinder ?? 0,
+      smoked: Math.floor(S.smoked ?? 0),
+      lines: (S.lineList ?? []).map((l: { spotId: string }) => l.spotId),
+      snares: (S.snareList ?? []).length,
+      netBuilt: !!S.net?.built,
+      netSpot: S.net?.spot ?? '',
+      smoking: (S.smokingSession?.n ?? 0) + (S.hugeSmokingSession?.n ?? 0),
+      exitLabels: EXIT_SIGNS,
+    };
+    // v12 mutates its state in place; the view version marks a change.
+  }, [S, view.version]);
+  const frozen = !!(view.modal || journal || map || night || keepsake || sound || curtain !== null);
+  useSoundCues(view, curtain !== null);
+  useThoughts(view, !frozen && !view.endScreen && !guide);
+  const worldInput: WorldInput = useMemo(
+    () => ({
+      area: WORLD[loc],
+      layout,
+      hidden,
+      selected,
+      hour: S.hour,
+      dawn: dawnHour(),
+      dusk: duskHour(),
+      weather: S.weather,
+      winter: !!S.winter,
+      tempC: ambientTempC(),
+      props,
+      frozen,
+      birdsSilent: !!S.birdsSilent,
+      aurora: auroraTonight(S),
+    }),
+    [loc, layout, hidden, selected, S.hour, S.weather, S.winter, S.day, props, frozen, S.birdsSilent],
+  );
 
   if (view.endScreen && !view.modal) return <EndScreen view={view} />;
   const station = selected ? layout.stations.find((s) => s.id === selected) : null;
@@ -475,23 +599,39 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       return;
     }
     if (station && !station.exitTo && station.id !== 'you') setStandAt((at) => ({ ...at, [loc]: station.id }));
-    if (station?.exitTo) setSelected(null);
+    // Back to looking around once you have done something.
+    setSelected(null);
     session.click(offer.handler);
   };
 
   return (
     <div className="game2">
-      <TableauHost input={input} events={events} />
+      {guide ? <TableauHost input={input} events={events} /> : <WorldHost input={worldInput} events={worldEvents} />}
       {!guide && (
         <>
           <div className="travel-fade" key={loc}>
             {layout.label}
           </div>
-          <TopBar view={view} onJournal={() => setJournal(true)} onMap={() => setMap(true)} />
+          <TopBar view={view} onJournal={() => setJournal(true)} onMap={() => setMap(true)} onSound={() => setSound(true)} />
           <BodyRail view={view} />
           <StoresRail view={view} />
           <BottomBar view={view} onJournal={() => setJournal(true)} />
-          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} />}
+          <button className="you-btn" onClick={() => setSelected(selected === 'you' ? null : 'you')} title="Things only you need (Tab)">
+            You
+          </button>
+          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} onKeepsake={(note) => {
+            setSelected(null);
+            setKeepsake(note);
+          }} beside />}
+          {keepsake && (
+            <div className="overlay" onClick={() => setKeepsake(null)}>
+              <div className="intro-note">
+                <h3>{keepsake.title}</h3>
+                <p>{keepsake.text}</p>
+                <span className="intro-hint">Click to put it away</span>
+              </div>
+            </div>
+          )}
           {view.result && !view.modal && <ResultCard result={view.result} />}
           {night && (
             <NightPreview
@@ -507,6 +647,10 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {curtain !== null && (
             <div className="night-curtain" key={curtain} onAnimationEnd={() => setCurtain(null)} />
           )}
+          <Tips view={view} hidden={frozen || !!station} />
+          <ThoughtSubtitle />
+          <NoteBox />
+          {sound && <SettingsPanel onClose={() => setSound(false)} />}
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
           <Modal view={view} />

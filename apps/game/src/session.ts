@@ -6,6 +6,7 @@
 
 import {
   actionPanel,
+  ambientTempC,
   hudRecord,
   type HudElement,
   parseHandler,
@@ -17,7 +18,8 @@ import {
   type Run,
   type RunSnapshot,
 } from '@tapout/core';
-import { CAST, GAME_VERSION, P1 } from '@tapout/content';
+import { CAST, GAME_VERSION, P1, THOUGHT_TIMING } from '@tapout/content';
+import { logError } from './crash.ts';
 import { RESTORED_FROM, RUN_KEY, SaveStore } from './saves.ts';
 
 export interface PageElement {
@@ -65,9 +67,15 @@ interface SaveBody {
   run: RunSnapshot;
   modal: string | null;
   elements: Array<[string, Omit<PageElement, 'classes'> & { classes: string[] }]>;
+  /** Dan's thoughts already heard this run (D-067); older saves have none. */
+  thoughts?: string[];
+  /** When he last said something, in game hours, and the roll for how long until the next. */
+  thoughtAt?: [number, number];
 }
 const HISTORY_KEY = 'tapout.history';
 const HISTORY_MAX = 30;
+const NOTES_KEY = 'tapout.notes';
+const NOTES_MAX = 300;
 
 /** One finished run, for the title screen's list of past runs. */
 export interface RunRecord {
@@ -86,8 +94,11 @@ function newElement(id: string): PageElement {
 export class Session {
   private run: Run | null = null;
   private modal: string | null = null;
+  private thoughts: string[] = [];
+  private thoughtAt: [number, number] = [-THOUGHT_TIMING.momentGap, Math.random()];
   private elements = new Map<string, PageElement>();
   private listeners = new Set<() => void>();
+  private callListeners = new Set<(fn: string) => void>();
   private view: View | null = null;
   private version = 0;
   private baseline: Baseline | null = null;
@@ -153,6 +164,8 @@ export class Session {
     this.reset();
     this.run = restoreRun(save.run);
     this.modal = save.modal;
+    this.thoughts = save.thoughts ?? [];
+    this.thoughtAt = save.thoughtAt ?? [-THOUGHT_TIMING.momentGap, Math.random()];
     for (const [id, el] of save.elements) this.elements.set(id, { ...el, classes: new Set(el.classes) });
     // A damaged save was replaced by an older copy: say so, once, on the result card.
     if (found.source !== 'save') this.result = { id: -1, lines: [{ msg: RESTORED_FROM[found.source], cls: 'warn' }], bars: {}, stores: {}, minutes: 0 };
@@ -175,6 +188,12 @@ export class Session {
     this.emit();
   }
 
+  /** Hears the name of every v12 call a click makes (the sounds use it). */
+  onCall(f: (fn: string) => void): () => void {
+    this.callListeners.add(f);
+    return () => this.callListeners.delete(f);
+  }
+
   /** Runs a v12 handler, exactly as clicking that button in v12 would. */
   click(handler: string): void {
     if (!this.run) return;
@@ -194,7 +213,10 @@ export class Session {
       else if (call.fn === 'restartRun') {
         this.leaveRun();
         return;
-      } else this.run.call(call.fn, ...call.args);
+      } else {
+        for (const f of this.callListeners) f(call.fn);
+        this.run.call(call.fn, ...call.args);
+      }
     }
     if (!this.modal && this.baseline) {
       this.result = this.diff(this.baseline);
@@ -262,7 +284,26 @@ export class Session {
     this.baseline = null;
     this.result = null;
     this.modal = null;
+    this.thoughts = [];
+    this.thoughtAt = [-THOUGHT_TIMING.momentGap, Math.random()];
     this.elements.clear();
+  }
+
+  /** Dan's thoughts already heard this run: each is heard at most once. */
+  heardThoughts(): readonly string[] {
+    return this.thoughts;
+  }
+
+  /** When he last said something (game hours) and a 0..1 roll for how long until the next. */
+  lastThought(): readonly [number, number] {
+    return this.thoughtAt;
+  }
+
+  markThought(id: string, atHours: number): void {
+    if (this.thoughts.includes(id)) return;
+    this.thoughts = [...this.thoughts, id];
+    this.thoughtAt = [atHours, Math.random()];
+    this.autosave();
   }
 
   private element(id: string): PageElement {
@@ -332,6 +373,57 @@ export class Session {
     }
   }
 
+  /** Playtest notes (F8), oldest first. Kept across runs until cleared. */
+  notes(): PlaytestNote[] {
+    try {
+      const raw = this.storage?.getItem(NOTES_KEY);
+      const list = raw ? (JSON.parse(raw) as PlaytestNote[]) : [];
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Saves a note with where the run is; false if it could not be written. */
+  addNote(text: string): boolean {
+    const words = text.trim();
+    if (!words || !this.storage) return false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const S: any = this.run?.state;
+    const note: PlaytestNote = {
+      at: new Date().toISOString(),
+      version: GAME_VERSION,
+      text: words,
+      run: S
+        ? {
+            day: S.day,
+            hour: Math.round((((S.hour % 24) + 24) % 24) * 10) / 10,
+            loc: S.loc,
+            weather: S.weather,
+            tempC: Math.round(ambientTempC()),
+            body: { health: Math.round(S.health), food: Math.round(S.hunger), water: Math.round(S.thirst), warmth: Math.round(S.warmth), energy: Math.round(S.energy), morale: Math.round(S.morale) },
+            shelter: S.structure,
+            rivals: S.rivals,
+          }
+        : null,
+    };
+    try {
+      this.storage.setItem(NOTES_KEY, JSON.stringify([...this.notes(), note].slice(-NOTES_MAX)));
+      return true;
+    } catch (error) {
+      logError('Could not save a note', error);
+      return false;
+    }
+  }
+
+  clearNotes(): void {
+    try {
+      this.storage?.removeItem(NOTES_KEY);
+    } catch (error) {
+      logError('Could not clear the notes', error);
+    }
+  }
+
   private record(): void {
     this.recorded = true;
     if (this.throwaway || !this.run) return;
@@ -344,7 +436,7 @@ export class Session {
     try {
       this.storage.setItem(HISTORY_KEY, JSON.stringify([entry, ...this.history()].slice(0, HISTORY_MAX)));
     } catch (error) {
-      console.error('Could not record the run', error);
+      logError('Could not record the run', error);
     }
   }
 
@@ -377,10 +469,12 @@ export class Session {
         run: snapshotRun(this.run),
         modal: this.modal,
         elements: [...this.elements].map(([id, el]) => [id, { ...el, classes: [...el.classes] }]),
+        thoughts: this.thoughts,
+        thoughtAt: this.thoughtAt,
       };
       this.saves.write(body, this.run.state.day, new Date().toISOString());
     } catch (error) {
-      console.error('Autosave failed', error);
+      logError('Autosave failed', error);
     }
   }
 
@@ -437,7 +531,7 @@ function safeStorage(): Storage | null {
         if (old && files.getItem(key) === null) files.setItem(key, old);
         if (old) window.localStorage.removeItem(key);
       } catch (error) {
-        console.error('Could not move an old save', error);
+        logError('Could not move an old save', error);
       }
     }
     return files;
@@ -447,3 +541,19 @@ function safeStorage(): Storage | null {
 }
 
 export const session = new Session(safeStorage());
+
+export interface PlaytestNote {
+  at: string;
+  version: string;
+  text: string;
+  run: {
+    day: number;
+    hour: number;
+    loc: string;
+    weather: string;
+    tempC: number;
+    body: Record<string, number>;
+    shelter: number;
+    rivals: number;
+  } | null;
+}

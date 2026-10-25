@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- TAP / OUT: one pine on the lake shore at dusk, a small fire at its foot. Drawn by hand, CC0. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2a44"/>
+      <stop offset="0.55" stop-color="#4a5a78"/>
+      <stop offset="0.8" stop-color="#d98a4a"/>
+      <stop offset="1" stop-color="#f2b56b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd27a" stop-opacity="0.95"/>
+      <stop offset="0.4" stop-color="#ff8a2a" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ff6a00" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="r"><rect width="256" height="256" rx="44"/></clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="256" height="256" fill="url(#sky)"/>
+    <circle cx="186" cy="62" r="13" fill="#f4ecd8" opacity="0.9"/>
+    <path d="M0 196 L40 178 L78 188 L120 170 L160 186 L204 172 L256 184 L256 256 L0 256 Z" fill="#20283a"/>
+    <rect y="204" width="256" height="52" fill="#141a26"/>
+    <path d="M0 204 H256" stroke="#f2b56b" stroke-opacity="0.35" stroke-width="2"/>
+    <path d="M118 34 L146 84 L134 84 L158 124 L142 124 L170 166 L150 166 L174 204 L66 204 L90 166 L70 166 L98 124 L82 124 L106 84 L94 84 Z" fill="#0b0f16"/>
+    <rect x="113" y="196" width="14" height="12" fill="#0b0f16"/>
+    <circle cx="164" cy="204" r="30" fill="url(#glow)"/>
+    <path d="M164 186 C171 194 172 200 168 206 L160 206 C156 200 157 194 164 186 Z" fill="#ffcf6a"/>
+    <path d="M152 208 L176 200 M152 200 L176 208" stroke="#2a1a10" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

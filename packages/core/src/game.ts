@@ -4,7 +4,7 @@
 
 import { createRngState, type RngState } from './rng/rng.ts';
 import { useRng } from './v12/runtime.ts';
-import { S, setS } from './v12/state.ts';
+import { S, SETTINGS, setS, setSettings } from './v12/state.ts';
 import { RULES, TAPOUT_RULES, V12_RULES, setRules, type RuleSet } from './v12/rules.ts';
 import * as breakSequence from './v12/breakSequence.ts';
 import * as breakdown from './v12/breakdown.ts';
@@ -33,11 +33,15 @@ import * as tuning from './v12/tuning.ts';
 import * as woods from './v12/woods.ts';
 import * as worry from './v12/worry.ts';
 import * as panel from './v12/panel.ts';
+import * as home from './v12/home.ts';
+import * as letters from './v12/letters.ts';
+
+export type { HomeThread } from './v12/home.ts';
 
 const MODULES = [
   breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, helpers,
   interior, medical, modifiers, night, person, recorder, resolve, rules, setup, shore, tags, threads,
-  travel, tuning, woods, worry, panel,
+  travel, tuning, woods, worry, panel, home, letters,
 ];
 
 /** Every function v12 defines, by its v12 name. */
@@ -66,6 +70,8 @@ export interface RunCast {
   prizeLabel: string;
   /** v12 rival name -> the name the radio uses. */
   rivals: Readonly<Record<string, string>>;
+  /** The parents / no-contact thread's words and numbers (§8.4). */
+  home?: home.HomeThread;
 }
 
 export interface Run {
@@ -93,7 +99,7 @@ export function startRun(options: RunOptions): Run {
     new Set(options.kit),
   );
   if (options.cast && RULES.content) {
-    S.cast = { partner: options.cast.partner, prizeLabel: options.cast.prizeLabel };
+    S.cast = { partner: options.cast.partner, prizeLabel: options.cast.prizeLabel, ...(options.cast.home ? { home: options.cast.home } : {}) };
     S.tapNames = S.tapNames.map((name: string) => options.cast!.rivals[name] ?? name);
   }
   return liveRun(rng, RULES);
@@ -152,6 +158,7 @@ export function restoreRun(snapshot: RunSnapshot): Run {
 }
 
 export { actionPanel, hudRecord, BUTTONS, type PanelEntry, type HudElement } from './v12/panel.ts';
+export { LETTER_BUTTONS } from './v12/letters.ts';
 export { setPresenter, type Presenter } from './v12/ui.ts';
 export { TAPOUT_RULES, V12_RULES, type RuleSet } from './v12/rules.ts';
 export { rationsLeft } from './v12/camp.ts';
@@ -167,3 +174,8 @@ export { fireCap } from './v12/camp.ts';
 export { waterCap, computeBMI } from './v12/setup.ts';
 export { meatCount, berryCount } from './v12/food.ts';
 export { roundDisplay, hh, duskHour, dawnHour } from './v12/helpers.ts';
+
+/** v12's radio setting: name the rivals who leave and why, or only that someone left. */
+export function setRivalNews(on: boolean): void {
+  setSettings({ ...SETTINGS, showRivalNews: on });
+}

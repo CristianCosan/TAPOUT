@@ -3,7 +3,7 @@
 // calls routed through ./ui.ts. Parity with the original is enforced by tests.
 
 import { whoLabel } from './camp.ts';
-import { say } from './rules.ts';
+import { RULES, say } from './rules.ts';
 import { S } from './state.ts';
 import { showModal, typewriterInto } from './ui.ts';
 // ============================== v12 §7: ending sequences for ALL endings ==============================
@@ -33,7 +33,7 @@ export function showCollapseFade(){
 }
 export function showCollapseAftermath(){
   const who = whoLabel('no one in particular');
-  showModal(`<h3>Waking up</h3><div class="wsub tw" id="twCAft" onclick="skipTypewriter('twCAft')"></div><button class="mbtn" onclick="hideModal(); showFinalStatsScreen('dead')">Continue</button>`);
+  showModal(`<h3>Waking up</h3><div class="wsub tw" id="twCAft" onclick="skipTypewriter('twCAft')"></div><button class="mbtn" onclick="hideModal(); ${RULES.letters ? 'showCallHome' : 'showFinalStatsScreen'}('dead')">Continue</button>`);
   typewriterInto('twCAft', say(`They got to him eventually. A hospital ceiling, too bright, a voice asking his name like it's a test he might fail. He's alive - that's the whole headline. Somewhere, ${who} gets the call that isn't the bad kind, and it takes a while for that to feel real to anyone, including him.`, `They got to you eventually. A hospital ceiling, too bright, a voice asking your name like it's a test you might fail. You're alive - that's the whole headline. Somewhere, ${who} gets the call that isn't the bad kind, and it takes a while for that to feel real to anyone, including you.`), 16);
 }
 export function showViolentDeathStep1(){
@@ -83,7 +83,7 @@ export function showLossStep5(kind?){
   const vehicle = (S.warmth<=15 || S.health<=15) ? 'helicopter' : 'boat';
   const rivalNote = S.rivals>0 ? ` Somewhere out there, ${S.rivals} other fire${S.rivals===1?' is':'s are'} still going.` : '';
   const text = `The ${vehicle} pulls you off the shoreline and the whole run goes small behind you fast, faster than the days it took to live it.${rivalNote}`;
-  showModal(`<h3>Pulling Away</h3><div class="wsub tw" id="twL5" onclick="skipTypewriter('twL5')"></div><button class="mbtn" onclick="hideModal(); showFinalStatsScreen('${kind}')">Continue</button>`);
+  showModal(`<h3>Pulling Away</h3><div class="wsub tw" id="twL5" onclick="skipTypewriter('twL5')"></div><button class="mbtn" onclick="hideModal(); ${RULES.letters ? 'showCallHome' : 'showFinalStatsScreen'}('${kind}')">Continue</button>`);
   typewriterInto('twL5', text, 18);
 }
 export function showWinStep1(){
@@ -110,7 +110,7 @@ export function showWinStep4(){
 }
 export function showWinStep5(){
   const text = "The coastline goes dark behind you as the boat pulls out, and somewhere out there nine other fires have already gone cold. Every one of them home, one way or another. You're the last light still burning, and now you're not even that.";
-  showModal(`<h3>Leaving</h3><div class="wsub tw" id="twW5" onclick="skipTypewriter('twW5')"></div><button class="mbtn" onclick="hideModal(); showFinalStatsScreen('win')">Continue</button>`);
+  showModal(`<h3>Leaving</h3><div class="wsub tw" id="twW5" onclick="skipTypewriter('twW5')"></div><button class="mbtn" onclick="hideModal(); ${RULES.letters ? 'showCallHome' : 'showFinalStatsScreen'}('win')">Continue</button>`);
   typewriterInto('twW5', text, 18);
 }
 

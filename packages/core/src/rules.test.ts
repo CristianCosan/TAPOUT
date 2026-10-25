@@ -2,7 +2,7 @@
 // The parity tests prove everything else is still identical (they run with V12_RULES).
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { setPresenter, startRun, TAPOUT_RULES, V12_RULES, type RuleSet, type Run } from './game.ts';
+import { hudRecord, setPresenter, startRun, TAPOUT_RULES, V12_RULES, type RuleSet, type Run } from './game.ts';
 
 const CAST = {
   partner: 'Mara',
@@ -193,5 +193,38 @@ describe('partner rule (§8.3)', () => {
     const run = start(V12_RULES);
     run.call('showForcedTapoutCinematic');
     expect(typed.at(-1)).toContain('You think of my partner');
+  });
+});
+
+describe('autoUnload: walking into camp empties the pack', () => {
+  it('adds the haul to camp stock and says what came back; v12 keeps it in the pack', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      const S = run.state;
+      S.loc = 'woods';
+      S.hour = 9;
+      S.carry.wood = 6;
+      S.carry.moss = 2;
+      const logs = S.stock.wood;
+      run.call('goTo', 'camp');
+      expect(S.loc).toBe('camp');
+      if (rules === TAPOUT_RULES) {
+        expect(S.carry.wood).toBe(0);
+        expect(S.stock.wood).toBe(logs + 6);
+        expect(logText(run)).toContain('You brought back 6 logs and 2 bundles of moss');
+      } else {
+        expect(S.carry.wood).toBe(6);
+        expect(S.stock.wood).toBe(logs);
+      }
+    }
+  });
+});
+
+describe('wholeNumbers: max energy is written as a whole number', () => {
+  it('rounds the dawn line and the energy readout', () => {
+    for (const [rules, expected] of [[V12_RULES, '/161.6166666'], [TAPOUT_RULES, '/162']] as const) {
+      start(rules).state.maxEnergy = 161.6166666;
+      expect(hudRecord().get('val-energy')?.text).toContain(expected);
+    }
   });
 });

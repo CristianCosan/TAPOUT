@@ -3,7 +3,7 @@
 // calls routed through ./ui.ts. Parity with the original is enforced by tests.
 
 import { rand } from './runtime.ts';
-import { endGame } from './endings.ts';
+import { confirmTapOut, endGame } from './endings.ts';
 import { addMeat, meatCount, takeMeat } from './food.ts';
 import { clamp, pickNoRepeat } from './helpers.ts';
 import { triggerMedicalArc } from './medical.ts';
@@ -331,6 +331,11 @@ export function resolveCardChoice(cardId?, choiceIdx?){
   if (outcome.next === 'faceRoll'){
     S.cardHistory.push({id:card.id, day:S.day, choice:choice.label, text:'Went out to face the wolverine.'});
     resolveWolverineFace();
+    return;
+  }
+  if (outcome.next === 'satPhone'){
+    S.cardHistory.push({id:card.id, day:S.day, choice:choice.label, text:choice.label});
+    confirmTapOut();
     return;
   }
   if (outcome.next === 'panicSequence'){

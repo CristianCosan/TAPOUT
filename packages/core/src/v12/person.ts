@@ -50,7 +50,7 @@ export const LETTER_POOL: any = {
   ],
 };
 export function maybeWriteLetter(trigger?, notes?){
-  if (S.letters.length >= 3) return;
+  if ((RULES.letters ? S.letters.filter(l => !l.written) : S.letters).length >= 3) return;
   if (S.letters.some(l => l.trigger === trigger)) return;
   const pool = LETTER_POOL[trigger];
   if (!pool) return;

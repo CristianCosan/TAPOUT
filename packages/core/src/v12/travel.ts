@@ -2,8 +2,9 @@
 // moved verbatim apart from: exports, imports, Math.random -> rand(), and presentation
 // calls routed through ./ui.ts. Parity with the original is enforced by tests.
 
+import { RULES } from './rules.ts';
 import { rand } from './runtime.ts';
-import { actBootFailure } from './camp.ts';
+import { actBootFailure, unloadOnArrival } from './camp.ts';
 import { maybeMartenVignette } from './cards.ts';
 import { meatCount } from './food.ts';
 import { TRAVEL_HOURS, clamp, duskHour, pick } from './helpers.ts';
@@ -139,6 +140,7 @@ export function goTo(loc?){
     }
   }
   log(`You make your way to the ${loc === 'camp' ? 'camp' : loc}.`, 'sys');
+  if (RULES.autoUnload && loc === 'camp') unloadOnArrival();
   travelPopup(loc);
   afterAction('travel');
 }

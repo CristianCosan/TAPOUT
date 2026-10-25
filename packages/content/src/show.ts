@@ -1,5 +1,6 @@
 import type { RunCast } from '@tapout/core';
 import { P1 } from './protagonist.ts';
+import { HOME_THREAD } from './home.ts';
 // The competition framing. Fictional show; rival names echo the v12 cast
 // without copying real contestants. All open to Sir's veto (docs/DECISIONS.md).
 
@@ -27,4 +28,5 @@ export const CAST: RunCast = {
   partner: P1.relationships.find((r) => r.role === 'partner')!.name,
   prizeLabel: SHOW.prizeLabel,
   rivals: Object.fromEntries(RIVALS.map((r) => [r.v12, `${r.name} ${r.surname}`])),
+  home: HOME_THREAD,
 };
