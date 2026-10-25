@@ -1,4 +1,5 @@
 // npm run parity -- --seeds 20 --days 40
+import { KIT_POOL } from '@tapout/core';
 import { runLockstep } from '../parity/lockstep.ts';
 
 function arg(name: string, fallback: string): string {
@@ -10,7 +11,10 @@ const seeds = Number(arg('seeds', '10'));
 const days = Number(arg('days', '40'));
 const prefix = arg('prefix', 'lockstep');
 const tap = Number(arg('tap', '0'));
-const persona = arg('persona', 'random') as 'random' | 'survivor';
+const persona = arg('persona', 'random') as 'random' | 'survivor' | 'competent';
+// --kit std plays the usual ten; the default kit names items v12 does not know (no sleeping bag,
+// no snare wire), so the bag and snare rules are only compared with --kit std.
+const kit = arg('kit', 'default') === 'std' ? (KIT_POOL as Array<{ id: string; std?: boolean }>).filter((k) => k.std).map((k) => k.id) : undefined;
 const resumeEvery = Number(arg('resume', '0')) || undefined;
 let failures = 0;
 let decisions = 0;
@@ -19,7 +23,7 @@ const endings: Record<string, number> = {};
 const lastDays: number[] = [];
 for (let i = 0; i < seeds; i += 1) {
   const seed = `${prefix}-${i}`;
-  const result = runLockstep({ seed }, { days, tapOutChance: tap, persona, resumeEvery });
+  const result = runLockstep({ seed, kit }, { days, tapOutChance: tap, persona, resumeEvery });
   decisions += result.decisions.length;
   result.handlersSeen.forEach((h) => handlers.add(h));
   lastDays.push(result.finalDay);

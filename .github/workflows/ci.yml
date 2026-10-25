@@ -22,6 +22,8 @@ jobs:
       - run: npm run build
       - name: Parity sweep (port vs untouched v12)
         run: npm run parity -- --seeds 40 --days 70 --persona survivor --resume 11 --prefix ci
+      - name: Parity sweep with the usual ten (sleeping bag, snares, careful play)
+        run: npm run parity -- --seeds 12 --days 70 --persona competent --resume 7 --prefix ci-kit --kit std
 
   windows:
     # The playable Windows build. Download it from this run's artifacts.

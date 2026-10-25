@@ -190,6 +190,8 @@ Balance pass and slow-PC check (D-070, docs/reports/M22_BALANCE_AND_SLOW_PC.md):
 
 **Build 0.0.61** is the M23 legal pass (D-073): open-source licences in Credits, a name check, a safer cover tagline, and 'Raw chill' instead of 'Cold snap' on mild days.
 
+Final regression (docs/reports/M23_FINAL_REGRESSION.md): all green on 0.0.61; parity and soak now also cover the usual-ten kit, and CI runs a usual-ten parity sweep.
+
 **Next:** more M22 hardening and Shore/Woods detail.
 
 ## First person — build 0.0.3

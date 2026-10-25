@@ -3,7 +3,7 @@
 // few decisions the way the app's autosave does, and reports anything that went wrong: a thrown
 // error, a run that stalled before an ending, a number in the state that is not finite, or a
 // save that grew too large. Exits non-zero if any run failed.
-import { TAPOUT_RULES } from '@tapout/core';
+import { KIT_POOL, TAPOUT_RULES } from '@tapout/core';
 import { CAST } from '@tapout/content';
 import { runSolo } from '../parity/lockstep.ts';
 
@@ -16,6 +16,8 @@ const seeds = Number(arg('seeds', '100'));
 const days = Number(arg('days', '70'));
 const resumeEvery = Number(arg('resume', '7'));
 const SAVE_LIMIT = 2 * 1024 * 1024;
+// The usual ten (the parity kit lacks a sleeping bag and snare wire, so they would go untested).
+const STD_KIT = (KIT_POOL as Array<{ id: string; std?: boolean }>).filter((k) => k.std).map((k) => k.id);
 
 /** Paths of numbers in the state that are NaN or infinite. */
 function badNumbers(value: unknown, path = 'S', out: string[] = [], seen = new Set<unknown>()): string[] {
@@ -35,9 +37,9 @@ let decisions = 0;
 const t0 = performance.now();
 for (let i = 0; i < seeds; i += 1) {
   const seed = `soak-${i}`;
-  const persona = i % 2 ? 'survivor' : 'random';
+  const persona = (['random', 'survivor', 'competent'] as const)[i % 3]!;
   try {
-    const run = runSolo({ seed }, { days, persona, resumeEvery, tapOutChance: 0.01 }, TAPOUT_RULES, CAST);
+    const run = runSolo({ seed, kit: persona === 'random' ? undefined : STD_KIT }, { days, persona, resumeEvery, tapOutChance: 0.01 }, TAPOUT_RULES, CAST);
     decisions += run.decisions;
     const cause = run.over ? (run.state.cause ?? 'over') : run.finalDay > days ? 'outlasted the test' : 'stalled';
     causes.set(cause, (causes.get(cause) ?? 0) + 1);
