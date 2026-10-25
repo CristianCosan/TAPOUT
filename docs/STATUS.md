@@ -192,7 +192,7 @@ Balance pass and slow-PC check (D-070, docs/reports/M22_BALANCE_AND_SLOW_PC.md):
 
 Final regression (docs/reports/M23_FINAL_REGRESSION.md): all green on 0.0.61; parity and soak now also cover the usual-ten kit, and CI runs a usual-ten parity sweep.
 
-A release workflow (.github/workflows/release.yml) builds the Windows game for any `v*` tag and attaches it to a GitHub release page, which, unlike build artifacts, never expires. No tag has been pushed yet.
+A release job in CI puts every build merged into main on the GitHub release page for its version (tag v<version>), which, unlike build artifacts, never expires.
 
 **1.0.0-rc.1** (D-074) is the release candidate: merged into main and tagged; the download lives on the GitHub release page. M23 is done up to the plan's STOP: launching, and where, is Sir's decision.
 
