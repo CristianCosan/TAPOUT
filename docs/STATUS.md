@@ -194,7 +194,9 @@ Final regression (docs/reports/M23_FINAL_REGRESSION.md): all green on 0.0.61; pa
 
 A release workflow (.github/workflows/release.yml) builds the Windows game for any `v*` tag and attaches it to a GitHub release page, which, unlike build artifacts, never expires. No tag has been pushed yet.
 
-**Next:** more M22 hardening and Shore/Woods detail.
+**1.0.0-rc.1** (D-074) is the release candidate: merged into main and tagged; the download lives on the GitHub release page. M23 is done up to the plan's STOP: launching, and where, is Sir's decision.
+
+**Next:** Sir's playtest (F8 notes), then rc.2 with whatever it turns up.
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,
