@@ -29,6 +29,7 @@ export const SETTINGS_TEXT = {
   keyList: [
     ['Click', 'Look around (the mouse stays captured); click a lit thing to use it'],
     ['W A S D', 'Walk · Shift to run'],
+    ['R', 'Sit down and rest, wherever you are'],
     ['Tab', 'Things only you need: rest, sit and watch, tinder'],
     ['M', 'Map'],
     ['J', 'Journal'],

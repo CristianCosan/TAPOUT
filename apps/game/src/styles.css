@@ -276,7 +276,7 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .look-label b { font-family: var(--serif); font-weight: 400; font-size: 24px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone); }
 .look-label span { font-size: 15px; color: #f3c27a; }
 .look-label.far span { color: var(--sage); }
-.move-hint { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); padding: 8px 18px; border-radius: 10px; background: #0b100cb8; color: var(--sage); font-size: 17px; pointer-events: none; z-index: 3; white-space: nowrap; }
+.move-hint { position: absolute; left: 50%; bottom: 270px; transform: translateX(-50%); padding: 8px 18px; border-radius: 10px; background: #0b100cb8; color: var(--sage); font-size: 17px; pointer-events: none; z-index: 3; white-space: nowrap; }
 .you-btn { position: absolute; left: 180px; bottom: 88px; z-index: 5; padding: 10px 22px; border-radius: 10px; border: 1px solid var(--lichen); background: #101812e0; color: var(--bone); font-family: var(--serif); font-size: 20px; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; }
 .you-btn:hover { border-color: #f3c27a; }
 
@@ -336,7 +336,7 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
   mask-image: radial-gradient(ellipse at center, transparent 30%, #000 75%); }
 
 /* Dan's thoughts, when subtitles are on (D-067) */
-.thought-sub { position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%); max-width: 1000px; padding: 10px 22px; border-radius: 10px; background: #0b100cb3; color: var(--bone); font-family: var(--serif); font-style: italic; font-size: 26px; line-height: 1.4; text-align: center; z-index: 4; pointer-events: none; animation: thought-in 0.6s ease-out; }
+.thought-sub { position: absolute; left: 50%; bottom: 250px; transform: translateX(-50%); max-width: 1000px; padding: 10px 22px; border-radius: 10px; background: #0b100cb3; color: var(--bone); font-family: var(--serif); font-style: italic; font-size: 26px; line-height: 1.4; text-align: center; z-index: 4; pointer-events: none; animation: thought-in 0.6s ease-out; }
 .note-box { position: absolute; left: 50%; top: 140px; transform: translateX(-50%); width: 720px; padding: 18px 22px; border-radius: 12px; background: #0b100cf0; border: 1px solid #3a4a3c; z-index: 20; display: flex; flex-direction: column; gap: 10px; animation: thought-in 0.2s ease-out; }
 .note-box input { font: inherit; font-size: 22px; padding: 10px 12px; border-radius: 8px; border: 1px solid #3a4a3c; background: #050805; color: var(--bone); outline: none; }
 .note-box em { color: var(--dim); font-style: normal; font-size: 16px; }
@@ -346,3 +346,20 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .notes-text { width: 100%; height: 160px; font: 15px/1.4 monospace; background: #050805; color: var(--bone); border: 1px solid #3a4a3c; border-radius: 8px; padding: 8px; }
 .licences-text { height: 300px; }
 @keyframes thought-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---- energy, the one meter in the middle of the screen (rc.2) */
+.energy-hud { position: absolute; left: 50%; bottom: 88px; transform: translateX(-50%); width: 660px; padding: 12px 20px 12px; border-radius: 14px; background: #0b100cd0; border: 1px solid #3a4a3c; z-index: 5; display: flex; flex-direction: column; gap: 8px; }
+.energy-head { display: flex; align-items: baseline; gap: 14px; font-size: 18px; color: var(--sage); letter-spacing: 0.08em; text-transform: uppercase; }
+.energy-head b { font-size: 34px; color: var(--gold); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.energy-head b i { font-style: normal; font-size: 20px; color: var(--sage); }
+.energy-head em { font-style: normal; font-size: 18px; color: #e3a07a; text-transform: none; letter-spacing: 0; }
+.energy-bar { position: relative; height: 20px; border-radius: 10px; background: #1a241c; overflow: hidden; border: 1px solid #2a3a2c; }
+.energy-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #c9a24a, var(--gold)); border-radius: 10px 0 0 10px; transition: width 0.4s ease; }
+.energy-spend { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, #e3a07a99 0 6px, #e3a07a44 6px 12px); }
+.energy-hud.low .energy-fill { background: var(--blood); animation: energy-pulse 1.4s ease-in-out infinite; }
+.energy-hud.low .energy-head b { color: #f0b2a8; }
+@keyframes energy-pulse { 50% { opacity: 0.55; } }
+.energy-btns { display: flex; gap: 10px; justify-content: center; }
+.energy-btns .hud-btn { font-size: 17px; padding: 8px 16px; }
+.energy-btns .key { margin-left: 8px; padding: 1px 7px; border-radius: 5px; border: 1px solid var(--lichen); font-size: 13px; color: var(--sage); }
+.energy-low { margin: 0; text-align: center; font-size: 16px; color: #f0b2a8; }

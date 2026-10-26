@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay } from '@tapout/core';
-import { HUNT_TRAIL_LABELS, KEEPSAKES, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -111,7 +111,6 @@ function BodyRail({ view }: { view: View }) {
   );
   return (
     <aside className="rail rail-left">
-      {bar('energy', 'Energy', S.energy, S.maxEnergy, S.energy / S.maxEnergy < 0.22)}
       {BARS.map(([key, label]) => {
         const value = S[key] as number;
         return bar(key, label, value, 100, key === 'stress' ? value > 78 : value < 22);
@@ -174,9 +173,62 @@ function BottomBar({ view, onJournal }: { view: View; onJournal: () => void }) {
   );
 }
 
+// ---- energy, in the middle of the screen: the one number every action spends
+
+/** The energy an action would cost, read off its v12 detail line ("−6⚡ · 1h ..."). */
+export function energyCost(detail: string): number {
+  const m = /−(\d+)⚡/.exec(detail);
+  return m ? Number(m[1]) : 0;
+}
+
+function EnergyHud({ view, cost, onBed }: { view: View; cost: number; onBed: (offer: Offer) => void }) {
+  const S = view.state;
+  const max = Math.max(1, S.maxEnergy as number);
+  const energy = Math.max(0, S.energy as number);
+  const pct = (n: number) => `${Math.max(0, Math.min(100, (n / max) * 100))}%`;
+  const after = Math.max(0, energy - cost);
+  const low = energy / max < 0.22;
+  const rest = view.panel.find((e) => e.id === 'a-rest');
+  const sleep = specialOffer('sleep', view.hud);
+  const early = specialOffer('turnInEarly', view.hud);
+  const bed = sleep?.enabled ? sleep : early;
+  return (
+    <div className={`energy-hud${low ? ' low' : ''}`}>
+      <div className="energy-head">
+        <span>⚡ {ENERGY_HUD.label}</span>
+        <b>
+          {roundDisplay(energy)} <i>/ {roundDisplay(max)}</i>
+        </b>
+        {cost > 0 && (
+          <em>
+            → {roundDisplay(after)} {ENERGY_HUD.after}
+          </em>
+        )}
+      </div>
+      <div className="energy-bar">
+        <div className="energy-fill" style={{ width: pct(cost > 0 ? after : energy) }} />
+        {cost > 0 && <div className="energy-spend" style={{ left: pct(after), width: pct(Math.min(cost, energy)) }} />}
+      </div>
+      <div className="energy-btns">
+        {rest?.visible && (
+          <button className="hud-btn" disabled={!rest.enabled} title={`${rest.detail} (${ENERGY_HUD.restKey})`} onClick={() => session.click(rest.onclick)}>
+            🧘 {ENERGY_HUD.rest} <span className="key">{ENERGY_HUD.restKey}</span>
+          </button>
+        )}
+        {bed && (
+          <button className="hud-btn" disabled={!bed.enabled} title={bed.detail} onClick={() => onBed(bed)}>
+            {bed.label}
+          </button>
+        )}
+      </div>
+      {low && <p className="energy-low">{ENERGY_HUD.low}</p>}
+    </div>
+  );
+}
+
 // ---- the context panel, next to the station you clicked
 
-function ContextPanel({ station, view, onClose, onAct, onKeepsake, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onKeepsake: (note: IntroNote) => void; beside?: boolean }) {
+function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onKeepsake: (note: IntroNote) => void; onCost: (cost: number) => void; beside?: boolean }) {
   const offers = offersFor(station, view);
   const stores = STATION_STORES[station.id] ?? [];
   const xs = station.id === 'you' ? [1000] : station.hotspot.map((p) => p.x);
@@ -221,7 +273,14 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, beside }: { s
         station.id !== 'pack' && <p className="context-empty">Nothing to do here right now.</p>
       ) : (
         offers.map((offer) => (
-          <button key={offer.key} className="context-act" disabled={!offer.enabled} onClick={() => onAct(offer)}>
+          <button
+            key={offer.key}
+            className="context-act"
+            disabled={!offer.enabled}
+            onClick={() => onAct(offer)}
+            onMouseEnter={() => onCost(offer.enabled ? energyCost(offer.detail) : 0)}
+            onMouseLeave={() => onCost(0)}
+          >
             <span className="act-name">{offer.label}</span>
             {offer.detail && <span className="act-detail">{offer.detail}</span>}
           </button>
@@ -444,6 +503,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [night, setNight] = useState<Offer | null>(null);
   const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
   const [sound, setSound] = useState(false);
+  const [cost, setCost] = useState(0);
   // A new day starts behind a curtain: the night passes, then the dawn report.
   const [curtain, setCurtain] = useState<number | null>(null);
   const lastDay = useRef<number>(S.day);
@@ -468,6 +528,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
 
   // A new location starts with nothing open.
   useEffect(() => setSelected(null), [loc]);
+  useEffect(() => setCost(0), [selected, view.version]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -485,6 +546,9 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       } else if (e.key === 'Tab') {
         e.preventDefault();
         setSelected((current) => (current === 'you' ? null : 'you'));
+      } else if (e.key === 'r' || e.key === 'R') {
+        const rest = session.getView()?.panel.find((p) => p.id === 'a-rest');
+        if (rest?.visible && rest.enabled && !session.getView()?.modal) session.click(rest.onclick);
       } else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
       else if (e.key === 'm' || e.key === 'M') setMap((open) => !open);
       else if (e.key === 'F3') {
@@ -614,6 +678,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           </div>
           <TopBar view={view} onJournal={() => setJournal(true)} onMap={() => setMap(true)} onSound={() => setSound(true)} />
           <BodyRail view={view} />
+          {!frozen && <EnergyHud view={view} cost={station ? cost : 0} onBed={setNight} />}
           <StoresRail view={view} />
           <BottomBar view={view} onJournal={() => setJournal(true)} />
           <button className="you-btn" onClick={() => setSelected(selected === 'you' ? null : 'you')} title="Things only you need (Tab)">
@@ -622,7 +687,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} onKeepsake={(note) => {
             setSelected(null);
             setKeepsake(note);
-          }} beside />}
+          }} onCost={setCost} beside />}
           {keepsake && (
             <div className="overlay" onClick={() => setKeepsake(null)}>
               <div className="intro-note">
