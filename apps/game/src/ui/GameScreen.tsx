@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay } from '@tapout/core';
-import { ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
+import { ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -16,6 +16,7 @@ import { playUi } from '../audio/effects.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
 import { NoteBox } from './NoteBox.tsx';
+import { ResIcon, Tooltip, WithIcons, resourceTip } from './icons.tsx';
 
 const BARS = [
   ['health', 'Health'],
@@ -27,24 +28,28 @@ const BARS = [
 ] as const;
 
 const STORES = [
-  ['inv-meat', 'Raw meat'],
-  ['inv-arrows', 'Arrows'],
-  ['inv-raw', 'Raw water'],
-  ['inv-tinder', 'Tinder'],
-  ['inv-wood', 'Logs'],
-  ['inv-firewood', 'Firewood'],
-  ['inv-moss', 'Moss'],
-  ['inv-rocks', 'Rocks'],
-  ['inv-clay', 'Clay'],
-] as const;
+  ['inv-wood', 'wood'],
+  ['inv-firewood', 'firewood'],
+  ['inv-rocks', 'rocks'],
+  ['inv-moss', 'moss'],
+  ['inv-clay', 'clay'],
+  ['inv-tinder', 'tinder'],
+  ['inv-meat', 'meat'],
+  ['inv-arrows', 'arrows'],
+  ['inv-raw', 'raw'],
+] as const satisfies ReadonlyArray<readonly [string, ResourceId]>;
 
 /** What a station shows about your stores when you open it. */
-const STATION_STORES: Record<string, ReadonlyArray<readonly [string, string]>> = {
-  woodpile: [['inv-firewood', 'Firewood'], ['inv-wood', 'Logs']],
-  stock: [['inv-rocks', 'Rocks'], ['inv-moss', 'Moss'], ['inv-clay', 'Clay'], ['inv-tinder', 'Tinder']],
-  food: [['inv-meat', 'Raw meat']],
-  water: [['inv-raw', 'Raw water']],
+const STATION_STORES: Record<string, ReadonlyArray<readonly [string, ResourceId]>> = {
+  woodpile: [['inv-firewood', 'firewood'], ['inv-wood', 'wood']],
+  stock: [['inv-rocks', 'rocks'], ['inv-moss', 'moss'], ['inv-clay', 'clay'], ['inv-tinder', 'tinder']],
+  food: [['inv-meat', 'meat']],
+  water: [['inv-raw', 'raw']],
 };
+
+/** Camp builds that show their whole path when you open them. */
+const UPGRADES: Record<string, UpgradeId> = { shelter: 'shelter', fire: 'firepit', rack: 'rack', cache: 'cache' };
+const STOCK_OF: Record<string, string> = { wood: 'inv-wood', moss: 'inv-moss', clay: 'inv-clay', rocks: 'inv-rocks' };
 
 function Html({ html, className }: { html: string; className?: string }) {
   return <span className={className} dangerouslySetInnerHTML={{ __html: inertHandlers(html) }} />;
@@ -130,12 +135,14 @@ function StoresRail({ view }: { view: View }) {
   return (
     <aside className="rail rail-right">
       <h4>Stores</h4>
-      {STORES.map(([id, label]) => (
-        <div className="store" key={id}>
-          <span>{label}</span>
-          <b>{hudText(hud, id)}</b>
-        </div>
-      ))}
+      <div className="store-grid">
+        {STORES.map(([id, res]) => (
+          <div className="store-tile" key={id} data-tip={resourceTip(res)}>
+            <ResIcon id={res} size={30} />
+            <b>{hudText(hud, id)}</b>
+          </div>
+        ))}
+      </div>
       <h4>Eat and drink</h4>
       <div className="eat">
         {(['drink', 'eatBerries', 'eatCooked', 'eatSmoked', 'eatRation'] as const).map((kind) => {
@@ -253,13 +260,14 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
       </div>
       {stores.length > 0 && (
         <div className="context-stores">
-          {stores.map(([id, label]) => (
+          {stores.map(([id, res]) => (
             <span key={id}>
-              {label} <b>{hudText(view.hud, id)}</b>
+              <ResIcon id={res} /> <b>{hudText(view.hud, id)}</b>
             </span>
           ))}
         </div>
       )}
+      {UPGRADES[station.id] && <BuildPath id={UPGRADES[station.id]!} view={view} />}
       {station.id === 'pack' && (
         <div className="keepsakes">
           {Object.values(KEEPSAKES).map((note) => (
@@ -282,10 +290,51 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
             onMouseLeave={() => onCost(0)}
           >
             <span className="act-name">{offer.label}</span>
-            {offer.detail && <span className="act-detail">{offer.detail}</span>}
+            {offer.detail && (
+              <span className="act-detail">
+                <WithIcons text={offer.detail} />
+              </span>
+            )}
           </button>
         ))
       )}
+    </div>
+  );
+}
+
+/** Every tier of a camp build: what you have, what comes next, what each session takes. Facts only. */
+function BuildPath({ id, view }: { id: UpgradeId; view: View }) {
+  void view.version;
+  const path = upgradePath(id);
+  const names = UPGRADE_TEXT.names[id];
+  return (
+    <div className="build-path">
+      <h4>{UPGRADE_TEXT.title}</h4>
+      {path.steps.map((step) => (
+        <div key={step.tier} className={`build-step ${step.state}`}>
+          <span className="build-name">
+            {step.state === 'built' ? '✓ ' : ''}
+            {names[step.tier]}
+          </span>
+          {step.state === 'built' ? (
+            <span className="build-meta">{UPGRADE_TEXT.built}</span>
+          ) : (
+            <span className="build-meta">
+              {UPGRADE_TEXT.sessions(step.done, step.sessions)} · ⚡{step.energy} · {duration(Math.round(step.hours * 60))}
+              {Object.entries(step.needs).map(([m, n]) => {
+                const have = Number(hudText(view.hud, STOCK_OF[m]!)) || 0;
+                return (
+                  <span key={m} className={`build-need${step.state === 'next' && have < n ? ' short' : ''}`}>
+                    <ResIcon id={m as ResourceId} size={18} />
+                    {n}
+                  </span>
+                );
+              })}
+              {step.sessions > 1 && <i> {UPGRADE_TEXT.perSession}</i>}
+            </span>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -301,8 +350,8 @@ const RESULT_LABELS: Record<string, string> = {
   morale: 'Morale',
   stress: 'Stress',
   water: 'Clean water',
-  ...Object.fromEntries(STORES),
 };
+const RESULT_ICONS: Record<string, ResourceId> = Object.fromEntries(STORES);
 
 function duration(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -317,7 +366,7 @@ function ResultCard({ result }: { result: ActionResult }) {
     return (
       <span key={key} className={`tag ${good ? 'up' : 'down'}`}>
         {d > 0 ? '+' : '−'}
-        {Math.abs(d)} {RESULT_LABELS[key] ?? key}
+        {Math.abs(d)} {RESULT_ICONS[key] ? <ResIcon id={RESULT_ICONS[key]!} size={18} /> : (RESULT_LABELS[key] ?? key)}
       </span>
     );
   });
@@ -504,6 +553,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
   const [sound, setSound] = useState(false);
   const [cost, setCost] = useState(0);
+  const root = useRef<HTMLDivElement>(null);
   // A new day starts behind a curtain: the night passes, then the dawn report.
   const [curtain, setCurtain] = useState<number | null>(null);
   const lastDay = useRef<number>(S.day);
@@ -669,7 +719,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   };
 
   return (
-    <div className="game2">
+    <div className="game2" ref={root}>
       {guide ? <TableauHost input={input} events={events} /> : <WorldHost input={worldInput} events={worldEvents} />}
       {!guide && (
         <>
@@ -719,6 +769,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
           <Modal view={view} />
+          <Tooltip root={root} />
         </>
       )}
     </div>

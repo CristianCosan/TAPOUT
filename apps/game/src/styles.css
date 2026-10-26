@@ -363,3 +363,25 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .energy-btns .hud-btn { font-size: 17px; padding: 8px 16px; }
 .energy-btns .key { margin-left: 8px; padding: 1px 7px; border-radius: 5px; border: 1px solid var(--lichen); font-size: 13px; color: var(--sage); }
 .energy-low { margin: 0; text-align: center; font-size: 16px; color: #f0b2a8; }
+
+/* ---- resource pictures, their hover words, and the build path (rc.2) */
+.res-icon { display: inline-block; vertical-align: -4px; flex: none; }
+.store-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.store-tile { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; background: #121a14; border: 1px solid #223225; cursor: help; }
+.store-tile b { font-size: 19px; color: var(--bone); font-variant-numeric: tabular-nums; }
+.context-stores span { display: inline-flex; align-items: center; gap: 4px; cursor: help; }
+.act-detail .res-icon { margin: 0 2px; cursor: help; }
+.result-card .tag .res-icon { vertical-align: -4px; }
+.tooltip { position: absolute; z-index: 40; transform: translateX(-50%); max-width: 340px; padding: 8px 12px; border-radius: 8px; background: #0b100cf4; border: 1px solid #3a4a3c; color: var(--sage); font-size: 15px; line-height: 1.4; pointer-events: none; box-shadow: 0 6px 20px #0008; }
+.tooltip b { color: var(--bone); }
+.build-path { margin-top: 6px; padding-top: 10px; border-top: 1px solid #2a3a2c; display: flex; flex-direction: column; gap: 6px; }
+.build-path h4 { margin: 0; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+.build-step { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 8px; background: #121a14; }
+.build-step.built { opacity: 0.6; }
+.build-step.next { border: 1px solid #5a6a4c; }
+.build-step.later { opacity: 0.8; }
+.build-name { font-size: 17px; color: var(--bone); }
+.build-meta { font-size: 15px; color: var(--sage); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.build-meta i { font-style: normal; color: var(--dim); }
+.build-need { display: inline-flex; align-items: center; gap: 3px; color: var(--bone); cursor: help; }
+.build-need.short { color: #e3a07a; }
