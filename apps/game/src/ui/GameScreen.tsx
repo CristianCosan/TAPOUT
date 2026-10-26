@@ -7,6 +7,7 @@ import { session, type ActionResult, type View } from '../session.ts';
 import { TableauHost } from '../scene/TableauHost.tsx';
 import type { SceneInput } from '../scene/LocationScene.ts';
 import { WorldHost } from '../world/WorldHost.tsx';
+import { WinScene } from '../intro/WinScene.tsx';
 import type { WorldInput } from '../world/World.ts';
 import type { PropState } from '../world/props.ts';
 import { useSoundCues } from '../audio/cues.ts';
@@ -556,6 +557,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   // A new day starts behind a curtain: the night passes, then the dawn report.
   const [curtain, setCurtain] = useState<number | null>(null);
+  const [winSeen, setWinSeen] = useState(false);
   const lastDay = useRef<number>(S.day);
   useEffect(() => {
     if (S.day > lastDay.current) setCurtain(S.day);
@@ -698,6 +700,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     [loc, layout, hidden, selected, S.hour, S.weather, S.winter, S.day, props, frozen, S.birdsSilent],
   );
 
+  // rc.3: the win is a scene first; v12's cards wait underneath until it ends.
+  if (S.over && S.winAtMedCheck && !winSeen) return <WinScene weather={S.weather} winter={!!S.winter} tempC={ambientTempC()} onDone={() => setWinSeen(true)} />;
   if (view.endScreen && !view.modal) return <EndScreen view={view} />;
   const station = selected ? layout.stations.find((s) => s.id === selected) : null;
 

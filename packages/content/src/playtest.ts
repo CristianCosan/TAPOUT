@@ -20,3 +20,16 @@ export const PLAYTEST_TEXT = {
   body: (b: Record<string, number>, shelter: number, rivals: number) =>
     `health ${b.health}, food ${b.food}, water ${b.water}, warmth ${b.warmth}, energy ${b.energy}, morale ${b.morale}; shelter stage ${shelter}; ${rivals} rivals left`,
 } as const;
+
+// Test mode (rc.3, D-086): Sir's shortcuts for trying things out, in Settings during a run.
+export const TEST_TEXT = {
+  section: 'Test mode',
+  hint: 'For trying things out. These change the run you are in.',
+  infinite: { label: 'Infinite energy', hint: 'Energy tops back up after every action' },
+  materials: '+20 of every material',
+  restore: 'Fed, watered, warm, rested',
+  traps: 'Traps ready to check',
+  win: 'Win at the next med check',
+  winDone: 'Done. Sleep, and the next morning is the win.',
+  outside: 'Start or continue a run to use these.',
+} as const;

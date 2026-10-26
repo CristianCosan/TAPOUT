@@ -14,7 +14,10 @@ export function startEndingSequence(kind?){
     if (S.deathSource === 'violent') showViolentDeathStep1(); else showCollapseStep1();
     return;
   }
-  if (kind === 'win') showWinStep1(); else showLossStep1(kind);
+  // rc.3 (quietField): the app plays the arrival as a scene (Kerry, then Mara), so v12's two
+  // arrival cards are skipped and the ending picks up at the tour of camp.
+  if (kind === 'win') { if (RULES.quietField && S.winAtMedCheck) showWinStep3(); else showWinStep1(); }
+  else showLossStep1(kind);
 }
 export function showCollapseStep1(){
   const causeLine = S.lowestMoment ? S.lowestMoment.cause : 'the accumulated wear of the run';

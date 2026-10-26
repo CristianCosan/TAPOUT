@@ -35,13 +35,14 @@ import * as worry from './v12/worry.ts';
 import * as panel from './v12/panel.ts';
 import * as home from './v12/home.ts';
 import * as letters from './v12/letters.ts';
+import * as testMode from './v12/testMode.ts';
 
 export type { HomeThread } from './v12/home.ts';
 
 const MODULES = [
   breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, helpers,
   interior, medical, modifiers, night, person, recorder, resolve, rules, setup, shore, tags, threads,
-  travel, tuning, woods, worry, panel, home, letters,
+  travel, tuning, woods, worry, panel, home, letters, testMode,
 ];
 
 /** Every function v12 defines, by its v12 name. */

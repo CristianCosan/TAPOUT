@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CREDITS_TEXT, PLAYTEST_TEXT, SETTINGS_TEXT, SOUND_SETTINGS, THOUGHT_TEXT, TIPS_TEXT } from '@tapout/content';
+import { CREDITS_TEXT, PLAYTEST_TEXT, SETTINGS_TEXT, SOUND_SETTINGS, TEST_TEXT, THOUGHT_TEXT, TIPS_TEXT } from '@tapout/content';
 import { audio, type Channel } from '../audio/engine.ts';
 import { setSetting, useSettings } from '../settings.ts';
 import { notesText } from '../notes.ts';
@@ -81,7 +81,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <Toggle {...T.invertY} on={s.invertY} set={(on) => setSetting('invertY', on)} />
         <Toggle {...T.headBob} on={s.headBob} set={(on) => setSetting('headBob', on)} />
         <h4>{T.game}</h4>
-        <Toggle {...T.rivalNews} on={s.rivalNews} set={(on) => setSetting('rivalNews', on)} />
         <Toggle {...TIPS_TEXT.setting} on={s.tips} set={(on) => setSetting('tips', on)} />
         <Toggle {...THOUGHT_TEXT.subtitles} on={s.thoughtSubtitles} set={(on) => setSetting('thoughtSubtitles', on)} />
         <h4>{T.display}</h4>
@@ -92,6 +91,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <Toggle {...T.reduceFlashing} on={s.reduceFlashing} set={(on) => setSetting('reduceFlashing', on)} />
         <Toggle {...T.lowGraphics} on={s.lowGraphics} set={(on) => setSetting('lowGraphics', on)} />
         <PlaytestNotes />
+        <TestMode />
         <h4>{T.keys}</h4>
         <div className="key-list">
           {T.keyList.map(([k, what]) => (
@@ -106,6 +106,40 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** Shortcuts for testing a run (rc.3). Each is a core function; the panel only presses it. */
+function TestMode() {
+  const X = TEST_TEXT;
+  const [said, setSaid] = useState<string | null>(null);
+  const [, redraw] = useState(0);
+  const view = session.getView();
+  if (!view) {
+    return (
+      <>
+        <h4>{X.section}</h4>
+        <div className="sound-row notes-row"><span className="sound-name"><em>{X.outside}</em></span></div>
+      </>
+    );
+  }
+  const press = (handler: string, after?: string) => {
+    session.click(handler);
+    setSaid(after ?? null);
+    redraw((n) => n + 1);
+  };
+  return (
+    <>
+      <h4>{X.section}</h4>
+      <div className="sound-row notes-row"><span className="sound-name"><em>{said ?? X.hint}</em></span></div>
+      <Toggle {...X.infinite} on={!!view.state.testInfinite} set={(on) => press(`testSetInfinite(${on})`)} />
+      <div className="test-btns">
+        <button className="hud-btn" onClick={() => press('testMaterials()')}>{X.materials}</button>
+        <button className="hud-btn" onClick={() => press('testRestore()')}>{X.restore}</button>
+        <button className="hud-btn" onClick={() => press('testTrapsReady()')}>{X.traps}</button>
+        <button className="hud-btn" onClick={() => press('testWinNext()', X.winDone)}>{X.win}</button>
+      </div>
+    </>
   );
 }
 

@@ -13,6 +13,7 @@ import { curfewCapForLoc, log, sensitivityMul } from './setup.ts';
 import { homeTapCause } from './home.ts';
 import { RULES } from './rules.ts';
 import { S } from './state.ts';
+import { testTopUp } from './testMode.ts';
 import { TUNING, WEATHER } from './tuning.ts';
 import { render, showModal, toastRefusal, typewriterInto } from './ui.ts';
 // ============================== v6.2: personal threads ==============================
@@ -220,6 +221,7 @@ export function spendOrDebt(cost?, hrs?, cap?, tags=''){
 }
 export function afterAction(act?){
   if (act){ S.lastAct = act; S.acts[act] = (S.acts[act]||0) + 1; }
+  testTopUp();
   if (S.health <= 0){ if (!S.deathSource) S.deathSource = 'collapse'; endGame('dead'); return; }
   render();
 }

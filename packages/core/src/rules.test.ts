@@ -261,6 +261,8 @@ describe('rc.3 quiet field: you never learn who is left', () => {
     for (let d = 10; d < 30 && !ours.state.over; d++) night(ours, { day: d, health: 100, hunger: 100, thirst: 100, warmth: 100, morale: 100 });
     expect(ours.state.cause).toBe('win');
     expect(ours.state.winAtMedCheck).toBe(true);
+    // The arrival is the app's scene; the cards pick up at the tour of camp.
+    expect(modal).toContain('Showing Them');
   });
 });
 
@@ -311,5 +313,17 @@ describe('rc.3 dugout stages: dig, then walls and roof', () => {
       expect(run.state.stock.wood).toBe(rules === V12_RULES ? 14 : 16);
       expect(run.state.stock.moss).toBe(rules === V12_RULES ? 10 : 8);
     }
+  });
+});
+
+describe('rc.3 test mode (Settings)', () => {
+  it('tops energy back up after each action only while it is on', () => {
+    const run = start(TAPOUT_RULES);
+    Object.assign(run.state, { loc: 'camp', hour: 9 });
+    run.call('actFirewood');
+    expect(run.state.energy).toBeLessThan(run.state.maxEnergy);
+    run.call('testSetInfinite', true);
+    run.call('actFirewood');
+    expect(run.state.energy).toBe(run.state.maxEnergy);
   });
 });

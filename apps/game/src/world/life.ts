@@ -58,8 +58,20 @@ function bird(body: number, head: number, size: number, wing = body, neck = 0): 
 function flap(g: THREE.Group, angle: number): void {
   const l = g.getObjectByName('wl');
   const r = g.getObjectByName('wr');
-  if (l) l.rotation.z = -angle;
-  if (r) r.rotation.z = angle;
+  if (l) l.rotation.set(0, 0, -angle);
+  if (r) r.rotation.set(0, 0, angle);
+  l?.scale.setScalar(1);
+  r?.scale.setScalar(1);
+}
+
+/** Wings folded back along the body, the way a bird sits on the ground (rc.3: no flapping there). */
+function fold(g: THREE.Group): void {
+  const l = g.getObjectByName('wl');
+  const r = g.getObjectByName('wr');
+  if (l) l.rotation.set(0, Math.PI * 0.46, -0.25);
+  if (r) r.rotation.set(0, -Math.PI * 0.46, 0.25);
+  l?.scale.set(0.62, 1, 0.5);
+  r?.scale.set(0.62, 1, 0.5);
 }
 
 /** Points a bird along its velocity. */
@@ -396,7 +408,7 @@ export class Wildlife {
         const back = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.02, 0.36), mat(0x9a9c98));
         back.position.set(0, 0.15, 0.05);
         g.add(back);
-        flap(g, -0.05);
+        fold(g);
         const z = area.shoreZ - rand(14, 34);
         this.loons.push({ g, x: rand(-18, 18) + i * 3, z, heading: rand(0, 6.3), turn: 0, timer: rand(12, 40), under: false });
         this.root.add(g);
@@ -678,14 +690,14 @@ export class Wildlife {
       h.x = h.hop.fx + (h.hop.tx - h.hop.fx) * k;
       h.z = h.hop.fz + (h.hop.tz - h.hop.fz) * k;
       g.position.set(h.x, this.ground(h.x, h.z) + 0.1 + Math.sin(k * Math.PI) * 0.12, h.z);
-      flap(g, 0.3);
+      fold(g);
       if (k >= 1) h.hop = null;
     } else {
       h.timer -= dt;
       const peck = Math.max(0, Math.sin(h.timer * 14)) * 0.5;
       g.rotation.x = peck;
       g.position.set(h.x, this.ground(h.x, h.z) + 0.1, h.z);
-      flap(g, 0.05);
+      fold(g);
       if (h.timer <= 0) {
         g.rotation.x = 0;
         h.timer = rand(0.4, 1.6);

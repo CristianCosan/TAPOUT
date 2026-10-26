@@ -273,6 +273,8 @@ export const DUGOUT_STAGES: any = [
 export function dugoutStep(prog: number){ return RULES.dugoutStages ? DUGOUT_STAGES[prog] : DUGOUT_COST; }
 // rc.3 (campHarvest): how much fallen timber and loose stone lies around camp before it is picked clean.
 export const CAMP_HARVEST: any = { logs: 15, rocks: 12 };
+// rc.3 test mode (Settings): what one press of each shortcut gives.
+export const TEST_MODE: any = { materials: 20, soakedHours: 13 };
 export const ENERGY_SCHEDULE: any = [[3,120],[6,110],[9,100],[11,90],[15,80],[20,70],[25,60],[31,55],[38,50],[50,45],[65,40],[74,35],[89,30],[Infinity,20]];
 export function maxEnergyForDay(day?){
   if (day <= 5) return TUNING.energy.startArrival;

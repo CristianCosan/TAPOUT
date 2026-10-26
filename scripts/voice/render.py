@@ -30,20 +30,21 @@ from kokoro_onnx import Kokoro
 
 RENDER_VERSION = 2
 VOICE = 'am_michael'
-# The intro's other voices (rc.2): a narrator for what you see, Kerry the producer, Mum on the
-# answering machine. Lines without a voice are Dan.
-VOICES = {'narrator': 'bm_george', 'kerry': 'af_heart', 'mum': 'bf_isabella'}
-ROLE_SPEED = {'narrator': 0.9, 'kerry': 0.98, 'mum': 0.95}
+# The other voices: Kerry the producer, Mum on the answering machine (rc.2), Mara at the win
+# (rc.3). Lines without a voice are Dan. The rc.2 narrator is gone (rc.3, Sir: only people talking).
+VOICES = {'kerry': 'af_heart', 'mum': 'bf_isabella', 'mara': 'af_bella'}
+ROLE_SPEED = {'kerry': 0.98, 'mum': 0.95, 'mara': 0.97}
 SR = 24000
-SPEED = 0.88          # a thought is slower than speech
-LAST_SLOWER = 0.03    # the last sentence of a line slows a little more
+SPEED = 0.96          # rc.3: was 0.88; Sir found the slowdown too slow and warping
+LAST_SLOWER = 0.0     # rc.3: was 0.03, the extra slowing on the last sentence warped it most
+DAN_VERSION = 3       # bumps only Dan's lines, so Kerry and Mum keep their recordings
 GAP_SENTENCE = 0.45
 GAP_BEAT = 0.55       # ' / '
 GAP_LONG = 1.05       # ' // '
 COMMA_MIN = 0.30      # every pause the model leaves inside a sentence is at least this long
 LEAD, TAIL = 0.12, 0.40
 TARGET_RMS_DB = -21.0
-ALOUD_SPEED = 0.95    # said to the camera: out loud, closer to normal speech
+ALOUD_SPEED = 0.99    # said to the camera: out loud, closer to normal speech (rc.3: was 0.95)
 ALOUD_RMS_DB = -19.0
 
 
@@ -190,7 +191,7 @@ def main():
     keep = set()
     for line in lines:
         keep.add(line['id'])
-        h = hashlib.sha1(json.dumps([RENDER_VERSION, VOICE, line['say'], line.get('speed')] + ([line['style']] if line.get('style') else []) + ([line['voice']] if line.get('voice') else [])).encode()).hexdigest()[:12]
+        h = hashlib.sha1(json.dumps([RENDER_VERSION, VOICE, line['say'], line.get('speed')] + ([] if line.get('voice') else [DAN_VERSION]) + ([line['style']] if line.get('style') else []) + ([line['voice']] if line.get('voice') else [])).encode()).hexdigest()[:12]
         target = os.path.join(args.out, line['id'] + '.ogg')
         if args.only and line['id'] not in args.only:
             continue

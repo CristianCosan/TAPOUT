@@ -21,7 +21,7 @@ interface KitItem {
 const POOL = KIT_POOL as KitItem[];
 const PICKS = 10;
 const NOTES: Record<string, IntroNote> = INTRO_KITCHEN.notes;
-const NOTE_VOICE: Record<string, IntroClip[]> = INTRO_VOICE.notes;
+const NOTE_VOICE: Partial<Record<string, IntroClip[]>> = INTRO_VOICE.notes;
 
 /** Says a piece of the intro, cutting off whatever was being said. */
 function say(clips: readonly IntroClip[]): void {
@@ -42,7 +42,6 @@ export function Intro({ onBegin, onSkip }: { onBegin: (kit: string[]) => void; o
 
   useEffect(() => {
     if (phase !== 'opening') return;
-    say(INTRO_VOICE.opening);
     const t = window.setTimeout(() => setPhase('kitchen'), 6800);
     return () => window.clearTimeout(t);
   }, [phase]);
