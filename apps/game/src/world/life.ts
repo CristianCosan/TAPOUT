@@ -358,6 +358,10 @@ export class Wildlife {
   private owl = bird(0x6a5a48, 0x5e5040, 0.75, 0x7a6a56);
   private owlFlight: { from: THREE.Vector3; to: THREE.Vector3; t: number; length: number } | null = null;
   private owlWait = rand(30, 90);
+  /** Open water's surface: lower when you look down on the lake from a perched camp. */
+  private get waterY(): number {
+    return WATER_Y - (this.area.perch?.drop ?? 0);
+  }
 
   constructor(
     private readonly area: WorldArea,
@@ -568,7 +572,7 @@ export class Wildlife {
         }
       }
       const sink = l.under ? -0.6 : Math.sin(t * 1.4 + l.x) * 0.02;
-      l.g.position.set(l.x, WATER_Y + 0.05 + sink, l.z);
+      l.g.position.set(l.x, this.waterY + 0.05 + sink, l.z);
       l.g.rotation.y = l.heading;
       l.g.visible = !l.under;
     }
@@ -800,7 +804,7 @@ export class Wildlife {
     }
     if (b.state === 'swim') {
       b.x += b.dir * 0.75 * dt;
-      g.position.set(b.x, WATER_Y + 0.03 + Math.sin(t * 2.2) * 0.012, b.z);
+      g.position.set(b.x, this.waterY + 0.03 + Math.sin(t * 2.2) * 0.012, b.z);
       g.rotation.y = b.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
       wake.children.forEach((a) => ((a as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.28 + Math.sin(t * 3) * 0.06);
       const edge = s.player.z < shoreZ + 3;
@@ -927,7 +931,7 @@ export class Wildlife {
         e.state = 'dive';
         e.timer = 0;
         e.from.copy(g.position);
-        e.to.set(e.cx + rand(-4, 4), WATER_Y + 0.3, e.cz + rand(-4, 4));
+        e.to.set(e.cx + rand(-4, 4), this.waterY + 0.3, e.cz + rand(-4, 4));
       }
       return;
     }
@@ -942,7 +946,7 @@ export class Wildlife {
       if (k >= 1) {
         e.state = 'splash';
         e.timer = 0;
-        e.splash.position.set(e.to.x, WATER_Y + 0.02, e.to.z);
+        e.splash.position.set(e.to.x, this.waterY + 0.02, e.to.z);
         e.splash.visible = true;
         this.call('splash', e.to);
       }

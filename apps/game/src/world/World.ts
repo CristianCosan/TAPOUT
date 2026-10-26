@@ -555,7 +555,7 @@ export class World {
         new THREE.MeshStandardMaterial({ color: ice ? 0xc4d4dc : 0x24404e, roughness: ice ? 0.45 : 0.08, metalness: ice ? 0 : 0.25 }),
       );
       w.rotation.x = -Math.PI / 2;
-      w.position.set(0, -0.22, area.shoreZ - 200);
+      w.position.set(0, -0.22 - (area.perch?.drop ?? 0), area.shoreZ - 200);
       w.receiveShadow = true;
       this.water = w;
       this.areaRoot.add(w);
@@ -574,6 +574,11 @@ export class World {
     this.areaRoot.add(this.life.root);
   }
 
+  /** How far the lake lies below the place you stand (a perched camp looks down on it). */
+  private waterDrop(): number {
+    return this.input?.area.perch?.drop ?? 0;
+  }
+
   /** Ground height: flat where you walk, rising into hills, dropping into the lake. */
   private ground(area: WorldArea, x: number, z: number): number {
     const r = Math.hypot(x, z);
@@ -585,6 +590,7 @@ export class World {
       const lake = smooth(area.shoreZ, area.shoreZ - 5, z) * (1 - smooth(far + 8, far, z));
       h = h * (1 - lake) - 1.4 * lake;
     }
+    if (area.perch && area.shoreZ !== undefined) h -= area.perch.drop * smooth(area.perch.fromZ, area.shoreZ + 2, z);
     return h;
   }
 
@@ -642,6 +648,9 @@ export class World {
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
       if (blocked(x, z)) continue;
+      // A perch keeps a thin window of trees towards the lake, so you see the shore below.
+      const thin = area.perch && z < area.perch.fromZ + 4 && Math.abs(x) < -z * area.perch.window && rnd() > area.perch.keep;
+      if (thin) continue;
       spots.push({ x, z, s: 0.7 + rnd() * 0.7, birch: rnd() < area.trees.birchShare });
     }
     // The far shore across the lake: a band of timber.
@@ -786,6 +795,42 @@ export class World {
       }
       m.receiveShadow = true;
       g.add(m);
+    }
+    if (area.id === 'camp') {
+      // Logs and rocks lying about the clearing: fallen timber and boulders the camp grew up around.
+      const bark = mat(winter ? 0x8a8278 : 0x5a4632);
+      const stone = mat(winter ? 0xb4bcc0 : 0x7c7a72);
+      for (let i = 0, n = 0; n < 7 && i < 60; i++) {
+        const a = rnd() * Math.PI * 2;
+        const r = 8.5 + rnd() * 4;
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        if (nearStation(x, z, 2)) continue;
+        n++;
+        const len = 2.4 + rnd() * 2.6;
+        const thick = 0.16 + rnd() * 0.12;
+        const log = new THREE.Mesh(rough(new THREE.CylinderGeometry(thick * 0.85, thick, len, 7), 0.03, i + 40), bark);
+        log.position.set(x, ground(x, z) + thick * 0.8, z);
+        log.rotation.set(0, rnd() * Math.PI, Math.PI / 2);
+        log.castShadow = true;
+        log.receiveShadow = true;
+        g.add(log);
+      }
+      for (let i = 0, n = 0; n < 9 && i < 60; i++) {
+        const a = rnd() * Math.PI * 2;
+        const r = 6 + rnd() * 7;
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        if (nearStation(x, z, 1.4)) continue;
+        n++;
+        const sz = 0.2 + rnd() * rnd() * 0.7;
+        const rock = new THREE.Mesh(rough(new THREE.DodecahedronGeometry(sz, 0), sz * 0.35, i + 140).scale(1, 0.7, 1), stone);
+        rock.position.set(x, ground(x, z) + sz * 0.3, z);
+        rock.rotation.set(rnd(), rnd() * 3, rnd());
+        rock.castShadow = true;
+        rock.receiveShadow = true;
+        g.add(rock);
+      }
     }
     if (area.id === 'shore' && area.shoreZ !== undefined && !winter) {
       // Reeds standing in the shallows either side of the creek mouth.
@@ -1304,7 +1349,7 @@ export class World {
     // start where the line from you towards the moon meets the water's edge
     const back = Math.max(0, (this.pos.z - (shoreZ! - 1)) / -uz);
     const length = 160;
-    this.glitter.position.set(this.pos.x + ux * back, -0.2, this.pos.z + uz * back);
+    this.glitter.position.set(this.pos.x + ux * back, -0.2 - this.waterDrop(), this.pos.z + uz * back);
     this.glitter.rotation.set(0, Math.atan2(-ux, -uz), 0);
     this.glitter.scale.set(14, 1, length);
     this.glitter.material.uniforms.time!.value = this.time;
@@ -1633,7 +1678,7 @@ export class World {
       const w = 14 + rnd() * 18;
       m.scale.set(w, w * 0.35, 1);
       m.rotation.x = -Math.PI / 2 + 0.25;
-      m.position.set((rnd() - 0.5) * 90, 0.3 + rnd() * 0.6, shoreZ - 6 - rnd() * 45);
+      m.position.set((rnd() - 0.5) * 90, 0.3 + rnd() * 0.6 - this.waterDrop(), shoreZ - 6 - rnd() * 45);
       m.userData.drift = 0.15 + rnd() * 0.25;
       m.userData.base = m.position.x;
       group.add(m);
@@ -1678,7 +1723,7 @@ export class World {
 
   private ring(x: number, z: number, size: number, life: number): void {
     const r = (this.rings!.children as THREE.Mesh[]).find((m) => !m.visible) ?? (this.rings!.children[0] as THREE.Mesh);
-    r.position.set(x, -0.2, z);
+    r.position.set(x, -0.2 - this.waterDrop(), z);
     r.userData.age = 0;
     r.userData.life = life;
     r.userData.size = size;
@@ -1701,7 +1746,8 @@ export class World {
       const dist = Math.hypot(x - eye.x, z - eye.z);
       if (dist < 30) this.sound.plop(1 / (1 + dist / 8));
     }
-    if (raining) {
+    // Rain rings only where you stand by the water, not from a camp up the hill.
+    if (raining && eye.z - shoreZ < 12) {
       this.nextDrop -= dt;
       while (this.nextDrop <= 0) {
         this.nextDrop += w === 'storm' ? 0.03 : 0.06;

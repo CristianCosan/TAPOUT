@@ -24,6 +24,11 @@ export interface WorldArea {
   walkRadius: number;
   /** The lake's near edge (z), if the lake is in view; open water beyond it. */
   shoreZ?: number;
+  /**
+   * A place that sits up above the water (rc.2, camp): the ground falls `drop` metres from
+   * `fromZ` down to the shore, and the trees thin out in a window towards the lake.
+   */
+  perch?: { drop: number; fromZ: number; window: number; keep: number };
   /** Trees scattered around, outside the clearing. */
   trees: { count: number; clearing: number; outer: number; seed: number; birchShare: number };
   rocks: { count: number; seed: number };
@@ -35,8 +40,11 @@ export const WORLD: Readonly<Record<LocationId, WorldArea>> = {
     id: 'camp',
     spawn: { x: 0, z: 5.5, look: 0 },
     walkRadius: 13,
-    shoreZ: -13,
-    trees: { count: 150, clearing: 15, outer: 55, seed: 11, birchShare: 0.15 },
+    // Camp sits a little uphill in the timber, out of the wind and above any high water, with
+    // the shore in sight below (Sir, rc.2).
+    shoreZ: -34,
+    perch: { drop: 10, fromZ: -12, window: 0.6, keep: 0.15 },
+    trees: { count: 230, clearing: 14, outer: 55, seed: 11, birchShare: 0.15 },
     rocks: { count: 14, seed: 4 },
     stations: {
       fire: { x: 0, z: 0, radius: 1.1 },
