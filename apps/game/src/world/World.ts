@@ -11,6 +11,7 @@ import { buildProp, propKey, type PropState } from './props.ts';
 import { audio } from '../audio/engine.ts';
 import { settings } from '../settings.ts';
 import { Wildlife } from './life.ts';
+import { Hands, MOTIONS } from './hands.ts';
 import { Ambience } from './sound.ts';
 
 export interface WorldInput {
@@ -232,6 +233,7 @@ export class World {
   private pitch = 0;
   private keys = new Set<string>();
   private bob = 0;
+  private hands = new Hands();
   private locked = false;
   private mouse: { x: number; y: number } | null = null;
   private hovered: Hover | null = null;
@@ -271,6 +273,8 @@ export class World {
 
     this.camera = new THREE.PerspectiveCamera(FIRST_PERSON.fov, 1920 / 1080, 0.05, 900);
     this.camera.rotation.order = 'YXZ';
+    this.camera.add(this.hands.root);
+    this.scene.add(this.camera);
 
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -499,6 +503,12 @@ export class World {
   birds() {
     this.life?.showDeer();
     return this.life?.where() ?? [];
+  }
+
+  /** Shows the motion for a v12 action you just did: chopping, gathering, casting a line. */
+  perform(fn: string): void {
+    const motion = MOTIONS[fn];
+    if (motion) this.hands.play(motion);
   }
 
   /** Stands you somewhere and points you at a spot. For tests and screenshots. */
@@ -1146,8 +1156,10 @@ export class World {
       }
     }
     const eye = this.eye();
+    const doing = this.hands.update(dt);
     this.camera.position.copy(eye);
-    this.camera.rotation.set(this.pitch, this.yaw, 0);
+    this.camera.position.y += doing.drop;
+    this.camera.rotation.set(this.pitch + doing.pitch, this.yaw + doing.yaw, 0);
 
     // Walking away from what you had open puts it away.
     if (input.selected) {
