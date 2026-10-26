@@ -18,6 +18,8 @@ describe('location layouts', () => {
 
     it(`${id}: actions belong here`, () => {
       const here = new Set([...BUTTONS, ...LETTER_BUTTONS].filter((b) => b.loc === id || b.loc === 'all').map((b) => b.id));
+      // rc.3 (campHarvest): logs and rocks can also be gathered at camp.
+      if (id === 'camp') ['a-wood', 'a-rocks'].forEach((a) => here.add(a));
       const stray = layout.stations.flatMap((s) => s.actions).filter((a) => !here.has(a));
       expect(stray).toEqual([]);
     });

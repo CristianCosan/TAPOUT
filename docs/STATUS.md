@@ -198,7 +198,9 @@ A release job in CI puts every build merged into main on the GitHub release page
 
 **1.0.0-rc.2** answers Sir's first five minutes on rc.1 (D-075 to D-080). Energy rules were never changed (parity proves it); what had drifted was the screen: Rest sat behind Tab and turning in only worked at the shelter. Energy is now the big meter in the middle with Rest (R) and turn-in beside it in every place. Camp sits uphill in the trees above the shore with logs and rocks about; camp builds show their whole build path; every resource has a picture with hover words; every action shows a short first-person motion; and the intro is spoken (narrator, Kerry, Mum), with Dan saying why he chose the camp spot.
 
-**Next:** Sir plays rc.2 (F8 notes), then rc.3 or launch.
+**1.0.0-rc.3** answers Sir's rc.2 run (D-081 to D-087). You never learn who is left; medics come from day 14 every six to eight days, and the win arrives as a med check that becomes a scene with Kerry and Mara. Traps need 12 hours before a catch. Camp has fallen timber and loose stones to gather. The dugout is dug, then walled and roofed. Build panels show routes and stages apart from uses. No emojis: every icon is the game's own. Only people talking are voiced; Dan is faster. Test mode in Settings. Signposts walk straight; cards restyled; smaller energy meter; birds sit still.
+
+**Next:** Sir plays rc.3 (F8 notes), then rc.4 or launch.
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

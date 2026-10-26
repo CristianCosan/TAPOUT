@@ -7,6 +7,7 @@ import { floatPlane, producer } from './figures.ts';
 import { World, type WorldInput } from '../world/World.ts';
 import type { PropState } from '../world/props.ts';
 import { plainWords, speakPieces, stopThought } from '../audio/thoughts.ts';
+import { Txt } from '../ui/icons.tsx';
 
 interface KitItem {
   id: string;
@@ -182,7 +183,7 @@ function KitchenStage({ onZip }: { onZip: (ids: string[]) => void }) {
           {item ? (
             <>
               <b>
-                {item.icon} {item.label}
+                <Txt text={item.icon} /> {item.label}
               </b>
               <span>{on ? `Packed: ${item.has}` : `Without it: ${item.without}`}</span>
               {on && <em>{INTRO_KITCHEN.unpack}</em>}

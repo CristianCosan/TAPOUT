@@ -92,6 +92,10 @@ export const GLYPHS = {
   wash: `<ellipse cx="12" cy="15" rx="7" ry="4.5" fill="${C.bone}"/><circle cx="8" cy="8" r="2" fill="none" stroke="${C.water}" stroke-width="1.2"/><circle cx="14" cy="6" r="1.4" fill="none" stroke="${C.water}" stroke-width="1.2"/>`,
   pack: `<rect x="5" y="7" width="14" height="14" rx="3" fill="${C.moss}"/><path d="M9 7V5a3 3 0 0 1 6 0v2" stroke="${C.moss}" stroke-width="1.8" fill="none"/><rect x="8" y="12" width="8" height="5" rx="1" fill="#3f6a2c"/>`,
   sick: `<circle cx="12" cy="12" r="8" fill="#9ab070"/><path d="M8 15c1.5-1.5 6.5-1.5 8 0" stroke="#3f5a2c" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M8 9.5l2 1M16 9.5l-2 1" stroke="#3f5a2c" stroke-width="1.5" stroke-linecap="round"/>`,
+  bag: `<rect x="3" y="8" width="18" height="9" rx="4.5" fill="#3a5a7a"/><path d="M8 8v9M13 8v9" stroke="#2a4058" stroke-width="1"/><rect x="17" y="9" width="3" height="7" rx="1.5" fill="#2a4058"/>`,
+  mace: `<rect x="8" y="8" width="8" height="13" rx="2" fill="${C.blood}"/><rect x="9.5" y="4" width="5" height="4" rx="1" fill="${C.stoneDark}"/><path d="M14.5 5h3" stroke="${C.stoneDark}" stroke-width="1.6"/><rect x="9" y="12" width="6" height="4" fill="${C.flame}"/>`,
+  salt: `<path d="M7 9h10l-1 11H8z" fill="${C.bone}"/><path d="M7 9c0-3 2-5 5-5s5 2 5 5z" fill="${C.steel}"/><circle cx="10" cy="6.5" r="0.6" fill="${C.stoneDark}"/><circle cx="12" cy="5.5" r="0.6" fill="${C.stoneDark}"/><circle cx="14" cy="6.5" r="0.6" fill="${C.stoneDark}"/>`,
+  tarp: `<path d="M2 18 12 6l10 12z" fill="#3a6a8a"/><path d="M12 6v12M2 18h20" stroke="#2a4a62" stroke-width="1.2"/><path d="M2 18l-1 3M22 18l1 3" stroke="${C.wood}" stroke-width="1.2"/>`,
   tooth: `<path d="M6 4c2-1 4 0 6 0s4-1 6 0c2 2 1 6 0 8l-1 8c-1 1-2 0-2-1l-1-5h-4l-1 5c0 1-1 2-2 1l-1-8c-1-2-2-6 0-8z" fill="${C.bone}"/>`,
 } as const;
 
@@ -99,13 +103,13 @@ export type GlyphId = keyof typeof GLYPHS;
 
 /** v12's emojis, by meaning. Anything not listed here is decoration and is dropped. */
 const EMOJI: Record<string, GlyphId> = {
-  '⚡': 'energy', '🔋': 'energy', '🧘': 'rest', '😪': 'rest', '🌙': 'sleep', '💤': 'sleep', '😴': 'sleep', '🛌': 'comfort', '🛏': 'comfort',
+  '⚡': 'energy', '🔋': 'energy', '🧘': 'rest', '😪': 'rest', '🌙': 'sleep', '💤': 'sleep', '😴': 'sleep', '🛌': 'comfort', '🛏': 'bag',
   '🔥': 'fire', '🎇': 'fire', '♨️': 'boil', '💧': 'water', '🪣': 'water', '🏞': 'water', '🏺': 'water', '💦': 'wet', '🌊': 'wet',
   '☀️': 'clear', '🌅': 'clear', '🌄': 'clear', '☁️': 'overcast', '🌧': 'rain', '🌨': 'snow', '❄️': 'cold', '🥶': 'cold', '🧊': 'ice',
   '⛈': 'storm', '🌫': 'fog', '🌬': 'wind', '🌡': 'temp', '🥵': 'temp', '⚖️': 'weight',
-  '🏕': 'shelter', '⛺': 'shelter', '🏗': 'build', '🛠': 'build', '🔧': 'build', '⛏': 'dig', '⛰': 'firepit', '🗃': 'cache', '📦': 'cache', '🧶': 'insulate', '🪑': 'comfort',
+  '🏕': 'shelter', '⛺': 'tarp', '🏗': 'build', '🛠': 'build', '🔧': 'build', '⛏': 'dig', '⛰': 'firepit', '🗃': 'cache', '📦': 'cache', '🧶': 'insulate', '🪑': 'comfort',
   '🩹': 'injury', '🤕': 'injury', '🦴': 'injury', '🩸': 'blood', '🩺': 'med', '🤢': 'sick', '🤧': 'sick', '🦷': 'tooth',
-  '🍲': 'food', '🥫': 'rations', '🧂': 'rations', '🫐': 'berries', '🍇': 'berries', '🧺': 'berries', '🥩': 'meat', '🥓': 'smoked', '🐟': 'fish',
+  '🍲': 'food', '🥫': 'rations', '🧂': 'salt', '🫐': 'berries', '🍇': 'berries', '🧺': 'berries', '🥩': 'meat', '🥓': 'smoked', '🐟': 'fish',
   '🪵': 'wood', '🪨': 'rocks', '🌿': 'moss', '🧱': 'clay', '🟫': 'clay', '🌾': 'tinder', '🪓': 'axe', '🪚': 'saw', '🔪': 'knife',
   '🪤': 'snare', '➰': 'snare', '🎣': 'line', '🎏': 'line', '🕸': 'net', '🏹': 'bow', '🐾': 'tracks', '👀': 'look', '👁': 'look', '🔎': 'look', '🔭': 'scout', '👂': 'look',
   '🐻': 'animal', '🦡': 'animal', '🦊': 'animal', '🦝': 'animal', '🐿': 'animal', '🦌': 'animal', '🫎': 'animal', '🐺': 'wolf',
@@ -113,7 +117,7 @@ const EMOJI: Record<string, GlyphId> = {
   '📞': 'phone', '📻': 'radio', '🎥': 'camera', '✉️': 'letter', '🏠': 'home', '🗺': 'map', '📍': 'map', '🚶': 'walk', '🥾': 'walk', '🚚': 'pack', '🎒': 'pack',
   '🕒': 'time', '⏳': 'wait', '👥': 'people', '⚠️': 'warning', '🚫': 'warning', '✨': 'star', '🌠': 'star', '🍀': 'star',
   '🎶': 'music', '🪈': 'music', '💭': 'thought', '🗣': 'thought', '😞': 'low', '😔': 'low', '😖': 'low', '😩': 'low', '😨': 'low', '💔': 'low', '💪': 'morale', '🤝': 'morale',
-  '🧼': 'wash', '🧴': 'wash', '🌑': 'sleep',
+  '🧼': 'wash', '🧴': 'mace', '🌑': 'sleep',
 };
 
 /** Every emoji v12 can show (and a few more), with any variation selector or joiner. */

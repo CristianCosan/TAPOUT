@@ -1,7 +1,8 @@
 // Every resource as a small picture drawn in code (rc.2). Hovering one says what it is for.
 
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { RESOURCES, RESOURCE_WORDS, type ResourceId } from '@tapout/content';
+import { GLYPHS, glyphText, type GlyphId } from './glyphs.ts';
 
 const PICTURES: Record<ResourceId, ReactNode> = {
   wood: (
@@ -114,6 +115,16 @@ export function ResIcon({ id, size = 22 }: { id: ResourceId; size?: number }) {
   );
 }
 
+/** One of the game's own icons (rc.3), in place of an emoji. */
+export function Glyph({ id, size }: { id: GlyphId; size?: number }) {
+  return <svg className="glyph" viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" dangerouslySetInnerHTML={{ __html: GLYPHS[id] }} />;
+}
+
+/** Text whose emojis are drawn as the game's own icons. */
+export function Txt({ text }: { text: string }) {
+  return <span dangerouslySetInnerHTML={{ __html: glyphText(text) }} />;
+}
+
 /** v12's own words with each resource name swapped for its picture. */
 export function WithIcons({ text }: { text: string }) {
   let parts: Array<string | { icon: ResourceId }> = [text];
@@ -126,7 +137,7 @@ export function WithIcons({ text }: { text: string }) {
   }
   return (
     <>
-      {parts.map((p, i) => (typeof p === 'string' ? <Fragment key={i}>{p}</Fragment> : <ResIcon key={i} id={p.icon} size={18} />))}
+      {parts.map((p, i) => (typeof p === 'string' ? <Txt key={i} text={p} /> : <ResIcon key={i} id={p.icon} size={18} />))}
     </>
   );
 }

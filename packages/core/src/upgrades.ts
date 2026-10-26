@@ -3,9 +3,10 @@
 
 import { S } from './v12/state.ts';
 import { eCost, eTime } from './v12/cost.ts';
-import { BUILD_NEED, CACHE_COST, CACHE_NEED, FIREPIT_COST, FIREPIT_NEED, RACK_COST, SHELTER_COST } from './v12/tuning.ts';
+import { BUILD_NEED, CACHE_COST, CACHE_NEED, DUGOUT_NEED, DUGOUT_STAGES, FIREPIT_COST, FIREPIT_NEED, RACK_COST, SHELTER_COST, dugoutStep } from './v12/tuning.ts';
+import { RULES } from './v12/rules.ts';
 
-export type UpgradeId = 'shelter' | 'firepit' | 'rack' | 'cache';
+export type UpgradeId = 'shelter' | 'dugout' | 'firepit' | 'rack' | 'cache';
 export type Material = 'wood' | 'moss' | 'clay' | 'rocks';
 
 export interface UpgradeStep {
@@ -56,6 +57,8 @@ export function upgradePath(id: UpgradeId): UpgradePath {
   switch (id) {
     case 'shelter':
       return { id, current: S.structure, steps: steps(SHELTER_COST, BUILD_NEED, S.structure, S.buildProg, 1) };
+    case 'dugout':
+      return dugoutPath();
     case 'firepit':
       return { id, current: S.firepitTier, steps: steps(FIREPIT_COST, FIREPIT_NEED, S.firepitTier, S.firepitProg, 0) };
     case 'rack':
@@ -63,4 +66,24 @@ export function upgradePath(id: UpgradeId): UpgradePath {
     case 'cache':
       return { id, current: S.cacheTier, steps: steps(CACHE_COST, CACHE_NEED, S.cacheTier, S.cacheProg, 0) };
   }
+}
+
+/** The earth dugout: one long dig in v12; in TAP / OUT (dugoutStages) the pit, then walls, then a roof. */
+function dugoutPath(): UpgradePath {
+  const prog: number = S.dugout ? DUGOUT_NEED : S.dugoutProg;
+  if (!RULES.dugoutStages) {
+    const c = dugoutStep(0);
+    const current = S.dugout ? 1 : 0;
+    return { id: 'dugout', current, steps: steps([c], [DUGOUT_NEED], current, prog, 1) };
+  }
+  // Consecutive sessions of the same stage are one step.
+  const groups: Array<{ cost: Cost; sessions: number; from: number }> = [];
+  (DUGOUT_STAGES as Array<Cost & { stage: string }>).forEach((c, i) => {
+    const last = groups[groups.length - 1];
+    if (last && (DUGOUT_STAGES as Array<{ stage: string }>)[last.from]!.stage === c.stage) last.sessions += 1;
+    else groups.push({ cost: c, sessions: 1, from: i });
+  });
+  const current = groups.filter((g) => prog >= g.from + g.sessions).length;
+  const inStage = groups[current] ? prog - groups[current].from : 0;
+  return { id: 'dugout', current, steps: steps(groups.map((g) => g.cost), groups.map((g) => g.sessions), current, inStage, 1) };
 }

@@ -58,6 +58,8 @@ export const WORLD: Readonly<Record<LocationId, WorldArea>> = {
       comforts: { x: 3.4, z: 2.4, face: -60, radius: 1.0 },
       stump: { x: -2.4, z: 3.0, radius: 0.5 },
       woodpile: { x: 7.2, z: 1.2, face: -90, radius: 1.3 },
+      fallen: { x: -10.6, z: 0.8, face: 80, radius: 1.6 },
+      stones: { x: 10.6, z: -1.6, face: -80, radius: 1.0 },
       food: { x: 5.4, z: 4.6, face: -45, radius: 0.5 },
       stock: { x: 8.3, z: 4.6, face: -70, radius: 0.9 },
       killsite: { x: 1.5, z: 7.5, radius: 0.9 },

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
-import { ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay, upgradePath } from '@tapout/core';
+import { BUILD_STATIONS, ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -17,7 +17,8 @@ import { playUi } from '../audio/effects.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
 import { NoteBox } from './NoteBox.tsx';
-import { ResIcon, Tooltip, WithIcons, resourceTip } from './icons.tsx';
+import { Glyph, ResIcon, Tooltip, Txt, WithIcons, resourceTip } from './icons.tsx';
+import { glyphHtml, noEmoji } from './glyphs.ts';
 
 const BARS = [
   ['health', 'Health'],
@@ -48,8 +49,6 @@ const STATION_STORES: Record<string, ReadonlyArray<readonly [string, ResourceId]
   water: [['inv-raw', 'raw']],
 };
 
-/** Camp builds that show their whole path when you open them. */
-const UPGRADES: Record<string, UpgradeId> = { shelter: 'shelter', fire: 'firepit', rack: 'rack', cache: 'cache' };
 const STOCK_OF: Record<string, string> = { wood: 'inv-wood', moss: 'inv-moss', clay: 'inv-clay', rocks: 'inv-rocks' };
 
 function Html({ html, className }: { html: string; className?: string }) {
@@ -61,7 +60,8 @@ function Html({ html, className }: { html: string; className?: string }) {
  * the attribute is renamed before the HTML is mounted and clicks are routed through the port.
  */
 function inertHandlers(html: string): string {
-  return html.replace(/\sonclick="/g, ' data-handler="');
+  // rc.3: and every emoji becomes one of the game's own icons.
+  return glyphHtml(html.replace(/\sonclick="/g, ' data-handler="'));
 }
 
 function onHandlerClick(event: MouseEvent) {
@@ -81,7 +81,7 @@ function TopBar({ view, onJournal, onMap, onSound }: { view: View; onJournal: ()
         TAP <span className="slash">/</span> OUT
       </div>
       <div className="pills">
-        {['pillDay', 'pillWx', 'pillTemp', 'pillRivals', 'pillWeight'].map((id) => (
+        {['pillDay', 'pillWx', 'pillTemp', 'pillWeight'].map((id) => (
           <Html key={id} className="pill" html={hudText(hud, id)} />
         ))}
       </div>
@@ -95,7 +95,7 @@ function TopBar({ view, onJournal, onMap, onSound }: { view: View; onJournal: ()
         Settings
       </button>
       <button className="hud-btn phone" disabled={hud.get('tapBtn')?.disabled} onClick={() => session.click('confirmTapOut()')}>
-        📞 Sat phone
+        <Glyph id="phone" /> Sat phone
       </button>
     </header>
   );
@@ -150,7 +150,7 @@ function StoresRail({ view }: { view: View }) {
           const offer = specialOffer(kind, hud);
           return offer ? (
             <button key={kind} className="chip-btn" disabled={!offer.enabled} onClick={() => session.click(offer.handler)}>
-              {offer.label}
+              <Txt text={offer.label} />
             </button>
           ) : null;
         })}
@@ -203,7 +203,9 @@ function EnergyHud({ view, cost, onBed }: { view: View; cost: number; onBed: (of
   return (
     <div className={`energy-hud${low ? ' low' : ''}`}>
       <div className="energy-head">
-        <span>⚡ {ENERGY_HUD.label}</span>
+        <span>
+          <Glyph id="energy" /> {ENERGY_HUD.label}
+        </span>
         <b>
           {roundDisplay(energy)} <i>/ {roundDisplay(max)}</i>
         </b>
@@ -219,13 +221,13 @@ function EnergyHud({ view, cost, onBed }: { view: View; cost: number; onBed: (of
       </div>
       <div className="energy-btns">
         {rest?.visible && (
-          <button className="hud-btn" disabled={!rest.enabled} title={`${rest.detail} (${ENERGY_HUD.restKey})`} onClick={() => session.click(rest.onclick)}>
-            🧘 {ENERGY_HUD.rest} <span className="key">{ENERGY_HUD.restKey}</span>
+          <button className="hud-btn" disabled={!rest.enabled} title={`${noEmoji(rest.detail)} (${ENERGY_HUD.restKey})`} onClick={() => session.click(rest.onclick)}>
+            <Glyph id="rest" /> {ENERGY_HUD.rest} <span className="key">{ENERGY_HUD.restKey}</span>
           </button>
         )}
         {bed && (
-          <button className="hud-btn" disabled={!bed.enabled} title={bed.detail} onClick={() => onBed(bed)}>
-            {bed.label}
+          <button className="hud-btn" disabled={!bed.enabled} title={noEmoji(bed.detail)} onClick={() => onBed(bed)}>
+            <Txt text={bed.label} />
           </button>
         )}
       </div>
@@ -237,7 +239,11 @@ function EnergyHud({ view, cost, onBed }: { view: View; cost: number; onBed: (of
 // ---- the context panel, next to the station you clicked
 
 function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onKeepsake: (note: IntroNote) => void; onCost: (cost: number) => void; beside?: boolean }) {
-  const offers = offersFor(station, view);
+  const all = offersFor(station, view);
+  const building = BUILD_STATIONS[station.id];
+  const builds = new Set(building ? [...building.paths.map((p) => p.action), ...building.extras] : []);
+  const uses = all.filter((o) => !builds.has(o.key));
+  const offers = uses;
   const stores = STATION_STORES[station.id] ?? [];
   const xs = station.id === 'you' ? [1000] : station.hotspot.map((p) => p.x);
   const right = Math.max(...xs);
@@ -245,7 +251,9 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
   const width = 520;
   // In first person the thing you clicked is in the middle of the view; the panel sits beside it.
   const x = beside ? 1110 : right + 24 + width < 1700 ? right + 24 : Math.max(180, left - 24 - width);
-  const y = beside
+  const y = building
+    ? 90
+    : beside
     ? Math.max(90, Math.min(STAGE.height - 120 - (110 + offers.length * 78), 200))
     : Math.max(90, Math.min(STAGE.height - 120 - (110 + offers.length * 78), (station.id === 'you' ? 700 : Math.min(...station.hotspot.map((p) => p.y))) - 20));
   return (
@@ -268,7 +276,12 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
           ))}
         </div>
       )}
-      {UPGRADES[station.id] && <BuildPath id={UPGRADES[station.id]!} view={view} />}
+      {BUILD_STATIONS[station.id] && <BuildPanel station={station.id} view={view} onAct={onAct} onCost={onCost} />}
+      {BUILD_STATIONS[station.id] && uses.length > 0 && (
+        <h4 className="use-head">
+          <Glyph id="look" /> {UPGRADE_TEXT.use}
+        </h4>
+      )}
       {station.id === 'pack' && (
         <div className="keepsakes">
           {Object.values(KEEPSAKES).map((note) => (
@@ -290,7 +303,9 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
             onMouseEnter={() => onCost(offer.enabled ? energyCost(offer.detail) : 0)}
             onMouseLeave={() => onCost(0)}
           >
-            <span className="act-name">{offer.label}</span>
+            <span className="act-name">
+              <Txt text={offer.label} />
+            </span>
             {offer.detail && (
               <span className="act-detail">
                 <WithIcons text={offer.detail} />
@@ -303,40 +318,104 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
   );
 }
 
-/** Every tier of a camp build: what you have, what comes next, what each session takes. Facts only. */
-function BuildPath({ id, view }: { id: UpgradeId; view: View }) {
-  void view.version;
-  const path = upgradePath(id);
-  const names = UPGRADE_TEXT.names[id];
+/**
+ * What can be built here (rc.3): each path as a row of stages, the next stage with what it takes
+ * and its own build button, set apart from the things you use. Facts only, no advice.
+ */
+function BuildPanel({ station, view, onAct, onCost }: { station: string; view: View; onAct: (offer: Offer) => void; onCost: (cost: number) => void }) {
+  const spec = BUILD_STATIONS[station];
+  if (!spec) return null;
+  const panel = new Map(view.panel.map((e) => [e.id, e]));
+  const extras = spec.extras.map((id) => panel.get(id)).filter((e): e is NonNullable<typeof e> => !!e && e.visible);
+  if (spec.paths.length === 0 && extras.length === 0) return null;
+  const S = view.state;
+  const buildButton = (entry: { id: string; label: string; detail: string; enabled: boolean; onclick: string }, label: string) => (
+    <button
+      className="build-btn"
+      disabled={!entry.enabled}
+      onClick={() => onAct({ key: entry.id, label: entry.label, detail: entry.detail, enabled: entry.enabled, handler: entry.onclick })}
+      onMouseEnter={() => onCost(entry.enabled ? energyCost(entry.detail) : 0)}
+      onMouseLeave={() => onCost(0)}
+    >
+      <Glyph id="build" /> <span>{label}</span>
+      {!entry.enabled && entry.detail && <em>{noEmoji(entry.detail)}</em>}
+    </button>
+  );
   return (
-    <div className="build-path">
-      <h4>{UPGRADE_TEXT.title}</h4>
-      {path.steps.map((step) => (
-        <div key={step.tier} className={`build-step ${step.state}`}>
-          <span className="build-name">
-            {step.state === 'built' ? '✓ ' : ''}
-            {names[step.tier]}
-          </span>
-          {step.state === 'built' ? (
-            <span className="build-meta">{UPGRADE_TEXT.built}</span>
-          ) : (
-            <span className="build-meta">
-              {UPGRADE_TEXT.sessions(step.done, step.sessions)} · ⚡{step.energy} · {duration(Math.round(step.hours * 60))}
-              {Object.entries(step.needs).map(([m, n]) => {
-                const have = Number(hudText(view.hud, STOCK_OF[m]!)) || 0;
-                return (
-                  <span key={m} className={`build-need${step.state === 'next' && have < n ? ' short' : ''}`}>
-                    <ResIcon id={m as ResourceId} size={18} />
-                    {n}
-                  </span>
-                );
-              })}
-              {step.sessions > 1 && <i> {UPGRADE_TEXT.perSession}</i>}
-            </span>
-          )}
+    <section className="build-panel">
+      <h4>
+        <Glyph id="build" /> {UPGRADE_TEXT.build}
+      </h4>
+      {spec.paths.map(({ id, action }, i) => {
+        const path = upgradePath(id);
+        const names = UPGRADE_TEXT.names[id];
+        const route = UPGRADE_TEXT.routes[id];
+        const entry = panel.get(action);
+        const next = path.steps.find((st) => st.state === 'next');
+        const finished = !next;
+        const closed = id === 'shelter' && S.dugout ? UPGRADE_TEXT.closed(names[names.length - 1]!) : id === 'dugout' && !S.dugout && !entry?.visible ? UPGRADE_TEXT.needsShovel : '';
+        return (
+          <div key={id} className={`build-route${closed ? ' closed' : ''}`}>
+            {i > 0 && <div className="build-or">{UPGRADE_TEXT.or}</div>}
+            {spec.paths.length > 1 && <b className="route-title">{route.title}</b>}
+            <p className="route-hint">{route.hint}</p>
+            <ol className="stages">
+              {path.steps.map((step) => (
+                <li key={step.tier} className={`bstage ${step.state}`}>
+                  {step.state === 'built' ? <Glyph id="star" size={14} /> : <i className="dot" />}
+                  <span>{names[step.tier]}</span>
+                  {step.sessions > 1 && step.state === 'next' && <small>{UPGRADE_TEXT.sessions(step.done, step.sessions)}</small>}
+                </li>
+              ))}
+            </ol>
+            {closed ? (
+              <p className="route-closed">{closed}</p>
+            ) : finished ? (
+              <p className="route-closed">{UPGRADE_TEXT.done}</p>
+            ) : (
+              next && (
+                <div className="stage-next">
+                  <div className="stage-cost">
+                    <span>
+                      <Glyph id="energy" size={16} /> {next.energy}
+                    </span>
+                    <span>
+                      <Glyph id="time" size={16} /> {duration(Math.round(next.hours * 60))}
+                    </span>
+                    {Object.entries(next.needs).map(([m, n]) => {
+                      const have = Number(hudText(view.hud, STOCK_OF[m]!)) || 0;
+                      return (
+                        <span key={m} className={`build-need${have < n ? ' short' : ''}`}>
+                          <ResIcon id={m as ResourceId} size={18} />
+                          {have}/{n}
+                        </span>
+                      );
+                    })}
+                    {next.sessions > 1 && <i>{UPGRADE_TEXT.perSession}</i>}
+                  </div>
+                  {entry?.visible && buildButton(entry, UPGRADE_TEXT.next(names[next.tier]!))}
+                </div>
+              )
+            )}
+          </div>
+        );
+      })}
+      {extras.length > 0 && (
+        <div className="build-extras">
+          {spec.paths.length > 0 && <b className="route-title">{UPGRADE_TEXT.also}</b>}
+          {extras.map((entry) => (
+            <div key={entry.id} className="build-extra">
+              {buildButton(entry, noEmoji(entry.label))}
+              {entry.enabled && entry.detail && (
+                <span className="act-detail">
+                  <WithIcons text={entry.detail} />
+                </span>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
+      )}
+    </section>
   );
 }
 
@@ -400,8 +479,14 @@ function NightPreview({ view, offer, onSleep, onCancel }: { view: View; offer: O
   return (
     <div className="overlay" onClick={onCancel}>
       <div className="night-preview" onClick={(e) => e.stopPropagation()}>
-        <h3>{offer.label}</h3>
-        {offer.detail && <p>{offer.detail}</p>}
+        <h3>
+          <Txt text={offer.label} />
+        </h3>
+        {offer.detail && (
+          <p>
+            <WithIcons text={offer.detail} />
+          </p>
+        )}
         <div className="night-facts">
           {facts.map((id) => (
             <Html key={id} className="chip" html={hudText(hud, id)} />
@@ -581,6 +666,16 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   // A new location starts with nothing open.
   useEffect(() => setSelected(null), [loc]);
   useEffect(() => setCost(0), [selected, view.version]);
+  // rc.3: a signpost walks you straight there. Only when the walk is not possible does its panel
+  // open, to say why.
+  useEffect(() => {
+    const exit = selected ? layout.stations.find((st) => st.id === selected && st.exitTo) : undefined;
+    if (!exit) return;
+    const walk = offersFor(exit, view)[0];
+    if (!walk?.enabled || view.modal) return;
+    setSelected(null);
+    session.click(walk.handler);
+  }, [selected]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {

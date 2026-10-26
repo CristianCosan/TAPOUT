@@ -22,7 +22,10 @@ interface Cast {
   mara: THREE.Group;
   /** Where each of them ends up standing. */
   beach: THREE.Vector3;
+  maraFrom: THREE.Vector3;
   maraTo: THREE.Vector3;
+  /** When she stepped into view. */
+  maraAt: number | null;
   line: number;
 }
 
@@ -56,14 +59,15 @@ export function WinScene({ weather, winter, tempC, onDone }: { weather: string; 
     w.configure(input, { select: () => undefined, clear: () => undefined, hover: () => undefined, looking: () => undefined, slow: () => undefined });
     const at = w.standing;
     const boat = medBoat();
-    const beach = new THREE.Vector3(at.x + 2.6, -0.1, at.z - 6.5);
-    boat.position.set(beach.x + 26, -0.1, beach.z - 40);
+    // Bow on the stones at the water's edge, off to the left, clear of the two on the beach.
+    const beach = new THREE.Vector3(at.x - 3.6, -0.1, (WORLD.shore.shoreZ ?? -2) - 1.6);
+    boat.position.set(beach.x - 22, -0.1, beach.z - 40);
     const doc = medic();
     const kerry = producer(false);
     const mara = partner();
-    doc.position.set(at.x + 1.1, 0, at.z - 2.6);
-    kerry.position.set(at.x + 2.3, 0, at.z - 3.4);
-    mara.position.set(beach.x - 0.4, 0, beach.z + 1.2);
+    doc.position.set(at.x + 1.4, 0, at.z - 4.6);
+    kerry.position.set(at.x + 2.9, 0, at.z - 5.4);
+    mara.position.set(beach.x + 1.0, 0, beach.z + 1.8);
     for (const p of [doc, kerry, mara]) {
       p.rotation.y = Math.atan2(at.x - p.position.x, at.z - p.position.z);
       p.visible = false;
@@ -72,8 +76,8 @@ export function WinScene({ weather, winter, tempC, onDone }: { weather: string; 
     w.addExtra(doc);
     w.addExtra(kerry);
     w.addExtra(mara);
-    const maraTo = new THREE.Vector3(at.x + 0.15, 0, at.z - 1.15);
-    cast.current = { boat, medic: doc, kerry, mara, beach, maraTo, line: 0 };
+    const maraTo = new THREE.Vector3(at.x - 0.55, 0, at.z - 2.0);
+    cast.current = { boat, medic: doc, kerry, mara, beach, maraFrom: mara.position.clone(), maraTo, maraAt: null, line: 0 };
     w.onFrame = (dt) => {
       const c = cast.current;
       if (!c) return;
@@ -91,14 +95,12 @@ export function WinScene({ weather, winter, tempC, onDone }: { weather: string; 
       c.kerry.visible = c.line >= WIN_SCENE.kerryFrom;
       c.mara.visible = c.line >= WIN_SCENE.maraFrom;
       if (c.mara.visible) {
-        // Up the stones to you, quickly.
-        const gap = c.maraTo.clone().sub(c.mara.position);
-        gap.y = 0;
-        const g = gap.length();
-        if (g > 0.03) {
-          c.mara.position.addScaledVector(gap.normalize(), Math.min(g, 2.6 * dt));
-          c.mara.position.y = Math.abs(Math.sin(performance.now() / 120)) * 0.05 * Math.min(1, g);
-        } else c.mara.position.y = 0;
+        // Up the stones to you, quickly: there in about three seconds, however slow the frames.
+        c.maraAt ??= performance.now();
+        const k = Math.min(1, (performance.now() - c.maraAt) / 3000);
+        const ease = k * k * (3 - 2 * k);
+        c.mara.position.lerpVectors(c.maraFrom, c.maraTo, ease);
+        c.mara.position.y = k < 1 ? Math.abs(Math.sin(performance.now() / 120)) * 0.05 : 0;
         c.mara.rotation.y = Math.atan2(at.x - c.mara.position.x, at.z - c.mara.position.z);
       }
     };

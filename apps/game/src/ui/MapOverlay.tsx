@@ -2,6 +2,8 @@ import { MAX_SNARES_PER_SPOT } from '@tapout/core';
 import { LOCATIONS, MAP_LAKE, MAP_PLACES, MAP_SHORE_SPOTS, MAP_SIZE, MAP_WOODS_SPOTS, type LocationId } from '@tapout/content';
 import { session, type View } from '../session.ts';
 import { hudText } from './offers.ts';
+import { Glyph } from './icons.tsx';
+import { noEmoji } from './glyphs.ts';
 
 /** Little ink trees scattered over the land, the same every time (a seeded walk, not Math.random). */
 const TREES = (() => {
@@ -114,7 +116,7 @@ export function MapOverlay({ view, onClose }: { view: View; onClose: () => void 
                 {loc === here ? (
                   <span>You are here</span>
                 ) : (
-                  <button className="hud-btn" disabled={!enabled} title={hudText(view.hud, `tt-${loc}`)} onClick={() => walk(loc)}>
+                  <button className="hud-btn" disabled={!enabled} title={noEmoji(hudText(view.hud, `tt-${loc}`))} onClick={() => walk(loc)}>
                     Walk here
                   </button>
                 )}
@@ -127,7 +129,7 @@ export function MapOverlay({ view, onClose }: { view: View; onClose: () => void 
             const out = lines.filter((l) => l.spotId === sp.id).length;
             return (
               <div key={sp.id} className={`map-spot shore${out ? ' set' : ''}${sp.noLuck >= 3 ? ' dead' : ''}`} style={{ left: p.x, top: p.y }}>
-                <i>{out ? '🎣' : '·'}</i>
+                <i>{out ? <Glyph id="line" /> : '·'}</i>
                 <span>{sp.name}</span>
                 {sp.noLuck >= 3 && <em>dead for days</em>}
               </div>
@@ -139,11 +141,13 @@ export function MapOverlay({ view, onClose }: { view: View; onClose: () => void 
             const count = snares.filter((s) => s.spotId === sp.id).length;
             return (
               <div key={sp.id} className={`map-spot woods${count ? ' set' : ''}${sp.noLuck >= 3 ? ' dead' : ''}`} style={{ left: p.x, top: p.y }}>
-                <i>🪤 {count}/{MAX_SNARES_PER_SPOT}</i>
+                <i>
+                  <Glyph id="snare" /> {count}/{MAX_SNARES_PER_SPOT}
+                </i>
                 <span>{sp.name}</span>
                 {sp.noLuck >= 3 && <em>dead for days</em>}
                 {canSnare && count < MAX_SNARES_PER_SPOT && (
-                  <button className="hud-btn" title={snareEntry?.detail} onClick={() => session.click(`placeSnareAt('${sp.id}')`)}>
+                  <button className="hud-btn" title={noEmoji(snareEntry?.detail ?? '')} onClick={() => session.click(`placeSnareAt('${sp.id}')`)}>
                     Set a snare
                   </button>
                 )}

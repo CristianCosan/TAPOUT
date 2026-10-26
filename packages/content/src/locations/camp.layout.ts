@@ -23,6 +23,9 @@ export const CAMP: LocationLayout = {
     station('comforts', 'Chair and table', 'Somewhere to sit that isn\'t the ground.', 1200, 820, 240, 150, ['a-chair', 'a-table', 'a-flute', 'a-wash']),
     station('stump', 'Chopping stump', 'Tools: the axe, the ferro rod, boots, carving.', 700, 870, 170, 120,
       ['a-sharpenAxe', 'a-haftAxe', 'a-maintainFerro', 'a-repairBoots', 'a-picker', 'a-poultice']),
+    // rc.3 (campHarvest): the timber and stones lying around camp, gathered straight into the stock.
+    station('fallen', 'Fallen timber', 'Deadfall and a standing dead spruce at the edge of camp. Logs for building.', 260, 640, 120, 160, ['a-wood']),
+    station('stones', 'Loose stones', 'Stones in the slope above camp. Rocks for a firepit.', 1640, 880, 110, 70, ['a-rocks']),
     station('woodpile', 'Woodpile', 'Firewood for burning, logs for building.', 1490, 800, 270, 170, ['a-woodCamp']),
     station('water', 'Pot and water', 'Raw water in, clean water out.', 830, 960, 130, 100, ['a-jug'], { special: ['drink'] }),
     station('food', 'Meat hook', 'Fresh meat and berries, and how long they have.', 1380, 975, 150, 170, [], { special: ['eatBerries', 'eatRation'] }),

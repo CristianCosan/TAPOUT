@@ -686,6 +686,31 @@ function trailhead(label: string, snares: number): THREE.Group {
   return g;
 }
 
+/** Camp's own timber (rc.3): a fallen trunk, a tangle of deadfall and a standing dead spruce. */
+function fallen(): THREE.Group {
+  const g = deadfall();
+  const snagWood = mat(0x6e6052);
+  g.add(mesh(rough(new THREE.CylinderGeometry(0.12, 0.24, 7, 7), 0.04, 9), snagWood, 1.6, 3.5, -1.2));
+  for (let i = 0; i < 6; i++) {
+    const y = 2.2 + i * 0.75;
+    const a = i * 2.1;
+    log(g, v(1.6, y, -1.2), v(1.6 + Math.cos(a) * 0.7, y - 0.25, -1.2 + Math.sin(a) * 0.7), 0.025, 0x6e6052);
+  }
+  return g;
+}
+
+/** Loose stones in the slope above camp (rc.3). */
+function stones(): THREE.Group {
+  const g = new THREE.Group();
+  const rnd = seeded(91);
+  g.add(mesh(rough(new THREE.DodecahedronGeometry(0.8, 0), 0.2, 3), mat(C.stoneDark), 0, 0.3, -0.4));
+  for (let i = 0; i < 9; i++) {
+    const s = 0.16 + rnd() * 0.2;
+    g.add(mesh(rough(new THREE.DodecahedronGeometry(s, 0), s * 0.25, i + 5), mat(i % 3 ? C.stone : C.stoneDark), (rnd() - 0.5) * 2.2, s * 0.6, 0.3 + (rnd() - 0.5) * 1.2, rnd(), rnd() * 3, rnd()));
+  }
+  return g;
+}
+
 function deadfall(): THREE.Group {
   const g = new THREE.Group();
   log(g, v(-2.2, 0.25, -0.3), v(2.3, 0.35, 0.4), 0.22, 0x6a5a48);
@@ -777,6 +802,8 @@ export function buildProp(id: string, s: PropState): THREE.Group {
     case 'animal': return animal(s);
     case 'trailhead': return trailhead(s.exitLabels[id] ?? 'TRAPLINE', s.snares);
     case 'deadfall': return deadfall();
+    case 'fallen': return fallen();
+    case 'stones': return stones();
     case 'moss': return mossyRocks(s);
     case 'berries': return berries(s);
     case 'tracks': return tracks();
