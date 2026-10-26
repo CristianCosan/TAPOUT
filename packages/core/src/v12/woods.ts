@@ -6,7 +6,8 @@ import { rand } from './runtime.ts';
 import { actAxeHandleBreak } from './camp.ts';
 import { ambientTempC } from './cost.ts';
 import { addBerries, addMeat, spoilageSting } from './food.ts';
-import { clamp, nowAbs, pick } from './helpers.ts';
+import { campHarvesting, campLeft, clamp, nowAbs, pick, soakHours } from './helpers.ts';
+import { RULES } from './rules.ts';
 import { hasTrait } from './interior.ts';
 import { resolveDelta } from './resolve.ts';
 import { consumeKitStock, hasKit, log, maybeRenameSpot, registerEmptyCheck } from './setup.ts';
@@ -73,7 +74,7 @@ export function placeSnareAt(id?){
   const countHere = S.snareList.filter(sn=>sn.spotId===id).length;
   if (!sp || countHere>=MAX_SNARES_PER_SPOT || S.snareList.length>=MAX_SNARES_TOTAL || S.wireStock<=0){ hideModal(); return; }
   if (!spend(2,0.0833,true,'oh')){ hideModal(); return; }
-  S.snareList.push({spotId:id, day:S.day, lastCheck:S.day});
+  S.snareList.push(RULES.soakTime ? {spotId:id, day:S.day, lastCheck:S.day, setAbs:nowAbs()} : {spotId:id, day:S.day, lastCheck:S.day});
   consumeKitStock('wire');
   hideModal();
   log(`You set a wire snare at the ${sp.name}. (${S.snareList.length}/${MAX_SNARES_TOTAL})`, 'good');
@@ -108,6 +109,7 @@ export function moveSnare(idx?, toId?){
   if (!sn){ hideModal(); return; }
   if (!spend(2,0.0833,true,'o')){ hideModal(); return; }
   sn.spotId = toId; sn.lastCheck = S.day;
+  if (RULES.soakTime) sn.setAbs = nowAbs();
   hideModal();
   log(`You pull the snare and reset it elsewhere.`, 'good');
   afterAction('moveSnare');
@@ -138,8 +140,17 @@ export function checkOneSnare(i?){
   if (!sn) return;
   const sp = S.woodsSpots.find(s=>s.id===sn.spotId);
   if (!spend(1,0.0167,true,'o')) return;
+  const soaked = RULES.soakTime ? soakHours(sn) : null;
+  if (soaked !== null && soaked < TUNING.catchRates.soakHours){
+    const row = $('snareRow'+i);
+    if (row) row.innerHTML = `<span>Snare ${i+1} - ${sp.name}: not yet, set ${Math.floor(soaked)}h ago</span>`;
+    log(`Too soon. The wire has only been out ${Math.floor(soaked)} hours - nothing has come down this run yet.`, 'sys');
+    afterAction('checkTraps');
+    return;
+  }
   const days = Math.max(1, Math.min(3, S.day - sn.lastCheck));
   sn.lastCheck = S.day;
+  if (RULES.soakTime) sn.setAbs = nowAbs();
   let hit = false;
   let q = Math.min(0.9, sp.q * pityMultiplier()) * TUNING.food.passiveCutMultiplier;
   if (S.winter) q = Math.min(q, (1/TUNING.catchRates.postSnowSnareDaysPerCatch) / Math.max(1,S.snareList.length));
@@ -404,7 +415,8 @@ export function actInvestigate(){
 // v12 kit-draft §2: felling logs requires axe/saw/shovel. Without any of them, actWood() is unreachable
 // (the button stays hidden in render()) - firewood (actFirewood, below) is always available by hand.
 export function actWood(){
-  if (S.carry.wood >= CARRY_CAP.wood || carryBlocked('wood')) return;
+  const atCamp = campHarvesting();
+  if (atCamp ? campLeft('logs') <= 0 : (S.carry.wood >= CARRY_CAP.wood || carryBlocked('wood'))) return;
   if (!hasKit('axe') && !hasKit('saw') && !hasKit('shovel')) return;
   if (hasKit('axe') && S.gear.axe <= 0){ actAxeHandleBreak(); return; }
   const sawBonus = (hasKit('axe') && hasKit('saw')) ? 0.8 : (hasKit('shovel') && !hasKit('axe') && !hasKit('saw')) ? 1.3 : 1;
@@ -413,13 +425,15 @@ export function actWood(){
   let n = 3 + Math.floor(rand()*3);
   if (S.weather === 'storm') n = Math.max(1, n-1);
   if (axeWeak) n = Math.max(1, n-1);
-  n = Math.min(n, CARRY_CAP.wood - S.carry.wood);
-  S.carry.wood += n; S.tot.wood += n;
+  n = atCamp ? Math.min(n, campLeft('logs')) : Math.min(n, CARRY_CAP.wood - S.carry.wood);
+  if (atCamp){ S.campLogsLeft = campLeft('logs') - n; S.stock.wood += n; } else S.carry.wood += n;
+  S.tot.wood += n;
   if (hasKit('axe')){
     S.gear.axe = Math.max(0, S.gear.axe - 2.5);
     if (S.gear.axe <= 15 && rand() < 0.08) { actAxeHandleBreak(); return; }
   }
-  log(`Felled and bucked. +${n} logs (carrying ${S.carry.wood}/${CARRY_CAP.wood})${axeWeak?' - the axe is dull, this is getting harder':''}`, 'good');
+  if (atCamp) log(`You buck the fallen timber and a standing dead tree at the edge of camp. +${n} logs${S.campLogsLeft<=0?'. Camp is cleared of good timber now; the woods have more.':''}${axeWeak?' - the axe is dull, this is getting harder':''}`, 'good');
+  else log(`Felled and bucked. +${n} logs (carrying ${S.carry.wood}/${CARRY_CAP.wood})${axeWeak?' - the axe is dull, this is getting harder':''}`, 'good');
   afterAction('wood');
 }
 // v12 kit-draft §2: firewood is always hand-gatherable, no tool needed - the safety valve that keeps

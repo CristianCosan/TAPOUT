@@ -33,7 +33,7 @@ export function showForcedTapoutCinematic(){
   S.deathSource = null;
   const who = WHO_LABEL[S.backstory.who] || 'no one in particular';
   const thought = RULES.content || RULES.partnerRule ? `You think of ${forcedTapCause()}` : `You think of ${who}`;
-  const text = `You don't remember deciding. The phone is just in your hand, and your thumb is already moving. Day ${S.day}. ${S.rivals} rival${S.rivals===1?'':'s'} still out there, and you're not one of the ones who's going to find out how it ends. ${thought}, and the line rings, and you find you're relieved. That's the part nobody tells you - how much it feels like relief.`;
+  const text = `You don't remember deciding. The phone is just in your hand, and your thumb is already moving. Day ${S.day}.${RULES.quietField ? ' Somebody is still out there' : ` ${S.rivals} rival${S.rivals===1?'':'s'} still out there`}, and you're not one of the ones who's going to find out how it ends. ${thought}, and the line rings, and you find you're relieved. That's the part nobody tells you - how much it feels like relief.`;
   showModal(`
     <h3>Day ${S.day}</h3>
     <div class="wsub">Something in you already decided.</div>

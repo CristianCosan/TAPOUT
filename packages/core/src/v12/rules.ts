@@ -31,6 +31,17 @@ export interface RuleSet {
   homeThread: boolean;
   /** M18: letters you write yourself, and the call home at the end of a run. */
   letters: boolean;
+  /**
+   * rc.3 (Sir): you never learn who tapped out or how many are left. Med checks come from day 14,
+   * then every six to eight days; the win is told to you at a med check like any other.
+   */
+  quietField: boolean;
+  /** rc.3: snares, lines and the net need half a day in the water or the wire before a catch. */
+  soakTime: boolean;
+  /** rc.3: rocks and timber lying about camp can be gathered there, straight onto the stock. */
+  campHarvest: boolean;
+  /** rc.3: the dugout is dug, then walled and roofed with logs and moss, not dug four times. */
+  dugoutStages: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -47,6 +58,10 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   wholeNumbers: false,
   homeThread: false,
   letters: false,
+  quietField: false,
+  soakTime: false,
+  campHarvest: false,
+  dugoutStages: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

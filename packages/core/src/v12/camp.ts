@@ -14,7 +14,7 @@ import { hasKit, log, registerWasteDiscard, waterCap } from './setup.ts';
 import { RULES, say } from './rules.ts';
 import { S } from './state.ts';
 import { afterAction, spend, spendOrDebt, tickShiverClear } from './threads.ts';
-import { BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_COST, DUGOUT_NEED, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
+import { BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
 import { render, sfxBuild, sfxCooking, sfxDrink, sfxEat, sfxFireLight, showModal } from './ui.ts';
 import { triggerBearDread } from './worry.ts';
 // ============================== actions: camp ==============================
@@ -318,16 +318,18 @@ export function actShelter(){
 // top-tier warmth retention. Independent of the tarp/lean-to/hut/timber ladder.
 export function actDugout(){
   if (!hasKit('shovel') || S.dugout || S.dugoutProg >= DUGOUT_NEED) return;
-  if (S.stock.wood < DUGOUT_COST.wood) return;
-  if (!spend(DUGOUT_COST.e, DUGOUT_COST.h, true, 'ohw')) return;
-  S.stock.wood -= DUGOUT_COST.wood;
+  const c = dugoutStep(S.dugoutProg);
+  if (S.stock.wood < c.wood || (c.moss && S.stock.moss < c.moss)) return;
+  if (!spend(c.e, c.h, true, 'ohw')) return;
+  S.stock.wood -= c.wood; if (c.moss) S.stock.moss -= c.moss;
   S.dugoutProg++;
   sfxBuild();
   if (S.dugoutProg >= DUGOUT_NEED){
     S.dugout = true;
     S.morale = clamp(S.morale + 10);
     log('The earth dugout is finished - dug deep, roofed over, banked with soil. The cold-country gambit pays off: this holds heat like nothing built above ground. +morale', 'good');
-  } else log(`Another long session digging. ${S.dugoutProg}/${DUGOUT_NEED} done.`, 'good');
+  } else if (RULES.dugoutStages) log(c.stage === 'dig' ? (S.dugoutProg === 1 ? 'You break the ground and dig. Half a pit by dusk.' : 'The pit is deep enough to stand in. It needs walls next.') : 'Logs set along the sides and chinked with moss. The walls hold back the soil. It needs a roof.', 'good');
+  else log(`Another long session digging. ${S.dugoutProg}/${DUGOUT_NEED} done.`, 'good');
   afterAction('dugout');
 }
 export function actInsulate(){
