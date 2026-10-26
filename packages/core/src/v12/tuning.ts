@@ -7,6 +7,7 @@ import { weightLossPct } from './cost.ts';
 import { meatCount } from './food.ts';
 import { clamp, pick } from './helpers.ts';
 import { S } from './state.ts';
+import { RULES } from './rules.ts';
 // ============================== v12 §0/compression: RUN_SCALE ==============================
 // The parked compression migration, applied per v12 §0: modifies only day-count/pacing constants -
 // §3's weather/temperature/photoperiod system (below) owns temperature and night length entirely and
@@ -35,6 +36,8 @@ export const TUNING: any = {
     pityMultiplierStep: 0.5,
     pityMultiplierCap: 3.0,
     postSnowSnareDaysPerCatch: 4.5,
+    // rc.3 (soakTime): hours out before anything can be in the wire, on the hook or in the net.
+    soakHours: 12,
   },
   // v12 §3: temperature is the single source of truth for weather - the whole group is rebuilt.
   temperature: {
@@ -66,6 +69,8 @@ export const TUNING: any = {
     forcedPullWeightLossPct: 0.27,     // v12 §12 re-tune: 0.24->0.27 - v12's new hardship stack (shivering, tripled overnight penalties) was pulling med-cause over its v11-calibrated band
     severeHealthThreshold: 15,          // v12 §12 re-tune: 22->15 - was the dominant OR-branch in the weekly "severe" pull check; health now crashes faster under shivering/tripled overnight penalties, so the old bar of 22 was being crossed far more often than in v11. (Tried 18 as a middle value: raised the total health-related loss share and left two metrics marginally over instead of one - 15 gives the cleaner profile, med+tap in band, only dead elevated.)
     bmiPullThreshold: 17.5, bmiWarnThreshold: 18.5,
+    // rc.3 (quietField): the first check on day 14, then every six to eight days.
+    quietFirstDay: 14, quietEveryMin: 6, quietEveryMax: 8,
   },
   bigGame: {
     signDroughtDays: 8,
@@ -258,6 +263,18 @@ export const ICE_CACHE_COST: any = {e:16,h:4};
 // kit-draft §3.3: earth dugout - shovel-only shelter path, high labor, near-immune to storm damage.
 export const DUGOUT_NEED = 4;
 export const DUGOUT_COST: any = {e:26,h:4,wood:2};
+// rc.3 (dugoutStages): dig the pit first, then wall and roof it with logs and moss. Same 8 logs as v12.
+export const DUGOUT_STAGES: any = [
+  {stage:'dig',  e:26,h:4,wood:0,moss:0},
+  {stage:'dig',  e:26,h:4,wood:0,moss:0},
+  {stage:'walls',e:26,h:4,wood:4,moss:2},
+  {stage:'roof', e:26,h:4,wood:4,moss:2},
+];
+export function dugoutStep(prog: number){ return RULES.dugoutStages ? DUGOUT_STAGES[prog] : DUGOUT_COST; }
+// rc.3 (campHarvest): how much fallen timber and loose stone lies around camp before it is picked clean.
+export const CAMP_HARVEST: any = { logs: 15, rocks: 12 };
+// rc.3 test mode (Settings): what one press of each shortcut gives.
+export const TEST_MODE: any = { materials: 20, soakedHours: 13 };
 export const ENERGY_SCHEDULE: any = [[3,120],[6,110],[9,100],[11,90],[15,80],[20,70],[25,60],[31,55],[38,50],[50,45],[65,40],[74,35],[89,30],[Infinity,20]];
 export function maxEnergyForDay(day?){
   if (day <= 5) return TUNING.energy.startArrival;

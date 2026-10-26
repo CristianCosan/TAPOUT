@@ -45,13 +45,44 @@ export const RESOURCE_WORDS: ReadonlyArray<readonly [RegExp, ResourceId]> = [
 /** The build path shown on a camp build (rc.2): what each tier is called. */
 export const UPGRADE_TEXT = {
   title: 'Build path',
+  build: 'Build',
+  use: 'Use',
+  also: 'Also to build here',
+  or: 'or',
   built: 'Built',
+  next: (name: string) => `Build: ${name}`,
   sessions: (done: number, of: number) => (of > 1 ? `${done}/${of} sessions` : '1 session'),
   perSession: 'each session',
+  closed: (other: string) => `${other} stands instead`,
+  needsShovel: 'Needs the shovel, which you did not pack.',
+  done: 'Finished',
   names: {
     shelter: ['Tarp on the ground', 'Lean-to', 'Framed hut', 'Timber shelter'],
+    dugout: ['Bare ground', 'Dug pit', 'Log walls', 'Roofed dugout'],
     firepit: ['Bare fire', 'Stone ring', 'Clay-lined pit'],
     rack: ['No rack', 'Tripod rack', 'Roofed rack'],
     cache: ['No cache', 'Rock-and-timber cache', 'Clay-sealed cache', 'Raised cache'],
   },
+  /** rc.3: the two ways to a warm bed, shown side by side so the choice is clear. */
+  routes: {
+    shelter: { title: 'Shelter route', hint: 'Built above ground from logs, moss and clay. Moss insulation helps it hold heat.' },
+    dugout: { title: 'Earth dugout route', hint: 'Needs the shovel. Dig the pit, then wall and roof it with logs and moss. The warmest bed, and storms barely touch it.' },
+    firepit: { title: 'Firepit', hint: 'Stones hold the heat; clay holds it longer.' },
+    rack: { title: 'Smoking rack', hint: 'Smoked meat keeps where fresh meat spoils.' },
+    cache: { title: 'Food cache', hint: 'Keeps stored food from what comes at night.' },
+  },
 } as const;
+
+/**
+ * rc.3: which panel entries build something, per station; the rest are uses. Paths are shown as
+ * stages with their build button inside; extras are one-off builds.
+ */
+export const BUILD_STATIONS: Readonly<Record<string, { paths: ReadonlyArray<{ id: 'shelter' | 'dugout' | 'firepit' | 'rack' | 'cache'; action: string }>; extras: readonly string[] }>> = {
+  shelter: { paths: [{ id: 'shelter', action: 'a-shelter' }, { id: 'dugout', action: 'a-dugout' }], extras: ['a-insulate', 'a-bed'] },
+  fire: { paths: [{ id: 'firepit', action: 'a-firepit' }], extras: [] },
+  rack: { paths: [{ id: 'rack', action: 'a-rack' }], extras: ['a-hugeRack'] },
+  cache: { paths: [{ id: 'cache', action: 'a-cache' }], extras: [] },
+  comforts: { paths: [], extras: ['a-chair', 'a-table'] },
+  water: { paths: [], extras: ['a-jug'] },
+  stump: { paths: [], extras: ['a-picker'] },
+};

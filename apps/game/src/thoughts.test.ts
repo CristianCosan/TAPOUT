@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { CONFESSION_CLIPS, INTRO_DROPOFF, INTRO_KITCHEN, INTRO_VOICE, THOUGHTS } from '@tapout/content';
+import { CONFESSION_CLIPS, INTRO_DROPOFF, INTRO_VOICE, THOUGHTS, WIN_SCENE, WIN_VOICE } from '@tapout/content';
 import { plainWords } from './audio/thoughts.ts';
 
 const dir = new URL('../public/voice/', import.meta.url);
-const INTRO = [...INTRO_VOICE.opening, ...Object.values(INTRO_VOICE.notes).flat(), ...INTRO_VOICE.dropoff];
+const INTRO = [...Object.values(INTRO_VOICE.notes).flat(), ...INTRO_VOICE.dropoff.flatMap((c) => (c ? [c] : [])), ...WIN_VOICE];
 
 describe("Dan's thoughts (D-067)", () => {
   it('has one recording for every line, and no stray ones', () => {
@@ -28,9 +28,10 @@ describe("Dan's thoughts (D-067)", () => {
     for (const t of THOUGHTS) expect(t.say, t.id).not.toMatch(/\b(you should|you need to|better go|go and|don't forget)\b/i);
   });
 
-  it('speaks the whole intro: every drop-off line and every note in the kitchen (rc.2)', () => {
+  it('voices only the people talking in the intro and the win (rc.3)', () => {
     expect(INTRO_VOICE.dropoff).toHaveLength(INTRO_DROPOFF.lines.length);
-    INTRO_DROPOFF.lines.forEach((line, i) => expect(INTRO_VOICE.dropoff[i]!.voice, line.text).toBe(line.who === 'Kerry' ? 'kerry' : 'narrator'));
-    expect(Object.keys(INTRO_VOICE.notes).sort()).toEqual(Object.keys(INTRO_KITCHEN.notes).sort());
+    INTRO_DROPOFF.lines.forEach((line, i) => expect(INTRO_VOICE.dropoff[i]?.voice ?? '', line.text).toBe(line.who === 'Kerry' ? 'kerry' : ''));
+    expect(Object.values(INTRO_VOICE.notes).flat().map((c) => c.voice)).toEqual(['mum']);
+    for (const line of WIN_SCENE.lines) expect(!!line.clip, line.text).toBe(line.who === 'Kerry' || line.who === 'Mara');
   });
 });

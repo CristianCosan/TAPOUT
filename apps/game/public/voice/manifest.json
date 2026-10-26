@@ -1,407 +1,395 @@
 {
  "c-again": {
-  "hash": "2145049d4f8d",
-  "seconds": 1.94
+  "hash": "ba9e01096f76",
+  "seconds": 1.84
  },
  "c-ankle": {
-  "hash": "954b02089547",
-  "seconds": 2.66
+  "hash": "0ee887cdcd25",
+  "seconds": 2.56
  },
  "c-bad": {
-  "hash": "de7e5eba528a",
-  "seconds": 4.48
+  "hash": "02fc18b67936",
+  "seconds": 4.29
  },
  "c-cold": {
-  "hash": "5da56af0a2fa",
-  "seconds": 3.05
+  "hash": "6c13ad49706d",
+  "seconds": 2.85
  },
  "c-day-1": {
-  "hash": "fb4d06d25665",
-  "seconds": 1.22
+  "hash": "ac2663ca2e29",
+  "seconds": 1.17
  },
  "c-day-10": {
-  "hash": "06804e463340",
-  "seconds": 1.27
+  "hash": "57d54ba9d251",
+  "seconds": 1.26
  },
  "c-day-11": {
-  "hash": "b238b74a388a",
-  "seconds": 1.44
+  "hash": "9d954035dffb",
+  "seconds": 1.35
  },
  "c-day-12": {
-  "hash": "9a1e3f38d852",
-  "seconds": 1.42
+  "hash": "e1825ea4ad93",
+  "seconds": 1.39
  },
  "c-day-13": {
-  "hash": "8eb26704936e",
-  "seconds": 1.51
+  "hash": "7e37c58d3b7a",
+  "seconds": 1.5
  },
  "c-day-14": {
-  "hash": "ecf3f52a6aee",
-  "seconds": 1.48
+  "hash": "34ab25d210c3",
+  "seconds": 1.43
  },
  "c-day-15": {
-  "hash": "54f887bc5428",
-  "seconds": 1.54
+  "hash": "803f7ef21af0",
+  "seconds": 1.46
  },
  "c-day-16": {
-  "hash": "0b1db4d7f366",
-  "seconds": 1.55
+  "hash": "a77218e39214",
+  "seconds": 1.48
  },
  "c-day-17": {
-  "hash": "6b70ae97e805",
-  "seconds": 1.57
+  "hash": "e7f0cc4e6766",
+  "seconds": 1.5
  },
  "c-day-18": {
-  "hash": "7fad718154d8",
-  "seconds": 1.47
+  "hash": "0187ec6d2a9c",
+  "seconds": 1.43
  },
  "c-day-19": {
-  "hash": "d50519c9b4eb",
-  "seconds": 1.49
+  "hash": "3f19e869abef",
+  "seconds": 1.44
  },
  "c-day-2": {
-  "hash": "4609ea9a1466",
-  "seconds": 1.32
+  "hash": "e26b5c87ef53",
+  "seconds": 1.3
  },
  "c-day-20": {
-  "hash": "452df31aa1d6",
-  "seconds": 1.42
+  "hash": "6088376449ba",
+  "seconds": 1.4
  },
  "c-day-21": {
-  "hash": "1a9bed33b513",
-  "seconds": 1.58
+  "hash": "160e3890d914",
+  "seconds": 1.49
  },
  "c-day-22": {
-  "hash": "ca2ce2f802f5",
-  "seconds": 1.62
+  "hash": "ec723693bdd3",
+  "seconds": 1.54
  },
  "c-day-23": {
-  "hash": "0b577f9a178c",
-  "seconds": 1.66
+  "hash": "7cef72ca8a04",
+  "seconds": 1.56
  },
  "c-day-24": {
-  "hash": "8bc6a38bfc1b",
-  "seconds": 1.68
+  "hash": "b632db1dc42c",
+  "seconds": 1.64
  },
  "c-day-25": {
-  "hash": "5e8057c803e3",
-  "seconds": 1.63
+  "hash": "a977a6183c62",
+  "seconds": 1.56
  },
  "c-day-26": {
-  "hash": "f98d15ec6de1",
-  "seconds": 1.7
+  "hash": "b45ef710b10e",
+  "seconds": 1.65
  },
  "c-day-27": {
-  "hash": "432b51d14bb5",
-  "seconds": 1.68
+  "hash": "7e3b7d4beecd",
+  "seconds": 1.62
  },
  "c-day-28": {
-  "hash": "e6dfd664dee1",
-  "seconds": 1.66
+  "hash": "343caf7ab2e5",
+  "seconds": 1.56
  },
  "c-day-29": {
-  "hash": "7ec1d8834578",
-  "seconds": 1.6
+  "hash": "2e6a2c4bbe49",
+  "seconds": 1.57
  },
  "c-day-3": {
-  "hash": "136a9fe2c354",
+  "hash": "5a5c2a21ece6",
   "seconds": 1.29
  },
  "c-day-30": {
-  "hash": "ea72877e2ad6",
-  "seconds": 1.39
+  "hash": "d7dcb7808137",
+  "seconds": 1.35
  },
  "c-day-31": {
-  "hash": "444ef12fc52e",
-  "seconds": 1.54
+  "hash": "cff59df28e8b",
+  "seconds": 1.48
  },
  "c-day-32": {
-  "hash": "b71608ca8bd3",
-  "seconds": 1.66
- },
- "c-day-33": {
-  "hash": "93ec3de68e7b",
-  "seconds": 1.69
- },
- "c-day-34": {
-  "hash": "f499c525d5be",
-  "seconds": 1.69
- },
- "c-day-35": {
-  "hash": "651f97d1e883",
-  "seconds": 1.68
- },
- "c-day-36": {
-  "hash": "103648eaf70f",
-  "seconds": 1.71
- },
- "c-day-37": {
-  "hash": "afa1851800b9",
-  "seconds": 1.73
- },
- "c-day-38": {
-  "hash": "472a9a5d3231",
-  "seconds": 1.6
- },
- "c-day-39": {
-  "hash": "8b0eaed5b35e",
-  "seconds": 1.65
- },
- "c-day-4": {
-  "hash": "a76c26146803",
-  "seconds": 1.32
- },
- "c-day-40": {
-  "hash": "771eb4bc2f0f",
-  "seconds": 1.36
- },
- "c-day-41": {
-  "hash": "e2429876e55c",
-  "seconds": 1.51
- },
- "c-day-42": {
-  "hash": "e762e3bf0eb0",
+  "hash": "c84d868fcbfa",
   "seconds": 1.57
  },
- "c-day-43": {
-  "hash": "9fc1b41b6b25",
-  "seconds": 1.62
+ "c-day-33": {
+  "hash": "35200596b25e",
+  "seconds": 1.54
  },
- "c-day-44": {
-  "hash": "78e8419fab32",
-  "seconds": 1.68
+ "c-day-34": {
+  "hash": "902270e41b54",
+  "seconds": 1.65
  },
- "c-day-45": {
-  "hash": "a20c0275d3e5",
-  "seconds": 1.6
- },
- "c-day-46": {
-  "hash": "fb6293e41cfe",
-  "seconds": 1.66
- },
- "c-day-47": {
-  "hash": "56b67942d2fd",
-  "seconds": 1.69
- },
- "c-day-48": {
-  "hash": "d4b6a3679e7c",
-  "seconds": 1.6
- },
- "c-day-49": {
-  "hash": "a8bab28f7caf",
-  "seconds": 1.6
- },
- "c-day-5": {
-  "hash": "7ac90a2974f2",
-  "seconds": 1.31
- },
- "c-day-50": {
-  "hash": "1b4ceeb3d750",
-  "seconds": 1.45
- },
- "c-day-51": {
-  "hash": "23c157a204a9",
-  "seconds": 1.56
- },
- "c-day-52": {
-  "hash": "578efd393d74",
-  "seconds": 1.67
- },
- "c-day-53": {
-  "hash": "3b57d5be07ae",
-  "seconds": 1.7
- },
- "c-day-54": {
-  "hash": "6496fca970a9",
-  "seconds": 1.71
- },
- "c-day-55": {
-  "hash": "85e5a0ad33e0",
+ "c-day-35": {
+  "hash": "365f2724947a",
   "seconds": 1.63
  },
- "c-day-56": {
-  "hash": "17a98683eae4",
-  "seconds": 1.72
+ "c-day-36": {
+  "hash": "47aa0243424d",
+  "seconds": 1.62
  },
- "c-day-57": {
-  "hash": "af7cadf52d5c",
-  "seconds": 1.71
+ "c-day-37": {
+  "hash": "90349830fc89",
+  "seconds": 1.59
  },
- "c-day-58": {
-  "hash": "9c8d78a2b438",
+ "c-day-38": {
+  "hash": "8ee20b6daf28",
+  "seconds": 1.49
+ },
+ "c-day-39": {
+  "hash": "52fe14b26ab8",
+  "seconds": 1.61
+ },
+ "c-day-4": {
+  "hash": "7cfd54cb5fbe",
+  "seconds": 1.29
+ },
+ "c-day-40": {
+  "hash": "cb7e8a963891",
+  "seconds": 1.34
+ },
+ "c-day-41": {
+  "hash": "20c1a7083311",
+  "seconds": 1.46
+ },
+ "c-day-42": {
+  "hash": "f37936f5652a",
+  "seconds": 1.49
+ },
+ "c-day-43": {
+  "hash": "d8c8de8dc4c9",
+  "seconds": 1.53
+ },
+ "c-day-44": {
+  "hash": "f38750e622cb",
+  "seconds": 1.57
+ },
+ "c-day-45": {
+  "hash": "581a4c6927da",
   "seconds": 1.58
  },
- "c-day-59": {
-  "hash": "d06976596cd1",
-  "seconds": 1.66
+ "c-day-46": {
+  "hash": "16dd7feae779",
+  "seconds": 1.61
  },
- "c-day-6": {
-  "hash": "a04b64ca3ce5",
-  "seconds": 1.36
+ "c-day-47": {
+  "hash": "e38dda929aa5",
+  "seconds": 1.68
  },
- "c-day-60": {
-  "hash": "f704116a64ec",
+ "c-day-48": {
+  "hash": "991f236d0890",
   "seconds": 1.47
  },
+ "c-day-49": {
+  "hash": "d156fda43e81",
+  "seconds": 1.53
+ },
+ "c-day-5": {
+  "hash": "3f3da5e00476",
+  "seconds": 1.26
+ },
+ "c-day-50": {
+  "hash": "a1d2fd8fe104",
+  "seconds": 1.34
+ },
+ "c-day-51": {
+  "hash": "92ffb8a8a209",
+  "seconds": 1.52
+ },
+ "c-day-52": {
+  "hash": "abca83bb2421",
+  "seconds": 1.6
+ },
+ "c-day-53": {
+  "hash": "0240a17b943c",
+  "seconds": 1.63
+ },
+ "c-day-54": {
+  "hash": "5e0d2c391f1f",
+  "seconds": 1.7
+ },
+ "c-day-55": {
+  "hash": "e41d520b09f6",
+  "seconds": 1.62
+ },
+ "c-day-56": {
+  "hash": "9f6ffec73deb",
+  "seconds": 1.63
+ },
+ "c-day-57": {
+  "hash": "70d456426290",
+  "seconds": 1.67
+ },
+ "c-day-58": {
+  "hash": "f9a20974b2d0",
+  "seconds": 1.43
+ },
+ "c-day-59": {
+  "hash": "892b58156db7",
+  "seconds": 1.55
+ },
+ "c-day-6": {
+  "hash": "00b6566121db",
+  "seconds": 1.34
+ },
+ "c-day-60": {
+  "hash": "c2fe1f8eebc1",
+  "seconds": 1.43
+ },
  "c-day-7": {
-  "hash": "fc92edb74b53",
-  "seconds": 1.36
+  "hash": "828d8bd7259b",
+  "seconds": 1.32
  },
  "c-day-8": {
-  "hash": "a7a07f51d9c8",
-  "seconds": 1.3
+  "hash": "4e2e516e4d08",
+  "seconds": 1.28
  },
  "c-day-9": {
-  "hash": "438af4845650",
-  "seconds": 1.24
+  "hash": "30cf098675d4",
+  "seconds": 1.19
  },
  "c-fear": {
-  "hash": "b00f0dbe244c",
-  "seconds": 5.51
+  "hash": "1692757ef5b7",
+  "seconds": 5.41
  },
  "c-for": {
-  "hash": "05b8da1c4129",
-  "seconds": 3.52
+  "hash": "4f10b4a57cd1",
+  "seconds": 3.51
  },
  "c-good": {
-  "hash": "4a2665764e97",
-  "seconds": 5.25
+  "hash": "66df2257d15b",
+  "seconds": 5.0
  },
  "c-home-1": {
-  "hash": "07a0cd2a636a",
-  "seconds": 10.82
+  "hash": "3b45c96da411",
+  "seconds": 10.62
  },
  "c-home-2": {
-  "hash": "efe199d81b8c",
-  "seconds": 4.01
+  "hash": "a861ef9cf6be",
+  "seconds": 3.72
  },
  "c-hungry": {
-  "hash": "89f84ea059ba",
-  "seconds": 4.95
+  "hash": "aa504eccfaaf",
+  "seconds": 4.56
  },
  "c-kill": {
-  "hash": "474d39f7d5ec",
-  "seconds": 4.13
+  "hash": "7396a2228e71",
+  "seconds": 4.05
  },
  "c-marten": {
-  "hash": "c158e85a8749",
-  "seconds": 5.84
+  "hash": "886f78bd8bf8",
+  "seconds": 5.66
  },
  "c-plain": {
-  "hash": "a6f39b840893",
-  "seconds": 3.42
+  "hash": "37d36067dd9c",
+  "seconds": 3.33
  },
  "c-rolling": {
-  "hash": "88e313ff4da2",
-  "seconds": 3.98
+  "hash": "60b4e0fbd70e",
+  "seconds": 3.9
  },
  "c-watch": {
-  "hash": "0b0f873b0f28",
-  "seconds": 3.32
+  "hash": "ba3cd12f69ae",
+  "seconds": 3.15
  },
  "c-wrist": {
-  "hash": "8d16dc3563c1",
-  "seconds": 2.66
+  "hash": "b0368074f39c",
+  "seconds": 2.51
  },
  "cam-1": {
-  "hash": "8b366b198e41",
-  "seconds": 5.8
+  "hash": "dbe933d4ce96",
+  "seconds": 5.51
  },
  "cam-2": {
-  "hash": "73ce0d635726",
-  "seconds": 6.76
+  "hash": "994f0735ce69",
+  "seconds": 6.35
  },
  "camp-spot": {
-  "hash": "156893f78136",
-  "seconds": 21.12
+  "hash": "86ef3895207c",
+  "seconds": 20.1
  },
  "cold-1": {
-  "hash": "3eabac24a712",
-  "seconds": 3.85
+  "hash": "c86b30085958",
+  "seconds": 3.7
  },
  "cold-2": {
-  "hash": "1f71847063ce",
-  "seconds": 3.31
+  "hash": "edeba46d190e",
+  "seconds": 2.94
  },
  "cold-3": {
-  "hash": "9886459c0d5c",
-  "seconds": 2.24
+  "hash": "92e9dc698528",
+  "seconds": 2.08
  },
  "fire-1": {
-  "hash": "fd66707269f2",
-  "seconds": 5.05
+  "hash": "6418346226d3",
+  "seconds": 4.79
  },
  "fire-2": {
-  "hash": "a14929a2d8ce",
-  "seconds": 6.31
+  "hash": "42894029687b",
+  "seconds": 5.99
  },
  "fireL-1": {
-  "hash": "9f633a334193",
-  "seconds": 3.79
+  "hash": "93241ce9178c",
+  "seconds": 3.59
  },
  "fireL-2": {
-  "hash": "049c9dd80cb6",
-  "seconds": 4.2
+  "hash": "8fc9a5a37502",
+  "seconds": 3.97
  },
  "fish-1": {
-  "hash": "7155fa6cd9b8",
-  "seconds": 6.17
+  "hash": "bd5cf85c4dd8",
+  "seconds": 5.85
  },
  "fish-2": {
-  "hash": "fcd30c70d5be",
-  "seconds": 4.69
+  "hash": "f9c2476b78e1",
+  "seconds": 4.47
  },
  "frost-1": {
-  "hash": "c9208a340c37",
-  "seconds": 4.0
+  "hash": "a8e7506dfeb9",
+  "seconds": 3.74
  },
  "frost-2": {
-  "hash": "362cae061bbd",
-  "seconds": 5.79
+  "hash": "1dddb0304f50",
+  "seconds": 5.31
  },
  "gone-1": {
-  "hash": "b67788d34116",
-  "seconds": 10.23
+  "hash": "7bf213ae5463",
+  "seconds": 9.5
  },
  "gone-2": {
-  "hash": "fc6449312be6",
-  "seconds": 8.07
+  "hash": "e2ffe5025910",
+  "seconds": 7.58
  },
  "gone-3": {
-  "hash": "6d1aac5f5c43",
-  "seconds": 4.35
+  "hash": "15c0f70ccdc2",
+  "seconds": 4.16
  },
  "hungry-1": {
-  "hash": "5faaca082941",
-  "seconds": 2.29
+  "hash": "9ebe2c78993e",
+  "seconds": 2.13
  },
  "hungry-2": {
-  "hash": "e176ef19df29",
-  "seconds": 5.25
+  "hash": "c0bab4353566",
+  "seconds": 4.86
  },
  "hungry-3": {
-  "hash": "9925420e9d3e",
-  "seconds": 3.61
- },
- "intro-axe": {
-  "hash": "91f9a80e46be",
-  "seconds": 14.9
- },
- "intro-dropoff-1": {
-  "hash": "4d43f83a0104",
-  "seconds": 9.87
- },
- "intro-dropoff-2": {
-  "hash": "08b48fb0bdc8",
-  "seconds": 13.28
+  "hash": "304a31c7cd54",
+  "seconds": 3.45
  },
  "intro-kerry-1": {
   "hash": "63b7d9b5450d",
   "seconds": 7.63
  },
  "intro-kerry-2": {
-  "hash": "9966bcf88d92",
-  "seconds": 7.54
+  "hash": "bee69d9f11bf",
+  "seconds": 7.38
  },
  "intro-kerry-3": {
   "hash": "e2fb623889f4",
@@ -419,312 +407,308 @@
   "hash": "e3b529d12aa3",
   "seconds": 7.79
  },
- "intro-letter": {
-  "hash": "3af86658dc7c",
-  "seconds": 24.75
- },
- "intro-machine": {
-  "hash": "3dd380cc3a13",
-  "seconds": 3.74
- },
  "intro-mum": {
   "hash": "1fd9e9c6267e",
   "seconds": 13.51
  },
- "intro-opening": {
-  "hash": "7d5c319d7617",
-  "seconds": 6.94
- },
- "intro-phone": {
-  "hash": "a37125169c4f",
-  "seconds": 17.41
- },
- "intro-photo": {
-  "hash": "925cbeb5a828",
-  "seconds": 14.83
- },
- "intro-window": {
-  "hash": "d58c62346c17",
-  "seconds": 13.93
- },
  "jay-1": {
-  "hash": "18570b5002b3",
-  "seconds": 5.15
+  "hash": "2600c27977f1",
+  "seconds": 4.83
  },
  "kill-1": {
-  "hash": "9b67874a46f5",
-  "seconds": 5.89
+  "hash": "8cf5d69338b2",
+  "seconds": 5.46
  },
  "low-1": {
-  "hash": "59c98fcdbdd4",
-  "seconds": 6.8
+  "hash": "ab80abecd9ad",
+  "seconds": 6.43
  },
  "low-10": {
-  "hash": "a2a5b8174319",
-  "seconds": 6.56
+  "hash": "51a6cbd56cb9",
+  "seconds": 6.13
  },
  "low-11": {
-  "hash": "d4e0ad3368a5",
-  "seconds": 5.21
- },
- "low-12": {
-  "hash": "a60480e8889b",
-  "seconds": 8.13
- },
- "low-13": {
-  "hash": "1abd75d160ad",
-  "seconds": 7.59
- },
- "low-14": {
-  "hash": "730c7a5df1f6",
-  "seconds": 7.92
- },
- "low-15": {
-  "hash": "a83e58378480",
-  "seconds": 5.22
- },
- "low-16": {
-  "hash": "83f482db2b27",
-  "seconds": 8.89
- },
- "low-2": {
-  "hash": "c7fd53f4ac65",
-  "seconds": 7.06
- },
- "low-3": {
-  "hash": "f17d2d14142a",
-  "seconds": 7.49
- },
- "low-4": {
-  "hash": "2417a46d3908",
-  "seconds": 9.46
- },
- "low-5": {
-  "hash": "cf6ba5c50e6d",
-  "seconds": 8.44
- },
- "low-6": {
-  "hash": "1aefa337e8d5",
-  "seconds": 5.77
- },
- "low-7": {
-  "hash": "44a2517df717",
-  "seconds": 6.87
- },
- "low-8": {
-  "hash": "e8e7692299d1",
-  "seconds": 8.5
- },
- "low-9": {
-  "hash": "c350c1b46494",
-  "seconds": 7.64
- },
- "night1-1": {
-  "hash": "62e03a1a7b1e",
-  "seconds": 5.68
- },
- "night1-2": {
-  "hash": "8179c3b2a586",
-  "seconds": 4.34
- },
- "pack-1": {
-  "hash": "f70b7ac7ba7c",
-  "seconds": 6.76
- },
- "pack-2": {
-  "hash": "d71a7aade01f",
-  "seconds": 5.59
- },
- "pack-3": {
-  "hash": "5940ee51a906",
-  "seconds": 7.86
- },
- "point-1": {
-  "hash": "52aafcdb46db",
+  "hash": "7729d558842a",
   "seconds": 4.91
  },
- "pred-1": {
-  "hash": "7b2973e9c4f9",
-  "seconds": 5.66
+ "low-12": {
+  "hash": "1f82e719735b",
+  "seconds": 7.59
  },
- "pred-2": {
-  "hash": "7d5eb0bcd9c1",
-  "seconds": 6.09
+ "low-13": {
+  "hash": "a381e6f6c195",
+  "seconds": 6.94
  },
- "q-day": {
-  "hash": "efcc16d52ca7",
-  "seconds": 4.85
- },
- "q-finish": {
-  "hash": "0b49704ed053",
-  "seconds": 5.27
- },
- "q-groan": {
-  "hash": "8393f9ac2347",
-  "seconds": 5.12
- },
- "q-heart": {
-  "hash": "f72794da8b01",
-  "seconds": 4.39
- },
- "q-leaves": {
-  "hash": "4fa301584c0e",
-  "seconds": 6.61
- },
- "q-loons": {
-  "hash": "7b31ee12430e",
-  "seconds": 7.87
- },
- "q-mara": {
-  "hash": "272e1b84825a",
-  "seconds": 6.87
- },
- "q-minus": {
-  "hash": "6767f4f085d8",
-  "seconds": 4.28
- },
- "q-mist": {
-  "hash": "9c355911abc1",
-  "seconds": 5.4
- },
- "q-money": {
-  "hash": "64dbca67bd49",
-  "seconds": 8.23
- },
- "q-night": {
-  "hash": "aeaf57adc98b",
-  "seconds": 6.64
- },
- "q-noise": {
-  "hash": "780fb3ac0950",
-  "seconds": 6.46
- },
- "q-plane": {
-  "hash": "ed8ba68e3b1d",
-  "seconds": 6.22
- },
- "q-rain": {
-  "hash": "8b71184f15f7",
-  "seconds": 8.61
- },
- "q-sit": {
-  "hash": "5d920b3a956d",
-  "seconds": 8.55
- },
- "q-stars": {
-  "hash": "19145b11d6b6",
-  "seconds": 6.31
- },
- "q-ten": {
-  "hash": "8d1d00193b0f",
-  "seconds": 6.73
- },
- "q-trees": {
-  "hash": "0e4c586ec8e1",
-  "seconds": 6.68
- },
- "q-twenty": {
-  "hash": "9402803e21a9",
-  "seconds": 5.24
- },
- "q-white": {
-  "hash": "dbe0739c3111",
-  "seconds": 7.38
- },
- "q-why": {
-  "hash": "dd85d91ff109",
-  "seconds": 6.66
- },
- "raven-1": {
-  "hash": "82202fc1b084",
-  "seconds": 6.28
- },
- "ridge-1": {
-  "hash": "adea5fd11b06",
-  "seconds": 7.91
- },
- "shelter-1": {
-  "hash": "ae0cbcd97b26",
-  "seconds": 6.28
- },
- "shore-1": {
-  "hash": "233ddcedf7a9",
-  "seconds": 4.3
- },
- "shore-2": {
-  "hash": "11f3e1dc21db",
-  "seconds": 7.16
- },
- "snare-1": {
-  "hash": "b86348dbe34b",
-  "seconds": 6.47
- },
- "snow-1": {
-  "hash": "11c3f10ea629",
-  "seconds": 8.03
- },
- "snow-2": {
-  "hash": "6397f48bb8fa",
-  "seconds": 4.26
- },
- "storm-1": {
-  "hash": "588dda34677f",
-  "seconds": 6.02
- },
- "storm-2": {
-  "hash": "fb7b4df0fda8",
-  "seconds": 4.99
- },
- "thirst-1": {
-  "hash": "0d22cb0bac42",
-  "seconds": 2.44
- },
- "thirst-2": {
-  "hash": "463622087e1a",
-  "seconds": 4.8
- },
- "tired-1": {
-  "hash": "075b84fb55da",
-  "seconds": 2.86
- },
- "tired-2": {
-  "hash": "5f28b6df9443",
-  "seconds": 2.15
- },
- "two-1": {
-  "hash": "c0918e798ed8",
-  "seconds": 7.86
- },
- "two-2": {
-  "hash": "641cad4ad93c",
-  "seconds": 5.61
- },
- "water-1": {
-  "hash": "1e54ec20fd30",
+ "low-14": {
+  "hash": "23b0c82f36ed",
   "seconds": 6.92
  },
- "waver-1": {
-  "hash": "130ecf065785",
-  "seconds": 5.52
+ "low-15": {
+  "hash": "fb9f6de49dd2",
+  "seconds": 5.04
  },
- "waver-2": {
-  "hash": "41b23902d122",
-  "seconds": 5.83
+ "low-16": {
+  "hash": "b4ac619ba191",
+  "seconds": 8.44
  },
- "wet-1": {
-  "hash": "d353b9cb6014",
+ "low-2": {
+  "hash": "43e7dc267193",
+  "seconds": 6.63
+ },
+ "low-3": {
+  "hash": "4f672c1551a5",
+  "seconds": 6.78
+ },
+ "low-4": {
+  "hash": "7768f1c9f62d",
+  "seconds": 8.72
+ },
+ "low-5": {
+  "hash": "7c5a5a676cbe",
+  "seconds": 7.91
+ },
+ "low-6": {
+  "hash": "4272c2913769",
+  "seconds": 5.44
+ },
+ "low-7": {
+  "hash": "ae885fff6a0f",
+  "seconds": 6.51
+ },
+ "low-8": {
+  "hash": "dfd4e6b9e2e1",
+  "seconds": 8.06
+ },
+ "low-9": {
+  "hash": "16b342df8302",
+  "seconds": 7.17
+ },
+ "night1-1": {
+  "hash": "c11c1f11840e",
+  "seconds": 5.37
+ },
+ "night1-2": {
+  "hash": "8875ab7e47d6",
+  "seconds": 4.12
+ },
+ "pack-1": {
+  "hash": "2ce9f5cdc237",
+  "seconds": 6.46
+ },
+ "pack-2": {
+  "hash": "670d9f1ced5f",
+  "seconds": 5.26
+ },
+ "pack-3": {
+  "hash": "d7dafa7546ce",
+  "seconds": 7.55
+ },
+ "point-1": {
+  "hash": "ae1b08600b14",
+  "seconds": 4.53
+ },
+ "pred-1": {
+  "hash": "0b5ea69aa594",
+  "seconds": 5.22
+ },
+ "pred-2": {
+  "hash": "9fce91e7d529",
+  "seconds": 5.86
+ },
+ "q-day": {
+  "hash": "5a1347622a8b",
+  "seconds": 4.66
+ },
+ "q-finish": {
+  "hash": "055cecc557e9",
+  "seconds": 4.97
+ },
+ "q-groan": {
+  "hash": "996d777677c0",
+  "seconds": 4.87
+ },
+ "q-heart": {
+  "hash": "90e365fec74d",
+  "seconds": 3.49
+ },
+ "q-leaves": {
+  "hash": "23d563f1b66f",
+  "seconds": 6.24
+ },
+ "q-loons": {
+  "hash": "354a71d5c2c8",
+  "seconds": 7.53
+ },
+ "q-mara": {
+  "hash": "c6225dd5caea",
+  "seconds": 6.34
+ },
+ "q-minus": {
+  "hash": "b5fdaec7758c",
+  "seconds": 4.06
+ },
+ "q-mist": {
+  "hash": "0edffeaeda2a",
+  "seconds": 5.13
+ },
+ "q-money": {
+  "hash": "1bc006002b57",
+  "seconds": 7.89
+ },
+ "q-night": {
+  "hash": "5dd288f1d6ac",
+  "seconds": 6.2
+ },
+ "q-noise": {
+  "hash": "4b18182ac4a8",
+  "seconds": 6.07
+ },
+ "q-plane": {
+  "hash": "e84c040a3559",
+  "seconds": 5.79
+ },
+ "q-rain": {
+  "hash": "12c112cf47bd",
+  "seconds": 8.19
+ },
+ "q-sit": {
+  "hash": "68e2b670841c",
+  "seconds": 7.79
+ },
+ "q-stars": {
+  "hash": "8b5435250634",
+  "seconds": 6.02
+ },
+ "q-ten": {
+  "hash": "7b599c628539",
+  "seconds": 6.45
+ },
+ "q-trees": {
+  "hash": "f762e6b1a096",
+  "seconds": 6.35
+ },
+ "q-twenty": {
+  "hash": "f0f45cc98557",
+  "seconds": 4.85
+ },
+ "q-white": {
+  "hash": "187d657ec611",
+  "seconds": 7.05
+ },
+ "q-why": {
+  "hash": "10b1f5ca5fbd",
+  "seconds": 6.26
+ },
+ "raven-1": {
+  "hash": "c29815aba3a8",
+  "seconds": 5.92
+ },
+ "ridge-1": {
+  "hash": "c0ee83b1c3ab",
+  "seconds": 7.39
+ },
+ "shelter-1": {
+  "hash": "e654107648a5",
+  "seconds": 5.95
+ },
+ "shore-1": {
+  "hash": "9b07aa702faa",
+  "seconds": 4.0
+ },
+ "shore-2": {
+  "hash": "e461dcd6ee33",
+  "seconds": 6.49
+ },
+ "snare-1": {
+  "hash": "303dd2f8d7a3",
+  "seconds": 6.14
+ },
+ "snow-1": {
+  "hash": "a9f7c0dc89ac",
+  "seconds": 7.51
+ },
+ "snow-2": {
+  "hash": "2398fa71e675",
+  "seconds": 3.89
+ },
+ "storm-1": {
+  "hash": "60e6f9b0f40d",
+  "seconds": 5.7
+ },
+ "storm-2": {
+  "hash": "b44755730ead",
+  "seconds": 4.56
+ },
+ "thirst-1": {
+  "hash": "f2fb30edc79d",
+  "seconds": 2.18
+ },
+ "thirst-2": {
+  "hash": "9413c2267dfb",
+  "seconds": 4.49
+ },
+ "tired-1": {
+  "hash": "8db684d38054",
+  "seconds": 2.63
+ },
+ "tired-2": {
+  "hash": "8b43e444ca52",
+  "seconds": 1.9
+ },
+ "two-1": {
+  "hash": "d59f5cdd5eb9",
+  "seconds": 7.38
+ },
+ "two-2": {
+  "hash": "badf327272f5",
   "seconds": 5.36
  },
+ "water-1": {
+  "hash": "fad89e799343",
+  "seconds": 6.54
+ },
+ "waver-1": {
+  "hash": "717bb23e0810",
+  "seconds": 5.22
+ },
+ "waver-2": {
+  "hash": "bb529e2cc813",
+  "seconds": 5.54
+ },
+ "wet-1": {
+  "hash": "93673c9828bc",
+  "seconds": 5.16
+ },
  "wet-2": {
-  "hash": "b1935a63fde3",
-  "seconds": 3.68
+  "hash": "41ea4dd563e7",
+  "seconds": 3.5
+ },
+ "win-kerry-1": {
+  "hash": "c6fdbcabdc7d",
+  "seconds": 6.44
+ },
+ "win-kerry-2": {
+  "hash": "969515db7e0e",
+  "seconds": 7.83
+ },
+ "win-kerry-3": {
+  "hash": "450ec41172fe",
+  "seconds": 7.93
+ },
+ "win-mara-1": {
+  "hash": "6ff376eb6e6e",
+  "seconds": 3.59
+ },
+ "win-mara-2": {
+  "hash": "33bce58435d4",
+  "seconds": 4.08
  },
  "woods-1": {
-  "hash": "7b9614ed4c47",
-  "seconds": 4.76
+  "hash": "e22f940088c2",
+  "seconds": 4.4
  },
  "woods-2": {
-  "hash": "13dfe7b85770",
-  "seconds": 5.75
+  "hash": "0725bb40a119",
+  "seconds": 5.42
  }
 }

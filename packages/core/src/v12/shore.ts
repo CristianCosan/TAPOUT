@@ -4,7 +4,7 @@
 
 import { rand } from './runtime.ts';
 import { addMeat } from './food.ts';
-import { clamp } from './helpers.ts';
+import { campHarvesting, campLeft, clamp, nowAbs, soakHours } from './helpers.ts';
 import { triggerMedicalArc } from './medical.ts';
 import { consumeKitStock, hasKit, log, maybeRenameSpot, registerEmptyCheck } from './setup.ts';
 import { RULES } from './rules.ts';
@@ -38,7 +38,7 @@ export function placeLineAt(id?){
   if (!sp || countHere>=1 || S.lineList.length>=MAX_LINES_TOTAL || S.lineStock<=0){ hideModal(); return; }
   const e = S.winter?6:4, h = S.winter?0.5:0.25;
   if (!spend(e,h,true,'oh')){ hideModal(); return; }
-  S.lineList.push({spotId:id, day:S.day, lastCheck:S.day});
+  S.lineList.push(RULES.soakTime ? {spotId:id, day:S.day, lastCheck:S.day, setAbs:nowAbs()} : {spotId:id, day:S.day, lastCheck:S.day});
   consumeKitStock('line');
   hideModal();
   log(S.winter ? `You chop through a foot of ice and drop a line down the hole at the ${sp.name}.` : `You bait hooks and set a line off the ${sp.name}.`, 'good');
@@ -70,6 +70,7 @@ export function moveLine(idx?, toId?){
   if (!ln){ hideModal(); return; }
   if (!spend(3,0.25,true,'o')){ hideModal(); return; }
   ln.spotId = toId; ln.lastCheck = S.day;
+  if (RULES.soakTime) ln.setAbs = nowAbs();
   hideModal();
   log(`You move the line elsewhere.`, 'good');
   afterAction('moveLine');
@@ -79,7 +80,7 @@ export function openNetModal(){
   if (S.winter){ showModal(`<h3>Frozen over</h3><div class="wsub">The net is useless under the ice now. Cut holes and fish instead.</div><button class="mbtn ghost" onclick="hideModal()">Close</button>`); return; }
   if (S.net.built && S.net.damaged){
     if (!spend(4,0.25,true,'oh')) return;
-    S.net.damaged = false; S.net.lastCheck = S.day; S.net.noLuck = 0;
+    S.net.damaged = false; S.net.lastCheck = S.day; S.net.noLuck = 0; if (RULES.soakTime) S.net.setAbs = nowAbs();
     log('You rework the torn mesh and reset the net.', 'good');
     afterAction('net'); return;
   }
@@ -106,7 +107,7 @@ export function placeNetAt(id?){
   if (S.net.built){
     if (S.net.spot===id) return;
     if (!spend(4,0.25,true,'oh')){ hideModal(); return; }
-    S.net.spot = id; S.net.lastCheck = S.day; S.net.noLuck = 0;
+    S.net.spot = id; S.net.lastCheck = S.day; S.net.noLuck = 0; if (RULES.soakTime) S.net.setAbs = nowAbs();
     hideModal();
     log(`You pull the net and reset it off the ${sp.name}.`, 'good');
     afterAction('net');
@@ -125,7 +126,7 @@ export function weaveNetSession(sp?){
   if (!spend(8,2,true,'ohw')) return;
   S.netProg++;
   if (S.netProg >= NET_SESSIONS){
-    S.net.built = true; S.net.spot = sp.id; S.net.lastCheck = S.day; S.net.noLuck = 0; S.netProg = 0; S.netPendingSpot = null;
+    S.net.built = true; S.net.spot = sp.id; S.net.lastCheck = S.day; S.net.noLuck = 0; if (RULES.soakTime) S.net.setAbs = nowAbs(); S.netProg = 0; S.netPendingSpot = null;
     log(`After five long sessions, the gill net is finally finished - woven and set off the ${sp.name}. It will fish while you sleep.`, 'good');
   } else {
     log(`Another long session weaving the net at the ${sp.name}. ${S.netProg}/${NET_SESSIONS} done.`, 'good');
@@ -159,8 +160,17 @@ export function checkOneLine(i?){
   if (!ln) return;
   const sp = S.shoreSpots.find(s=>s.id===ln.spotId);
   if (!spend(1,0.0167,true,'o')) return;
+  const soaked = RULES.soakTime ? soakHours(ln) : null;
+  if (soaked !== null && soaked < TUNING.catchRates.soakHours){
+    const row = $('lineRow'+i);
+    if (row) row.innerHTML = `<span>Line ${i+1} - ${sp.name}: not yet, set ${Math.floor(soaked)}h ago</span>`;
+    log(`Too soon. The line has only been in ${Math.floor(soaked)} hours - give it time.`, 'sys');
+    afterAction('checkShore');
+    return;
+  }
   const days = Math.max(1, Math.min(3, S.day - ln.lastCheck));
   ln.lastCheck = S.day;
+  if (RULES.soakTime) ln.setAbs = nowAbs();
   let hit=false;
   let q = Math.min(0.9, sp.q * pityMultiplier()) * TUNING.food.passiveCutMultiplier;
   for (let d=0; d<days; d++) if (rand() < q) hit = true;
@@ -180,8 +190,17 @@ export function checkNet(){
   if (!S.net.built || S.net.damaged || S.winter) return;
   if (!spend(2,0.033,true,'o')) return;
   const sp = S.shoreSpots.find(s=>s.id===S.net.spot);
+  const soaked = RULES.soakTime ? soakHours(S.net) : null;
+  if (soaked !== null && soaked < TUNING.catchRates.soakHours){
+    const row = $('netRow');
+    if (row) row.innerHTML = `<span>Gill net: not yet, set ${Math.floor(soaked)}h ago</span>`;
+    log(`Too soon. The net has only been out ${Math.floor(soaked)} hours.`, 'sys');
+    afterAction('checkShore');
+    return;
+  }
   const days = Math.max(1, Math.min(3, S.day - S.net.lastCheck));
   S.net.lastCheck = S.day;
+  if (RULES.soakTime) S.net.setAbs = nowAbs();
   let meatTot=0, descs=[];
   let q = Math.min(0.9, sp.q * TUNING.catchRates.netMultiplier * pityMultiplier()) * TUNING.food.passiveCutMultiplier;
   for (let d=0; d<days; d++) if (rand() < q){ const f = rollFish(); meatTot+=f.meat; descs.push(`a ${f.name} fish`); }
@@ -222,6 +241,13 @@ export function actFetchWater(){
   afterAction('fetch');
 }
 export function actRocks(){
+  if (campHarvesting()){
+    if (campLeft('rocks') <= 0 || !spend(6,TUNING.costs.rocksMin/60,true,'ohw')) return;
+    const n = Math.min(3, campLeft('rocks'));
+    S.campRocksLeft = campLeft('rocks') - n; S.stock.rocks += n;
+    log(`You pry loose stones out of the slope around camp. +${n} rocks${S.campRocksLeft<=0?'. That is the last of the loose ones; the shore has more.':''}`, 'good');
+    afterAction('rocks'); return;
+  }
   if (S.carry.rocks >= CARRY_CAP.rocks || carryBlocked('rocks')) return;
   if (!spend(6,TUNING.costs.rocksMin/60,true,'ohw')) return;
   const n = Math.min(3, CARRY_CAP.rocks - S.carry.rocks);

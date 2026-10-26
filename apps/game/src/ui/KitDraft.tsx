@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { KIT_POOL } from '@tapout/core';
+import { Txt } from './icons.tsx';
 
 interface KitItem {
   id: string;
@@ -40,7 +41,7 @@ export function KitDraft(props: { onBegin: (kit: string[]) => void; onBack: () =
           return (
             <button key={item.id} className={`kit-item${on ? ' on' : ''}${item.expert && !on ? ' expert' : ''}`} onClick={() => toggle(item.id)}>
               <span className="kit-name">
-                {item.icon} {item.label}
+                <Txt text={item.icon} /> {item.label}
               </span>
               <span className="kit-desc">{on ? item.has : item.without}</span>
               {item.expert && !on && <span className="kit-warn">Expert draft: going without this is a real handicap</span>}

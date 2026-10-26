@@ -121,7 +121,8 @@ export function actSleep(early?){
     // TAP / OUT (plan §2.12 #1): on a medical-check night the medics' check comes before the death
     // verdict, so a one-night crash ends in a pull, not a body. v12 checked death first.
     const checkDay = S.day + 1;
-    if (RULES.medCheckBeforeDeath && checkDay % 4 === 0 && !(checkDay === 4 && TUNING.medic.day7WarningOnly)){
+    const medicsDue = RULES.quietField ? checkDay === medDay() : checkDay % 4 === 0 && !(checkDay === 4 && TUNING.medic.day7WarningOnly);
+    if (RULES.medCheckBeforeDeath && medicsDue){
       S.health = 1; S.minHealth = Math.min(S.minHealth, S.health);
       notes.forEach(n=>log(n,'event'));
       log('🩺 The med team comes in for the check at first light and finds you barely responsive by the cold fire. They don\'t ask how you\'re holding up. This is the end of the run.', 'bad');
@@ -365,6 +366,10 @@ export const HUMOR_POOL: any = [
   "You'd almost put it on payroll if it would agree to leave a receipt.",
   "It has never once, not a single time, seemed embarrassed about any of this.",
 ];
+/** rc.3 (quietField): the day the medics come next. */
+export function medDay(){
+  return S.nextMedDay ?? TUNING.medic.quietFirstDay;
+}
 export function finishNight(notes?){
   const ctx = S._nightCtx || {nightWKey:S.weather, comfort:0, fireAtSleep:false};
   const nightWKey = ctx.nightWKey;
@@ -620,13 +625,15 @@ export function finishNight(notes?){
     S.smoked = smokedCount();
   }
 
-  S._rivalTappedTonight = S.tapDays.length>0 && S.tapDays[0] <= S.day;
+  // rc.3 (quietField): nobody tells you when someone taps out, so it moves nothing in you either.
+  S._rivalTappedTonight = !RULES.quietField && S.tapDays.length>0 && S.tapDays[0] <= S.day;
   while (S.tapDays.length && S.tapDays[0] <= S.day){
     S.tapDays.shift(); S.rivals--;
-    S.morale = clamp(S.morale + 4);
+    if (!RULES.quietField) S.morale = clamp(S.morale + 4);
     const reason = contextualTapReason();
     const name = S.tapNames.pop();
     S.rivalOrder.push({name, reason, day:S.day});
+    if (RULES.quietField) continue;
     if (SETTINGS.showRivalNews) notes.push(`📻 Base camp radio: ${name} tapped out - ${reason}. ${S.rivals} rival${S.rivals === 1 ? '' : 's'} left. (+morale)`);
     else notes.push(`📻 Base camp radio: another rival has tapped out. ${S.rivals} rival${S.rivals === 1 ? '' : 's'} left. (+morale)`);
     if (S.rivals === 2 && !S.finalTwoAnnounced){
@@ -635,15 +642,28 @@ export function finishNight(notes?){
       sfxFinalTwo();
     }
   }
-  if (S.rivals <= 0){ endGame('win'); return; }
+  if (S.rivals <= 0){
+    if (!RULES.quietField){ endGame('win'); return; }
+    // rc.3: the last one out is told at a med check, which now comes a little early, as they sometimes do.
+    if (!S.wonPending){ S.wonPending = true; S.nextMedDay = Math.min(medDay(), S.day + 1 + Math.floor(rand()*3)); }
+  }
 
   if (!S.finalTwoAnnounced && S.morale < 35 && rand() < 0.25 && S.day - S.lastPhoneMention >= 3){
     S.lastPhoneMention = S.day;
     notes.push('📞 You catch yourself staring at the sat phone longer than you meant to.');
   }
 
-  // compression §2: med checks every 4 days (was 7).
-  if (S.day % 4 === 0){
+  // compression §2: med checks every 4 days (was 7). rc.3 (quietField): from day 14, then every six to eight.
+  if (RULES.quietField ? S.day === medDay() : S.day % 4 === 0){
+    if (RULES.quietField){
+      S.nextMedDay = S.day + TUNING.medic.quietEveryMin + Math.floor(rand() * (TUNING.medic.quietEveryMax - TUNING.medic.quietEveryMin + 1));
+      if (S.wonPending){
+        S.winAtMedCheck = true;
+        notes.forEach(n=>log(n,'event'));
+        log(`🩺 The boat comes in at first light, the way it does for a check. Nobody opens a med kit.`, 'good');
+        endGame('win'); return;
+      }
+    }
     const canForcePull = (S.day >= TUNING.medic.noPullBeforeDay || S.health <= TUNING.medic.catastrophicHealth) && !(S.day === 4 && TUNING.medic.day7WarningOnly);
     const bmi = computeBMI();
     const severe = S.health < TUNING.medic.severeHealthThreshold || weightLossPct() >= TUNING.medic.forcedPullWeightLossPct || bmi <= TUNING.medic.bmiPullThreshold;

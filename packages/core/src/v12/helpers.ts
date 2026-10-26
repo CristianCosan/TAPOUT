@@ -4,7 +4,8 @@
 
 import { rand } from './runtime.ts';
 import { S } from './state.ts';
-import { RUN_SCALE_FACTOR } from './tuning.ts';
+import { CAMP_HARVEST, RUN_SCALE_FACTOR } from './tuning.ts';
+import { RULES } from './rules.ts';
 export const clamp = (v, lo=0, hi=100) => Math.max(lo, Math.min(hi, v));
 export const pick = a => a[Math.floor(rand()*a.length)];
 // picks from a pool, avoiding an immediate repeat of the last value drawn (tracked on S under stateKey)
@@ -50,3 +51,17 @@ export function roundDisplay(v?){
   return (v - floor) >= 0.3 - 1e-9 ? floor + 1 : floor;
 }
 
+
+/**
+ * rc.3 (soakTime): hours a snare, line or net has been out since it was set or last checked, or
+ * null when it was set before the rule existed. Under twelve hours nothing has come through yet.
+ */
+export function soakHours(item?: { setAbs?: number }): number | null {
+  return item && typeof item.setAbs === 'number' ? nowAbs() - item.setAbs : null;
+}
+
+// rc.3 (campHarvest): logs and rocks gathered at camp go straight to the camp stock, from a finite pile.
+export function campHarvesting(): boolean { return RULES.campHarvest && S.loc === 'camp'; }
+export function campLeft(kind: 'logs' | 'rocks'): number {
+  return kind === 'logs' ? (S.campLogsLeft ?? CAMP_HARVEST.logs) : (S.campRocksLeft ?? CAMP_HARVEST.rocks);
+}

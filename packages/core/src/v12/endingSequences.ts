@@ -14,7 +14,10 @@ export function startEndingSequence(kind?){
     if (S.deathSource === 'violent') showViolentDeathStep1(); else showCollapseStep1();
     return;
   }
-  if (kind === 'win') showWinStep1(); else showLossStep1(kind);
+  // rc.3 (quietField): the app plays the arrival as a scene (Kerry, then Mara), so v12's two
+  // arrival cards are skipped and the ending picks up at the tour of camp.
+  if (kind === 'win') { if (RULES.quietField && S.winAtMedCheck) showWinStep3(); else showWinStep1(); }
+  else showLossStep1(kind);
 }
 export function showCollapseStep1(){
   const causeLine = S.lowestMoment ? S.lowestMoment.cause : 'the accumulated wear of the run';
@@ -81,7 +84,7 @@ export function showLossStep4(kind?){
 export function recordLastLook(text?){ S.endingChoices.lastLook = text; }
 export function showLossStep5(kind?){
   const vehicle = (S.warmth<=15 || S.health<=15) ? 'helicopter' : 'boat';
-  const rivalNote = S.rivals>0 ? ` Somewhere out there, ${S.rivals} other fire${S.rivals===1?' is':'s are'} still going.` : '';
+  const rivalNote = S.rivals>0 && !RULES.quietField ? ` Somewhere out there, ${S.rivals} other fire${S.rivals===1?' is':'s are'} still going.` : '';
   const text = `The ${vehicle} pulls you off the shoreline and the whole run goes small behind you fast, faster than the days it took to live it.${rivalNote}`;
   showModal(`<h3>Pulling Away</h3><div class="wsub tw" id="twL5" onclick="skipTypewriter('twL5')"></div><button class="mbtn" onclick="hideModal(); ${RULES.letters ? 'showCallHome' : 'showFinalStatsScreen'}('${kind}')">Continue</button>`);
   typewriterInto('twL5', text, 18);

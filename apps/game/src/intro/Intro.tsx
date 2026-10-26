@@ -7,6 +7,7 @@ import { floatPlane, producer } from './figures.ts';
 import { World, type WorldInput } from '../world/World.ts';
 import type { PropState } from '../world/props.ts';
 import { plainWords, speakPieces, stopThought } from '../audio/thoughts.ts';
+import { Txt } from '../ui/icons.tsx';
 
 interface KitItem {
   id: string;
@@ -21,7 +22,7 @@ interface KitItem {
 const POOL = KIT_POOL as KitItem[];
 const PICKS = 10;
 const NOTES: Record<string, IntroNote> = INTRO_KITCHEN.notes;
-const NOTE_VOICE: Record<string, IntroClip[]> = INTRO_VOICE.notes;
+const NOTE_VOICE: Partial<Record<string, IntroClip[]>> = INTRO_VOICE.notes;
 
 /** Says a piece of the intro, cutting off whatever was being said. */
 function say(clips: readonly IntroClip[]): void {
@@ -42,7 +43,6 @@ export function Intro({ onBegin, onSkip }: { onBegin: (kit: string[]) => void; o
 
   useEffect(() => {
     if (phase !== 'opening') return;
-    say(INTRO_VOICE.opening);
     const t = window.setTimeout(() => setPhase('kitchen'), 6800);
     return () => window.clearTimeout(t);
   }, [phase]);
@@ -183,7 +183,7 @@ function KitchenStage({ onZip }: { onZip: (ids: string[]) => void }) {
           {item ? (
             <>
               <b>
-                {item.icon} {item.label}
+                <Txt text={item.icon} /> {item.label}
               </b>
               <span>{on ? `Packed: ${item.has}` : `Without it: ${item.without}`}</span>
               {on && <em>{INTRO_KITCHEN.unpack}</em>}

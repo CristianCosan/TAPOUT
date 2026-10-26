@@ -20,7 +20,7 @@ export function showNightModal(notes?){
   const w = WEATHER[S.weather];
   showModal(`
     <h3>Day ${S.day}</h3>
-    <div class="wsub">${w.icon} ${w.label} · ${ambientTempC(false)}°C · ${S.rivals} rival${S.rivals === 1 ? '' : 's'} still out there</div>
+    <div class="wsub">${w.icon} ${w.label} · ${ambientTempC(false)}°C${RULES.quietField ? '' : ` · ${S.rivals} rival${S.rivals === 1 ? '' : 's'} still out there`}</div>
     <ul>${notes.map(n => `<li>${n}</li>`).join('') || '<li>A quiet night. You slept alright.</li>'}</ul>
     <button class="mbtn" onclick="hideModal(); afterNightContinue();">Start the day</button>
   `);
@@ -53,10 +53,10 @@ export function confirmTapOut(){
   const who = whoLabel('no one waiting, if you are honest');
   showModal(`
     <h3>The sat phone is in your hand</h3>
-    <div class="wsub">Day ${S.day}. ${S.rivals} rival${S.rivals===1?'':'s'} still out there.</div>
+    <div class="wsub">Day ${S.day}.${RULES.quietField ? ' Nobody tells you who is still out there.' : ` ${S.rivals} rival${S.rivals===1?'':'s'} still out there.`}</div>
     <ul>
       <li>You've lasted ${S.day} day${S.day===1?'':'s'} out here.</li>
-      <li>${S.rivals} other${S.rivals===1?' is':'s are'} still in the field, still trying.</li>
+      <li>${RULES.quietField ? 'Some of the others are surely still in the field, still trying. You cannot know how many.' : `${S.rivals} other${S.rivals===1?' is':'s are'} still in the field, still trying.`}</li>
       <li>Walking away means no prize and no second attempt - just ${who}, and a story about how far you got and no further.</li>
     </ul>
     <button class="mbtn" onclick="confirmTapOutStep2()">Keep holding the phone</button>

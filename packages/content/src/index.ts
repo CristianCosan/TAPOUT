@@ -3,6 +3,7 @@ export * from './show.ts';
 export * from './locations/index.ts';
 export * from './build.ts';
 export * from './intro.ts';
+export * from './winScene.ts';
 export * from './sound.ts';
 export * from './home.ts';
 export * from './thoughts.ts';

@@ -118,14 +118,14 @@ describe('the medics check before the death verdict', () => {
     night(run, crash);
     expect(run.state.cause).toBe('dead');
   });
-  it('TAP / OUT: the same night ends in a medical pull', () => {
+  it('TAP / OUT: a crash the night before a check ends in a medical pull', () => {
     const run = start(TAPOUT_RULES);
-    night(run, crash);
+    night(run, { ...crash, day: 13 });
     expect(run.state.cause).toBe('med');
   });
   it('TAP / OUT: a crash on any other night is still a death', () => {
     const run = start(TAPOUT_RULES);
-    night(run, { ...crash, day: 8 });
+    night(run, crash);
     expect(run.state.cause).toBe('dead');
   });
 });
@@ -226,5 +226,104 @@ describe('wholeNumbers: max energy is written as a whole number', () => {
       start(rules).state.maxEnergy = 161.6166666;
       expect(hudRecord().get('val-energy')?.text).toContain(expected);
     }
+  });
+});
+
+describe('rc.3 quiet field: you never learn who is left', () => {
+  it('v12 tells you when a rival taps out; TAP / OUT does not', () => {
+    const said = (rules: Readonly<RuleSet>) => {
+      const run = start(rules);
+      for (let d = 1; d <= 12; d++) night(run, { day: d, health: 100, hunger: 100, thirst: 100, warmth: 100, morale: 100, energy: 100 });
+      expect(run.state.rivals).toBeLessThan(9);
+      return (run.state.log as Array<{ msg: string }>).filter((l) => /tapped out|taps out|left in the field/i.test(l.msg)).length;
+    };
+    expect(said(V12_RULES)).toBeGreaterThan(0);
+    expect(said(TAPOUT_RULES)).toBe(0);
+  });
+
+  it('the first med check is day 14, then six to eight days later', () => {
+    const run = start(TAPOUT_RULES);
+    expect(run.call('medDay')).toBe(14);
+    night(run, { day: 13, health: 100, hunger: 100, thirst: 100, warmth: 100, morale: 100 });
+    const next = run.call<number>('medDay');
+    expect(next).toBeGreaterThanOrEqual(20);
+    expect(next).toBeLessThanOrEqual(22);
+  });
+
+  it('v12 wins the moment the last rival goes; TAP / OUT waits for a med check', () => {
+    const v12 = start(V12_RULES);
+    night(v12, { day: 9, rivals: 0, health: 100, hunger: 100, thirst: 100, warmth: 100, morale: 100 });
+    expect(v12.state.cause).toBe('win');
+    const ours = start(TAPOUT_RULES);
+    night(ours, { day: 9, rivals: 0, health: 100, hunger: 100, thirst: 100, warmth: 100, morale: 100 });
+    expect(ours.state.over).toBeFalsy();
+    expect(ours.state.wonPending).toBe(true);
+    for (let d = 10; d < 30 && !ours.state.over; d++) night(ours, { day: d, health: 100, hunger: 100, thirst: 100, warmth: 100, morale: 100 });
+    expect(ours.state.cause).toBe('win');
+    expect(ours.state.winAtMedCheck).toBe(true);
+    // The arrival is the app's scene; the cards pick up at the tour of camp.
+    expect(modal).toContain('Showing Them');
+  });
+});
+
+describe('rc.3 soak time: a set trap catches nothing for half a day', () => {
+  it('v12 can check a snare the moment it is set; TAP / OUT says too soon', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'woods', hour: 9, energy: 100, wireStock: 5 });
+      run.call('placeSnareAt', (run.state.woodsSpots as Array<{ id: number }>)[0]!.id);
+      const snares = run.state.snareList as Array<{ setAbs?: number }>;
+      expect(snares.length).toBeGreaterThan(0);
+      run.call('checkOneSnare', 0);
+      const after = logText(run);
+      if (rules === V12_RULES) expect(after).not.toContain('Too soon');
+      else expect(after).toContain('Too soon');
+    }
+  });
+});
+
+describe('rc.3 camp harvest: logs and rocks at camp', () => {
+  it('only TAP / OUT offers them at camp, straight into the stock', () => {
+    const v12 = start(V12_RULES);
+    const ours = start(TAPOUT_RULES);
+    for (const run of [v12, ours]) Object.assign(run.state, { loc: 'camp', hour: 9, energy: 100 });
+    const shown = (run: Run) => run.call<Array<{ id: string; visible: boolean }>>('actionPanel').filter((b) => b.visible).map((b) => b.id);
+    expect(shown(v12)).not.toContain('a-rocks');
+    expect(shown(ours)).toContain('a-rocks');
+    expect(shown(ours)).toContain('a-wood');
+    const rocks = ours.state.stock.rocks as number;
+    ours.call('actRocks');
+    expect(ours.state.stock.rocks).toBe(rocks + 3);
+    expect(ours.state.carry.rocks).toBe(0);
+  });
+});
+
+describe('rc.3 dugout stages: dig, then walls and roof', () => {
+  it('v12 spends logs on every dig; TAP / OUT digs first and spends logs and moss on walls and roof', () => {
+    const kit = ['shovel', 'saw', 'ferro', 'pot', 'knife', 'sleeping', 'tarp', 'line', 'snare', 'bow'];
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules, kit);
+      Object.assign(run.state, { loc: 'camp', hour: 8, energy: 120, maxEnergy: 120 });
+      run.state.stock.wood = 20; run.state.stock.moss = 10;
+      run.call('actDugout');
+      expect(run.state.dugoutProg).toBe(1);
+      expect(run.state.stock.wood).toBe(rules === V12_RULES ? 18 : 20);
+      Object.assign(run.state, { hour: 8, energy: 120 }); run.call('actDugout');
+      Object.assign(run.state, { hour: 8, energy: 120 }); run.call('actDugout');
+      expect(run.state.stock.wood).toBe(rules === V12_RULES ? 14 : 16);
+      expect(run.state.stock.moss).toBe(rules === V12_RULES ? 10 : 8);
+    }
+  });
+});
+
+describe('rc.3 test mode (Settings)', () => {
+  it('tops energy back up after each action only while it is on', () => {
+    const run = start(TAPOUT_RULES);
+    Object.assign(run.state, { loc: 'camp', hour: 9 });
+    run.call('actFirewood');
+    expect(run.state.energy).toBeLessThan(run.state.maxEnergy);
+    run.call('testSetInfinite', true);
+    run.call('actFirewood');
+    expect(run.state.energy).toBe(run.state.maxEnergy);
   });
 });

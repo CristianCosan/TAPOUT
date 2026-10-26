@@ -7,13 +7,13 @@ import { RULES } from './rules.ts';
 import { fireCap } from './camp.ts';
 import { ambientTempC, eCost, eTime, shiveringActive } from './cost.ts';
 import { berryCount, cookedMealSpoiled, meatCount, oldestBerriesSpoiled, oldestMeatSpoiled } from './food.ts';
-import { TRAVEL_HOURS, clamp, hh, nowAbs, roundDisplay } from './helpers.ts';
+import { TRAVEL_HOURS, campHarvesting, campLeft, clamp, hh, nowAbs, roundDisplay } from './helpers.ts';
 import { checkSmokingDone } from './person.ts';
 import { curfewCapForLoc, hasKit, waterCap } from './setup.ts';
 import { NET_SESSIONS } from './shore.ts';
 import { S } from './state.ts';
 import { isNightNow } from './threads.ts';
-import { BUILD_NEED, CACHE_COST, CACHE_NEED, CARRY_CAP, DUGOUT_COST, DUGOUT_NEED, FIREPIT_COST, FIREPIT_NEED, GAME, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, ICE_CACHE_NEED, MAX_LINES_TOTAL, MAX_SNARES_TOTAL, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER, carryBlocked, carryType } from './tuning.ts';
+import { BUILD_NEED, CACHE_COST, CACHE_NEED, CARRY_CAP, DUGOUT_NEED, dugoutStep, FIREPIT_COST, FIREPIT_NEED, GAME, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, ICE_CACHE_NEED, MAX_LINES_TOTAL, MAX_SNARES_TOTAL, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER, carryBlocked, carryType } from './tuning.ts';
 import { enforceMoraleCeiling } from './worry.ts';
 // ---- The action panel: v12's render() run against a recording page instead of a real one.
 // What it records is exactly what v12 showed the player: which actions exist here, which are
@@ -532,7 +532,7 @@ export function actionPanel(): PanelEntry[] {
         label: name && name.textContent ? name.textContent : b.label,
         onclick: b.onclick,
         loc: b.loc,
-        visible: !el.classes.has('hidden') && (b.loc === 'all' || b.loc === S.loc),
+        visible: !el.classes.has('hidden') && (b.loc === 'all' || b.loc === S.loc || (campHarvesting() && (b.id === 'a-rocks' || b.id === 'a-wood'))),
         enabled: !el.disabled && !S.over,
         detail: recording.get(b.id + '-sub')?.textContent ?? '',
       };
@@ -571,7 +571,7 @@ function panelPass(){
   $('pillDay').innerHTML = `Day <b>${S.day}</b> · ${hh(S.hour)}${S.winter?' ❄️':''}`;
   $('pillWx').textContent = `${w.icon} ${w.label}`;
   $('pillTemp').textContent = `🌡 ${ambientTempC()}°C`;
-  $('pillRivals').innerHTML = `👥 <b>${S.rivals}</b> left`;
+  $('pillRivals').innerHTML = RULES.quietField ? '' : `👥 <b>${S.rivals}</b> left`;
   $('pillWeight').innerHTML = `⚖️ <b>${S.weight.toFixed(1)}</b>kg`;
   updateAmbient();
 
@@ -712,7 +712,10 @@ function panelPass(){
   }
   setBtn('a-shelter', r[0], r[1]);
   if (hasKit('shovel') && !S.dugout){
-    r = S.stock.wood < DUGOUT_COST.wood ? [false, `need ${DUGOUT_COST.wood} logs`] : gate(DUGOUT_COST.e, DUGOUT_COST.h, true, '', `−{c}⚡ · ${durTxt(DUGOUT_COST.h)} · ${DUGOUT_COST.wood} logs · ${S.dugoutProg}/${DUGOUT_NEED} · top-tier warmth, near-immune to storms`, 'ohw');
+    const c = dugoutStep(S.dugoutProg);
+    const missing = [c.wood ? c.wood+' logs' : null, c.moss ? c.moss+' moss' : null].filter(Boolean).join(' + ');
+    const ok = S.stock.wood >= c.wood && (!c.moss || S.stock.moss >= c.moss);
+    r = !ok ? [false, `need ${missing}`] : gate(c.e, c.h, true, '', `−{c}⚡ · ${durTxt(c.h)} · ${missing ? missing+' · ' : ''}${S.dugoutProg}/${DUGOUT_NEED} · top-tier warmth, near-immune to storms`, 'ohw');
     setBtn('a-dugout', r[0], r[1]);
   }
   r = S.structure < 1 ? [false,'build a lean-to first'] : (S.insulation >= 3 ? [false,'fully insulated'] : gate(6,1, S.stock.moss >= 4, 'need 4 moss', `−{c}⚡ · ${durTxt(1)} · 4 moss · ${S.insulation}/3`, 'oh'));
@@ -845,14 +848,14 @@ function panelPass(){
   setBtn('a-checkShore', r[0], r[1]);
   r = !hasKit('pot') ? [false,'no pot - drink at the stream directly'] : S.rawWater>=4 ? [false,'pot is full'] : gate(TUNING.costs.fetchWaterE,TUNING.costs.fetchWaterMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.fetchWaterMin/60)} · fills the pot`,'o');
   setBtn('a-fetch', r[0], r[1]);
-  r = S.carry.rocks>=CARRY_CAP.rocks ? [false,'pack full - drop off at camp'] : carryBlocked('rocks') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(6,TUNING.costs.rocksMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.rocksMin/60)} · +3 rocks`,'ohw'); setBtn('a-rocks', r[0], r[1]);
+  r = campHarvesting() ? (campLeft('rocks')<=0 ? [false,'no loose stone left at camp - try the shore'] : gate(6,TUNING.costs.rocksMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.rocksMin/60)} · +3 rocks to camp stock · ${campLeft('rocks')} left here`,'ohw')) : S.carry.rocks>=CARRY_CAP.rocks ? [false,'pack full - drop off at camp'] : carryBlocked('rocks') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(6,TUNING.costs.rocksMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.rocksMin/60)} · +3 rocks`,'ohw'); setBtn('a-rocks', r[0], r[1]);
   $('a-clay').classList.toggle('hidden', !hasKit('pot') && !hasKit('shovel'));
   r = S.carry.clay>=CARRY_CAP.clay ? [false,'pack full - drop off at camp'] : carryBlocked('clay') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(5,TUNING.costs.clayMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.clayMin/60)} · +2-3 clay`,'oh'); setBtn('a-clay', r[0], r[1]);
   r = gate(2,0.0833,true,'',`−{c}⚡ · ${durTxt(0.0833)} · risky (20% sick, slip chance in rain)`,'o'); setBtn('a-stream', r[0], r[1]);
 
   const snareTotal = S.snareList.length;
   const depNote = S.forageDep >= 4 ? ' · picked over' : '';
-  r = S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : gate(TUNING.costs.forageE,(S.berryPicker?0.8:1)*TUNING.costs.forageMin/60,true,'', `−{c}⚡ · ${durTxt((S.berryPicker?0.8:1)*TUNING.costs.forageMin/60)}${depNote}`,'o'); setBtn('a-forage', r[0], r[1]);
+  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(6,1,true,'',`−{c}⚡ · ${durTxt(1)} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : gate(TUNING.costs.forageE,(S.berryPicker?0.8:1)*TUNING.costs.forageMin/60,true,'', `−{c}⚡ · ${durTxt((S.berryPicker?0.8:1)*TUNING.costs.forageMin/60)}${depNote}`,'o'); setBtn('a-forage', r[0], r[1]);
   if (hasKit('wire')){
     r = S.wireStock<=0 ? [false,'out of wire'] : snareTotal>=MAX_SNARES_TOTAL ? [false,'trapline full (10/10)'] : gate(2,0.0833,true,'',`−{c}⚡ · ${durTxt(0.0833)} · pick a spot · ${S.wireStock} left`,'oh'); setBtn('a-snare', r[0], r[1]);
     r = snareTotal<=0 ? [false,'no snares set'] : gate(2,0.0833,true,'',`−{c}⚡ · ${durTxt(0.0833)}`,'o'); setBtn('a-moveSnare', r[0], r[1]);
@@ -890,7 +893,7 @@ function panelPass(){
   setBtn('a-haul', r[0], r[1]);
   $('a-invest').classList.toggle('hidden', !S.soundsWoods);
   r = gate(6,0.5,true,'',`−{c}⚡ · ${durTxt(0.5)} · could be anything`,'o'); setBtn('a-invest', r[0], r[1]);
-  r = S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : carryBlocked('wood') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(6,1,true,'',`−{c}⚡ · ${durTxt(1)} · +3-5 logs`,'ohw wood'); setBtn('a-wood', r[0], r[1]);
+  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(6,1,true,'',`−{c}⚡ · ${durTxt(1)} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : carryBlocked('wood') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(6,1,true,'',`−{c}⚡ · ${durTxt(1)} · +3-5 logs`,'ohw wood'); setBtn('a-wood', r[0], r[1]);
   r = S.carry.moss>=CARRY_CAP.moss ? [false,'pack full - drop off at camp'] : carryBlocked('moss') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(TUNING.costs.mossE,TUNING.costs.mossMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.mossMin/60)} · +3-4 moss`,'oh'); setBtn('a-moss', r[0], r[1]);
 
   r = gate(2,TUNING.costs.tinderMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.tinderMin/60)} · +${TUNING.costs.tinderYieldLo}-${TUNING.costs.tinderYieldHi} tinder`,'o'); setBtn('a-tinder', r[0], r[1]);

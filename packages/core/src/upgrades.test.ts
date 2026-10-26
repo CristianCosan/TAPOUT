@@ -39,4 +39,20 @@ describe('upgrade path', () => {
     for (const id of ['shelter', 'firepit', 'rack', 'cache'] as const) upgradePath(id);
     expect(JSON.stringify(snapshotRun(run))).toBe(before);
   });
+
+  it('splits the dugout into the pit, the walls and the roof (rc.3)', () => {
+    const run = start();
+    let path = upgradePath('dugout');
+    expect(path.steps.map((s) => [s.tier, s.sessions, s.needs, s.state])).toEqual([
+      [1, 2, {}, 'next'],
+      [2, 1, { wood: 4, moss: 2 }, 'later'],
+      [3, 1, { wood: 4, moss: 2 }, 'later'],
+    ]);
+    run.state.dugoutProg = 1;
+    expect(upgradePath('dugout').steps[0]!.done).toBe(1);
+    run.state.dugoutProg = 3;
+    path = upgradePath('dugout');
+    expect(path.current).toBe(2);
+    expect(path.steps.map((s) => s.state)).toEqual(['built', 'built', 'next']);
+  });
 });
