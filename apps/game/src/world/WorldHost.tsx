@@ -93,7 +93,7 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
         </div>
       )}
       {!looking && !input.frozen && !input.selected && (
-        <div className="move-hint">Click anywhere to look around · W A S D to walk · Shift to run · Esc frees the mouse · Tab for yourself</div>
+        <div className="move-hint">Click anywhere to look around · W A S D to walk · Shift to run · Esc frees the mouse · R to rest · Tab for yourself</div>
       )}
     </div>
   );

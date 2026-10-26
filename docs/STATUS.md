@@ -196,7 +196,9 @@ A release job in CI puts every build merged into main on the GitHub release page
 
 **1.0.0-rc.1** (D-074) is the release candidate: merged into main and tagged; the download lives on the GitHub release page. M23 is done up to the plan's STOP: launching, and where, is Sir's decision.
 
-**Next:** Sir's playtest (F8 notes), then rc.2 with whatever it turns up.
+**1.0.0-rc.2** answers Sir's first five minutes on rc.1 (D-075 to D-080). Energy rules were never changed (parity proves it); what had drifted was the screen: Rest sat behind Tab and turning in only worked at the shelter. Energy is now the big meter in the middle with Rest (R) and turn-in beside it in every place. Camp sits uphill in the trees above the shore with logs and rocks about; camp builds show their whole build path; every resource has a picture with hover words; every action shows a short first-person motion; and the intro is spoken (narrator, Kerry, Mum), with Dan saying why he chose the camp spot.
+
+**Next:** Sir plays rc.2 (F8 notes), then rc.3 or launch.
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,
