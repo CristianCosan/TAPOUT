@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { KIT_POOL } from '@tapout/core';
-import { INTRO_DROPOFF, INTRO_KITCHEN, SHORE, WORLD, type IntroNote } from '@tapout/content';
+import { INTRO_DROPOFF, INTRO_KITCHEN, INTRO_VOICE, SHORE, WORLD, type IntroClip, type IntroNote } from '@tapout/content';
 import { Kitchen, type KitchenHover } from './Kitchen.ts';
 import { floatPlane, producer } from './figures.ts';
 import { World, type WorldInput } from '../world/World.ts';
 import type { PropState } from '../world/props.ts';
+import { plainWords, speakPieces, stopThought } from '../audio/thoughts.ts';
 
 interface KitItem {
   id: string;
@@ -20,6 +21,12 @@ interface KitItem {
 const POOL = KIT_POOL as KitItem[];
 const PICKS = 10;
 const NOTES: Record<string, IntroNote> = INTRO_KITCHEN.notes;
+const NOTE_VOICE: Record<string, IntroClip[]> = INTRO_VOICE.notes;
+
+/** Says a piece of the intro, cutting off whatever was being said. */
+function say(clips: readonly IntroClip[]): void {
+  speakPieces(clips.map((c) => c.id), clips.map((c) => plainWords(c.say)).join(' '), 0.35);
+}
 
 type Phase = 'opening' | 'kitchen' | 'dropoff' | 'title';
 
@@ -35,9 +42,13 @@ export function Intro({ onBegin, onSkip }: { onBegin: (kit: string[]) => void; o
 
   useEffect(() => {
     if (phase !== 'opening') return;
-    const t = window.setTimeout(() => setPhase('kitchen'), 4200);
+    say(INTRO_VOICE.opening);
+    const t = window.setTimeout(() => setPhase('kitchen'), 6800);
     return () => window.clearTimeout(t);
   }, [phase]);
+
+  // Whatever is being said stops when the intro ends or is skipped.
+  useEffect(() => () => stopThought(), []);
 
   useEffect(() => {
     if (phase !== 'title') return;
@@ -127,6 +138,10 @@ function KitchenStage({ onZip }: { onZip: (ids: string[]) => void }) {
   useEffect(() => {
     if (scene.current) scene.current.frozen = note !== null;
     if (note && document.pointerLockElement) document.exitPointerLock();
+    // Read aloud while you look at it; putting it down stops the voice.
+    const id = note && Object.keys(NOTES).find((key) => NOTES[key] === note);
+    if (id && NOTE_VOICE[id]) say(NOTE_VOICE[id]!);
+    else stopThought();
   }, [note]);
 
   const zip = () => {
@@ -288,6 +303,11 @@ function DropoffStage({ onDone }: { onDone: () => void }) {
       globalThis.__tapoutIntro = undefined;
     };
   }, []);
+
+  useEffect(() => {
+    const clip = INTRO_VOICE.dropoff[line];
+    if (clip) say([clip]);
+  }, [line]);
 
   const l = INTRO_DROPOFF.lines[line]!;
   return (

@@ -12,7 +12,7 @@ import { session, type View } from '../session.ts';
 import { noticeLook, onLook, speak, speaking, speakPieces, stopThought } from './thoughts.ts';
 
 /** Moments that only ever get one thought per run, however often they happen. */
-const ONCE = new Set<ThoughtWhen>(['arriveShore', 'arriveWoods', 'firstNight', 'firstFire', 'firstFish', 'firstSnare', 'firstKill', 'wavering']);
+const ONCE = new Set<ThoughtWhen>(['campSpot', 'arriveShore', 'arriveWoods', 'firstNight', 'firstFire', 'firstFish', 'firstSnare', 'firstKill', 'wavering']);
 
 interface Marks {
   loc: string;
@@ -148,6 +148,8 @@ export function useThoughts(view: View, quiet: boolean): void {
     const n = marks(S);
     const p = prev.current;
     prev.current = n;
+    // The first morning of a run: why he put camp up here.
+    if (!p && n.day === 1 && S.hour < 7 && n.loc === 'camp' && !S.over) clock.current.held.push({ when: 'campSpot', at: now() });
     if (!p || S.over) return;
     if (n.confessions > p.confessions) {
       const text = S.confessionals.at(-1)?.text ?? '';
