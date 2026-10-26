@@ -13,8 +13,9 @@ export const MAP_LAKE: readonly Point[] = [
 ];
 
 export const MAP_PLACES: Readonly<Record<LocationId, Point>> = {
-  camp: { x: 360, y: 470 },
-  shore: { x: 640, y: 330 },
+  // Camp up the slope in the timber, the shore down at the water (Sir, rc.2).
+  camp: { x: 640, y: 400 },
+  shore: { x: 455, y: 335 },
   woods: { x: 700, y: 520 },
 };
 

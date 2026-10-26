@@ -9,3 +9,5 @@ export * from './thoughts.ts';
 export * from './confessions.ts';
 export * from './playtest.ts';
 export * from './weather.ts';
+export * from './hud.ts';
+export * from './resources.ts';

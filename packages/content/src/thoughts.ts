@@ -11,7 +11,7 @@
 
 export type ThoughtWhen =
   // Moments, the first time they happen in a run.
-  | 'arriveShore' | 'arriveWoods' | 'firstNight' | 'frost' | 'snow' | 'storm' | 'finalTwo'
+  | 'campSpot' | 'arriveShore' | 'arriveWoods' | 'firstNight' | 'frost' | 'snow' | 'storm' | 'finalTwo'
   | 'rivalGone' | 'firstFire' | 'firstFish' | 'firstSnare' | 'firstKill' | 'predator' | 'wavering'
   // When he is low: sad, worn down, resolve wavering.
   | 'low'
@@ -44,6 +44,8 @@ export interface Thought {
 
 export const THOUGHTS: readonly Thought[] = [
   // ---- moments
+  // The first morning, right after the drop-off: why camp is up here (rc.2, Sir).
+  { id: 'camp-spot', when: 'campSpot', say: 'I walked the shore for a while / before I picked this spot. // Up here in the trees, / the wind can\'t get at me. ~ And if the lake comes up in a storm, / it won\'t reach me. // The water\'s still close. / The woods are right behind me. // Yeah. / This\'ll do.' },
   { id: 'shore-1', when: 'arriveShore', say: 'So this is the lake. / Bigger than it looked from the plane.' },
   { id: 'shore-2', when: 'arriveShore', say: 'Water\'s flat as glass. // Somewhere out there, nine other people are staring at it too.' },
   { id: 'woods-1', when: 'arriveWoods', say: '~ Smells like rain in here. / Even when it isn\'t.' },

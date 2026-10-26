@@ -30,6 +30,10 @@ from kokoro_onnx import Kokoro
 
 RENDER_VERSION = 2
 VOICE = 'am_michael'
+# The intro's other voices (rc.2): a narrator for what you see, Kerry the producer, Mum on the
+# answering machine. Lines without a voice are Dan.
+VOICES = {'narrator': 'bm_george', 'kerry': 'af_heart', 'mum': 'bf_isabella'}
+ROLE_SPEED = {'narrator': 0.9, 'kerry': 0.98, 'mum': 0.95}
 SR = 24000
 SPEED = 0.88          # a thought is slower than speech
 LAST_SLOWER = 0.03    # the last sentence of a line slows a little more
@@ -113,14 +117,21 @@ def breath(rng):
     return (b / (np.abs(b).max() + 1e-9) * 0.035).astype(np.float32)
 
 
-def colour(a, aloud=False):
+def colour(a, aloud=False, phone=False):
     """Inside the head: cut the rumble below 90 Hz, soften above 7 kHz, even loudness.
-    Out loud (to the camera): the full top end, a little louder."""
+    Out loud (to the camera): the full top end, a little louder.
+    Through a phone line: only 300 Hz to 3.4 kHz, a touch of grit."""
     spec = np.fft.rfft(a)
     f = np.fft.rfftfreq(len(a), 1 / SR)
-    hp = 1 / (1 + (90 / np.maximum(f, 1)) ** 4)
-    lp = 1 if aloud else 1 / (1 + (f / 7000) ** 4)
+    if phone:
+        hp = 1 / (1 + (300 / np.maximum(f, 1)) ** 6)
+        lp = 1 / (1 + (f / 3400) ** 6)
+    else:
+        hp = 1 / (1 + (90 / np.maximum(f, 1)) ** 4)
+        lp = 1 if aloud else 1 / (1 + (f / 7000) ** 4)
     a = np.fft.irfft(spec * hp * lp, n=len(a))
+    if phone:
+        a = np.tanh(a / (np.abs(a).max() + 1e-9) * 2.2)
     rms = np.sqrt((a[np.abs(a) > 0.01 * np.abs(a).max()] ** 2).mean())
     a = a * (10 ** ((ALOUD_RMS_DB if aloud else TARGET_RMS_DB) / 20) / max(rms, 1e-9))
     peak = np.abs(a).max()
@@ -139,8 +150,12 @@ def fade(a, s=0.008):
 
 
 def record(k, line):
-    aloud = line.get('style') == 'aloud'
-    speed = line.get('speed') or (ALOUD_SPEED if aloud else SPEED)
+    role = line.get('voice')
+    voice = VOICES.get(role, VOICE)
+    phone = line.get('style') == 'phone'
+    aloud = line.get('style') == 'aloud' or role in VOICES
+    speed = line.get('speed') or ROLE_SPEED.get(role) or (ALOUD_SPEED if aloud else SPEED)
+    lang = 'en-gb' if voice.startswith('b') else 'en-us'
     toks = tokens(line['say'])
     last_text = max(i for i, t in enumerate(toks) if t[0] == 'text')
     rng = np.random.default_rng(int(hashlib.sha1(line['id'].encode()).hexdigest()[:8], 16))
@@ -153,11 +168,11 @@ def record(k, line):
             parts.append(np.zeros(int(0.10 * SR), np.float32))
         else:
             s = speed - (LAST_SLOWER if i == last_text else 0)
-            a, sr = k.create(val, voice=VOICE, speed=s, lang='en-us')
+            a, sr = k.create(val, voice=voice, speed=s, lang=lang)
             assert sr == SR
             parts.append(fade(stretch_pauses(trim(a.astype(np.float32)))))
     parts.append(np.zeros(int(TAIL * SR), np.float32))
-    return colour(np.concatenate(parts), aloud)
+    return colour(np.concatenate(parts), aloud, phone)
 
 
 def main():
@@ -175,7 +190,7 @@ def main():
     keep = set()
     for line in lines:
         keep.add(line['id'])
-        h = hashlib.sha1(json.dumps([RENDER_VERSION, VOICE, line['say'], line.get('speed')] + ([line['style']] if line.get('style') else [])).encode()).hexdigest()[:12]
+        h = hashlib.sha1(json.dumps([RENDER_VERSION, VOICE, line['say'], line.get('speed')] + ([line['style']] if line.get('style') else []) + ([line['voice']] if line.get('voice') else [])).encode()).hexdigest()[:12]
         target = os.path.join(args.out, line['id'] + '.ogg')
         if args.only and line['id'] not in args.only:
             continue

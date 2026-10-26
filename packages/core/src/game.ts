@@ -163,6 +163,7 @@ export { setPresenter, type Presenter } from './v12/ui.ts';
 export { TAPOUT_RULES, V12_RULES, type RuleSet } from './v12/rules.ts';
 export { rationsLeft } from './v12/camp.ts';
 export { forcedTapCause } from './v12/threads.ts';
+export { upgradePath, type UpgradeId, type UpgradePath, type UpgradeStep, type Material } from './upgrades.ts';
 
 /**
  * Read-only v12 values and helpers the presentation shows. None of them changes state or draws

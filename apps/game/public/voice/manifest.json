@@ -311,6 +311,10 @@
   "hash": "73ce0d635726",
   "seconds": 6.76
  },
+ "camp-spot": {
+  "hash": "156893f78136",
+  "seconds": 21.12
+ },
  "cold-1": {
   "hash": "3eabac24a712",
   "seconds": 3.85
@@ -378,6 +382,70 @@
  "hungry-3": {
   "hash": "9925420e9d3e",
   "seconds": 3.61
+ },
+ "intro-axe": {
+  "hash": "91f9a80e46be",
+  "seconds": 14.9
+ },
+ "intro-dropoff-1": {
+  "hash": "4d43f83a0104",
+  "seconds": 9.87
+ },
+ "intro-dropoff-2": {
+  "hash": "08b48fb0bdc8",
+  "seconds": 13.28
+ },
+ "intro-kerry-1": {
+  "hash": "63b7d9b5450d",
+  "seconds": 7.63
+ },
+ "intro-kerry-2": {
+  "hash": "9966bcf88d92",
+  "seconds": 7.54
+ },
+ "intro-kerry-3": {
+  "hash": "e2fb623889f4",
+  "seconds": 9.73
+ },
+ "intro-kerry-4": {
+  "hash": "37b3cead3917",
+  "seconds": 5.89
+ },
+ "intro-kerry-5": {
+  "hash": "c16c16161ec1",
+  "seconds": 7.2
+ },
+ "intro-kerry-6": {
+  "hash": "e3b529d12aa3",
+  "seconds": 7.79
+ },
+ "intro-letter": {
+  "hash": "3af86658dc7c",
+  "seconds": 24.75
+ },
+ "intro-machine": {
+  "hash": "3dd380cc3a13",
+  "seconds": 3.74
+ },
+ "intro-mum": {
+  "hash": "1fd9e9c6267e",
+  "seconds": 13.51
+ },
+ "intro-opening": {
+  "hash": "7d5c319d7617",
+  "seconds": 6.94
+ },
+ "intro-phone": {
+  "hash": "a37125169c4f",
+  "seconds": 17.41
+ },
+ "intro-photo": {
+  "hash": "925cbeb5a828",
+  "seconds": 14.83
+ },
+ "intro-window": {
+  "hash": "d58c62346c17",
+  "seconds": 13.93
  },
  "jay-1": {
   "hash": "18570b5002b3",

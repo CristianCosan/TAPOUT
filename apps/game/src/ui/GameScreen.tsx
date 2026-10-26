@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay } from '@tapout/core';
-import { HUNT_TRAIL_LABELS, KEEPSAKES, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
+import { ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -16,6 +16,7 @@ import { playUi } from '../audio/effects.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
 import { NoteBox } from './NoteBox.tsx';
+import { ResIcon, Tooltip, WithIcons, resourceTip } from './icons.tsx';
 
 const BARS = [
   ['health', 'Health'],
@@ -27,24 +28,28 @@ const BARS = [
 ] as const;
 
 const STORES = [
-  ['inv-meat', 'Raw meat'],
-  ['inv-arrows', 'Arrows'],
-  ['inv-raw', 'Raw water'],
-  ['inv-tinder', 'Tinder'],
-  ['inv-wood', 'Logs'],
-  ['inv-firewood', 'Firewood'],
-  ['inv-moss', 'Moss'],
-  ['inv-rocks', 'Rocks'],
-  ['inv-clay', 'Clay'],
-] as const;
+  ['inv-wood', 'wood'],
+  ['inv-firewood', 'firewood'],
+  ['inv-rocks', 'rocks'],
+  ['inv-moss', 'moss'],
+  ['inv-clay', 'clay'],
+  ['inv-tinder', 'tinder'],
+  ['inv-meat', 'meat'],
+  ['inv-arrows', 'arrows'],
+  ['inv-raw', 'raw'],
+] as const satisfies ReadonlyArray<readonly [string, ResourceId]>;
 
 /** What a station shows about your stores when you open it. */
-const STATION_STORES: Record<string, ReadonlyArray<readonly [string, string]>> = {
-  woodpile: [['inv-firewood', 'Firewood'], ['inv-wood', 'Logs']],
-  stock: [['inv-rocks', 'Rocks'], ['inv-moss', 'Moss'], ['inv-clay', 'Clay'], ['inv-tinder', 'Tinder']],
-  food: [['inv-meat', 'Raw meat']],
-  water: [['inv-raw', 'Raw water']],
+const STATION_STORES: Record<string, ReadonlyArray<readonly [string, ResourceId]>> = {
+  woodpile: [['inv-firewood', 'firewood'], ['inv-wood', 'wood']],
+  stock: [['inv-rocks', 'rocks'], ['inv-moss', 'moss'], ['inv-clay', 'clay'], ['inv-tinder', 'tinder']],
+  food: [['inv-meat', 'meat']],
+  water: [['inv-raw', 'raw']],
 };
+
+/** Camp builds that show their whole path when you open them. */
+const UPGRADES: Record<string, UpgradeId> = { shelter: 'shelter', fire: 'firepit', rack: 'rack', cache: 'cache' };
+const STOCK_OF: Record<string, string> = { wood: 'inv-wood', moss: 'inv-moss', clay: 'inv-clay', rocks: 'inv-rocks' };
 
 function Html({ html, className }: { html: string; className?: string }) {
   return <span className={className} dangerouslySetInnerHTML={{ __html: inertHandlers(html) }} />;
@@ -111,7 +116,6 @@ function BodyRail({ view }: { view: View }) {
   );
   return (
     <aside className="rail rail-left">
-      {bar('energy', 'Energy', S.energy, S.maxEnergy, S.energy / S.maxEnergy < 0.22)}
       {BARS.map(([key, label]) => {
         const value = S[key] as number;
         return bar(key, label, value, 100, key === 'stress' ? value > 78 : value < 22);
@@ -131,12 +135,14 @@ function StoresRail({ view }: { view: View }) {
   return (
     <aside className="rail rail-right">
       <h4>Stores</h4>
-      {STORES.map(([id, label]) => (
-        <div className="store" key={id}>
-          <span>{label}</span>
-          <b>{hudText(hud, id)}</b>
-        </div>
-      ))}
+      <div className="store-grid">
+        {STORES.map(([id, res]) => (
+          <div className="store-tile" key={id} data-tip={resourceTip(res)}>
+            <ResIcon id={res} size={30} />
+            <b>{hudText(hud, id)}</b>
+          </div>
+        ))}
+      </div>
       <h4>Eat and drink</h4>
       <div className="eat">
         {(['drink', 'eatBerries', 'eatCooked', 'eatSmoked', 'eatRation'] as const).map((kind) => {
@@ -174,9 +180,62 @@ function BottomBar({ view, onJournal }: { view: View; onJournal: () => void }) {
   );
 }
 
+// ---- energy, in the middle of the screen: the one number every action spends
+
+/** The energy an action would cost, read off its v12 detail line ("−6⚡ · 1h ..."). */
+export function energyCost(detail: string): number {
+  const m = /−(\d+)⚡/.exec(detail);
+  return m ? Number(m[1]) : 0;
+}
+
+function EnergyHud({ view, cost, onBed }: { view: View; cost: number; onBed: (offer: Offer) => void }) {
+  const S = view.state;
+  const max = Math.max(1, S.maxEnergy as number);
+  const energy = Math.max(0, S.energy as number);
+  const pct = (n: number) => `${Math.max(0, Math.min(100, (n / max) * 100))}%`;
+  const after = Math.max(0, energy - cost);
+  const low = energy / max < 0.22;
+  const rest = view.panel.find((e) => e.id === 'a-rest');
+  const sleep = specialOffer('sleep', view.hud);
+  const early = specialOffer('turnInEarly', view.hud);
+  const bed = sleep?.enabled ? sleep : early;
+  return (
+    <div className={`energy-hud${low ? ' low' : ''}`}>
+      <div className="energy-head">
+        <span>⚡ {ENERGY_HUD.label}</span>
+        <b>
+          {roundDisplay(energy)} <i>/ {roundDisplay(max)}</i>
+        </b>
+        {cost > 0 && (
+          <em>
+            → {roundDisplay(after)} {ENERGY_HUD.after}
+          </em>
+        )}
+      </div>
+      <div className="energy-bar">
+        <div className="energy-fill" style={{ width: pct(cost > 0 ? after : energy) }} />
+        {cost > 0 && <div className="energy-spend" style={{ left: pct(after), width: pct(Math.min(cost, energy)) }} />}
+      </div>
+      <div className="energy-btns">
+        {rest?.visible && (
+          <button className="hud-btn" disabled={!rest.enabled} title={`${rest.detail} (${ENERGY_HUD.restKey})`} onClick={() => session.click(rest.onclick)}>
+            🧘 {ENERGY_HUD.rest} <span className="key">{ENERGY_HUD.restKey}</span>
+          </button>
+        )}
+        {bed && (
+          <button className="hud-btn" disabled={!bed.enabled} title={bed.detail} onClick={() => onBed(bed)}>
+            {bed.label}
+          </button>
+        )}
+      </div>
+      {low && <p className="energy-low">{ENERGY_HUD.low}</p>}
+    </div>
+  );
+}
+
 // ---- the context panel, next to the station you clicked
 
-function ContextPanel({ station, view, onClose, onAct, onKeepsake, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onKeepsake: (note: IntroNote) => void; beside?: boolean }) {
+function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onKeepsake: (note: IntroNote) => void; onCost: (cost: number) => void; beside?: boolean }) {
   const offers = offersFor(station, view);
   const stores = STATION_STORES[station.id] ?? [];
   const xs = station.id === 'you' ? [1000] : station.hotspot.map((p) => p.x);
@@ -201,13 +260,14 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, beside }: { s
       </div>
       {stores.length > 0 && (
         <div className="context-stores">
-          {stores.map(([id, label]) => (
+          {stores.map(([id, res]) => (
             <span key={id}>
-              {label} <b>{hudText(view.hud, id)}</b>
+              <ResIcon id={res} /> <b>{hudText(view.hud, id)}</b>
             </span>
           ))}
         </div>
       )}
+      {UPGRADES[station.id] && <BuildPath id={UPGRADES[station.id]!} view={view} />}
       {station.id === 'pack' && (
         <div className="keepsakes">
           {Object.values(KEEPSAKES).map((note) => (
@@ -221,12 +281,60 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, beside }: { s
         station.id !== 'pack' && <p className="context-empty">Nothing to do here right now.</p>
       ) : (
         offers.map((offer) => (
-          <button key={offer.key} className="context-act" disabled={!offer.enabled} onClick={() => onAct(offer)}>
+          <button
+            key={offer.key}
+            className="context-act"
+            disabled={!offer.enabled}
+            onClick={() => onAct(offer)}
+            onMouseEnter={() => onCost(offer.enabled ? energyCost(offer.detail) : 0)}
+            onMouseLeave={() => onCost(0)}
+          >
             <span className="act-name">{offer.label}</span>
-            {offer.detail && <span className="act-detail">{offer.detail}</span>}
+            {offer.detail && (
+              <span className="act-detail">
+                <WithIcons text={offer.detail} />
+              </span>
+            )}
           </button>
         ))
       )}
+    </div>
+  );
+}
+
+/** Every tier of a camp build: what you have, what comes next, what each session takes. Facts only. */
+function BuildPath({ id, view }: { id: UpgradeId; view: View }) {
+  void view.version;
+  const path = upgradePath(id);
+  const names = UPGRADE_TEXT.names[id];
+  return (
+    <div className="build-path">
+      <h4>{UPGRADE_TEXT.title}</h4>
+      {path.steps.map((step) => (
+        <div key={step.tier} className={`build-step ${step.state}`}>
+          <span className="build-name">
+            {step.state === 'built' ? '✓ ' : ''}
+            {names[step.tier]}
+          </span>
+          {step.state === 'built' ? (
+            <span className="build-meta">{UPGRADE_TEXT.built}</span>
+          ) : (
+            <span className="build-meta">
+              {UPGRADE_TEXT.sessions(step.done, step.sessions)} · ⚡{step.energy} · {duration(Math.round(step.hours * 60))}
+              {Object.entries(step.needs).map(([m, n]) => {
+                const have = Number(hudText(view.hud, STOCK_OF[m]!)) || 0;
+                return (
+                  <span key={m} className={`build-need${step.state === 'next' && have < n ? ' short' : ''}`}>
+                    <ResIcon id={m as ResourceId} size={18} />
+                    {n}
+                  </span>
+                );
+              })}
+              {step.sessions > 1 && <i> {UPGRADE_TEXT.perSession}</i>}
+            </span>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -242,8 +350,8 @@ const RESULT_LABELS: Record<string, string> = {
   morale: 'Morale',
   stress: 'Stress',
   water: 'Clean water',
-  ...Object.fromEntries(STORES),
 };
+const RESULT_ICONS: Record<string, ResourceId> = Object.fromEntries(STORES);
 
 function duration(minutes: number): string {
   const h = Math.floor(minutes / 60);
@@ -258,7 +366,7 @@ function ResultCard({ result }: { result: ActionResult }) {
     return (
       <span key={key} className={`tag ${good ? 'up' : 'down'}`}>
         {d > 0 ? '+' : '−'}
-        {Math.abs(d)} {RESULT_LABELS[key] ?? key}
+        {Math.abs(d)} {RESULT_ICONS[key] ? <ResIcon id={RESULT_ICONS[key]!} size={18} /> : (RESULT_LABELS[key] ?? key)}
       </span>
     );
   });
@@ -444,6 +552,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [night, setNight] = useState<Offer | null>(null);
   const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
   const [sound, setSound] = useState(false);
+  const [cost, setCost] = useState(0);
+  const root = useRef<HTMLDivElement>(null);
   // A new day starts behind a curtain: the night passes, then the dawn report.
   const [curtain, setCurtain] = useState<number | null>(null);
   const lastDay = useRef<number>(S.day);
@@ -468,6 +578,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
 
   // A new location starts with nothing open.
   useEffect(() => setSelected(null), [loc]);
+  useEffect(() => setCost(0), [selected, view.version]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -485,6 +596,9 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       } else if (e.key === 'Tab') {
         e.preventDefault();
         setSelected((current) => (current === 'you' ? null : 'you'));
+      } else if (e.key === 'r' || e.key === 'R') {
+        const rest = session.getView()?.panel.find((p) => p.id === 'a-rest');
+        if (rest?.visible && rest.enabled && !session.getView()?.modal) session.click(rest.onclick);
       } else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
       else if (e.key === 'm' || e.key === 'M') setMap((open) => !open);
       else if (e.key === 'F3') {
@@ -605,7 +719,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   };
 
   return (
-    <div className="game2">
+    <div className="game2" ref={root}>
       {guide ? <TableauHost input={input} events={events} /> : <WorldHost input={worldInput} events={worldEvents} />}
       {!guide && (
         <>
@@ -614,6 +728,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           </div>
           <TopBar view={view} onJournal={() => setJournal(true)} onMap={() => setMap(true)} onSound={() => setSound(true)} />
           <BodyRail view={view} />
+          {!frozen && <EnergyHud view={view} cost={station ? cost : 0} onBed={setNight} />}
           <StoresRail view={view} />
           <BottomBar view={view} onJournal={() => setJournal(true)} />
           <button className="you-btn" onClick={() => setSelected(selected === 'you' ? null : 'you')} title="Things only you need (Tab)">
@@ -622,7 +737,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} onKeepsake={(note) => {
             setSelected(null);
             setKeepsake(note);
-          }} beside />}
+          }} onCost={setCost} beside />}
           {keepsake && (
             <div className="overlay" onClick={() => setKeepsake(null)}>
               <div className="intro-note">
@@ -654,6 +769,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
           <Modal view={view} />
+          <Tooltip root={root} />
         </>
       )}
     </div>

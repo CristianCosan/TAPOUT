@@ -97,3 +97,50 @@ export const INTRO_DROPOFF = {
   next: 'Continue',
   skip: 'Skip intro',
 };
+
+/**
+ * The intro, spoken (rc.2, Sir: "there is no narration at all for the starting dialogues").
+ * Recorded per phrase like Dan's thoughts (scripts/voice/render.py), one file per id. Marks:
+ * ' / ' a beat, ' // ' a long beat, '~' a breath. A narrator reads what you see and read, Kerry
+ * has her own voice, and Mum's message comes through the answering machine.
+ */
+export type IntroVoice = 'narrator' | 'kerry' | 'mum';
+
+export interface IntroClip {
+  id: string;
+  voice: IntroVoice;
+  say: string;
+  /** Through a phone line or an answering machine. */
+  style?: 'phone';
+}
+
+const n = (id: string, say: string): IntroClip => ({ id: `intro-${id}`, voice: 'narrator', say });
+const k = (id: string, say: string): IntroClip => ({ id: `intro-${id}`, voice: 'kerry', say });
+
+export const INTRO_VOICE = {
+  opening: [n('opening', 'The night before. // Your kitchen, / ten past one in the morning.')],
+  notes: {
+    letter: [
+      n('letter', `${SHOW.name}. / "Congratulations, Daniel. / You have been selected. // Ten contestants, / ten lakes, / no crew. / You film yourself. // The last one standing wins four hundred thousand dollars." // You have read it so many times / the folds have gone soft.`),
+    ],
+    phone: [n('phone', 'Mara. / "Pack the good socks. // You have talked about doing something like this for six years. / Go and find out. / I\'ll be here." // Then, a minute later. / "Come home skinny and rich."')],
+    photo: [n('photo', 'You and Mara at the lake, / two summers ago. / Sunburnt, / laughing at something off camera. // You take it down / and slide it into the lid of the pack.')],
+    machine: [
+      n('machine', 'One message. // Your mother.'),
+      { id: 'intro-mum', voice: 'mum', style: 'phone', say: 'Daniel, it\'s Mum. / I\'ve put a book about northern birds in the post. / Don\'t laugh. // Your father says keep the axe sharp. // Ring us before you go. / Ring us when you\'re out.' },
+    ],
+    axeTag: [n('axe', 'The head is older than you are. / The handle is the third one. // A tag on the haft, / in his blocky capitals. // Keep it sharp. / Don\'t be a hero.')],
+    window: [n('window', 'Your own face in the black glass. // Thirty-four. // A long list of things you started, / and let go. // You are not going to let go of this one.')],
+  } satisfies Record<keyof typeof INTRO_KITCHEN.notes, IntroClip[]>,
+  /** One per drop-off line, in order. */
+  dropoff: [
+    n('dropoff-1', 'Dawn. / The float plane ticks as its engine cools. // The lake is huge, / and completely still.'),
+    k('kerry-1', 'Right. / This is you. // Nearest person is twenty kilometres that way, / and they are competing too.'),
+    k('kerry-2', 'Ten of you went in this morning. / You will not see any of them. // You will hear how many are left / when we check in.'),
+    k('kerry-3', 'This is the phone. / Press the button, / and a boat comes for you. // The moment you press it, / it is over. / No take-backs.'),
+    k('kerry-4', 'Medics come out to check you now and then. // If they say you are done, / you are done.'),
+    k('kerry-5', 'That camera is yours. / Talk to it. // People at home want to know / what it is really like.'),
+    k('kerry-6', 'Winter comes fast up here. // Last one standing takes four hundred thousand dollars. // Good luck, Dan.'),
+    n('dropoff-2', 'The plane turns into the wind, / lifts off the water, / and is gone. // The engine lasts longer than you expect. // Then nothing.'),
+  ] satisfies IntroClip[],
+};

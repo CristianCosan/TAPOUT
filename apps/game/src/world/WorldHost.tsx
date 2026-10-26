@@ -3,6 +3,7 @@ import { SLOW_TEXT } from '@tapout/content';
 import { playUi } from '../audio/effects.ts';
 import { noticeLook } from '../audio/thoughts.ts';
 import { setSetting } from '../settings.ts';
+import { session } from '../session.ts';
 import { World, type Hover, type WorldEvents, type WorldInput } from './World.ts';
 
 declare global {
@@ -14,6 +15,7 @@ declare global {
         birds: () => { kind: string; at: { x: number; y: number; z: number }; visible: boolean }[];
         stand: (x: number, z: number, at: { x: number; y: number; z: number }) => void;
         where: () => { x: number; z: number; prints: number; calls: number; triangles: number; rings: number; shoreZ?: number };
+        perform: (fn: string) => void;
       }
     | undefined;
 }
@@ -50,8 +52,11 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
     const w = new World(parent.current);
     w.configure(latest.current.input, fullEvents.current);
     world.current = w;
-    globalThis.__tapoutWorld = { lookAt: (id) => w.lookAt(id), preview: (p) => (w.preview = p), birds: () => w.birds(), stand: (x, z, at) => w.stand(x, z, at), where: () => w.where() };
+    globalThis.__tapoutWorld = { lookAt: (id) => w.lookAt(id), preview: (p) => (w.preview = p), birds: () => w.birds(), stand: (x, z, at) => w.stand(x, z, at), where: () => w.where(), perform: (fn) => w.perform(fn) };
+    // Every action you take shows its motion: the axe swinging, hands reaching for stones.
+    const off = session.onCall((fn) => w.perform(fn));
     return () => {
+      off();
       globalThis.__tapoutWorld = undefined;
       w.dispose();
       world.current = null;
@@ -88,7 +93,7 @@ export function WorldHost({ input, events }: { input: WorldInput; events: Pick<W
         </div>
       )}
       {!looking && !input.frozen && !input.selected && (
-        <div className="move-hint">Click anywhere to look around · W A S D to walk · Shift to run · Esc frees the mouse · Tab for yourself</div>
+        <div className="move-hint">Click anywhere to look around · W A S D to walk · Shift to run · Esc frees the mouse · R to rest · Tab for yourself</div>
       )}
     </div>
   );
