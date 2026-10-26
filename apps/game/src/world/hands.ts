@@ -45,7 +45,7 @@ export const MOTIONS: Readonly<Record<string, Motion>> = {
   actSharpenAxe: 'knife', actMaintainFerro: 'knife', actTreeMark: 'knife', actPoultice: 'stir', actFlute: 'knife',
   eatCooked: 'eat', eatSmoked: 'eat', eatBerries: 'eat', eatRation: 'eat', eatSpoiledAnyway: 'eat', actFeedJay: 'drop',
   actMusic: 'flute', actConfess: 'nod', actDropOff: 'drop', actRest: 'sit', actSitWatch: 'sit',
-  writeLetter: 'write', actLetterPartner: 'write', actLetterParents: 'write',
+  actWriteLetter: 'write', weaveNetSession: 'snare',
 };
 
 const SECONDS: Partial<Record<Motion, number>> = { sit: 2.6, look: 2.2, chop: 1.9, build: 1.9, fire: 1.8, friction: 1.9 };
