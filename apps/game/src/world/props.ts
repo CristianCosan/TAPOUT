@@ -34,6 +34,12 @@ export interface PropState {
   secondTarp?: boolean;
   /** rc.5: the stone stove is built. */
   stove?: boolean;
+  /** rc.7: the late upgrades you have built (reflector wall, bark shingles, snow wall). */
+  late?: readonly string[];
+  /** rc.7: today's lake ice in winter, and whether you cut a test hole today. */
+  iceCm?: number;
+  thinIce?: boolean;
+  testHole?: boolean;
   /** v12's hunt state (rc.5: the trail on the ground shows it). */
   huntState?: string;
   /** A wounded animal leaves blood on its trail. */
@@ -258,7 +264,7 @@ function shelter(s: PropState): THREE.Group {
         const x = -1.3 + i * 0.37;
         log(g, v(x, 1.7, 0.6), v(x, 0, -1.4), 0.04, C.wood);
       }
-      const roof = mesh(rough(new THREE.BoxGeometry(3.0, 0.16, 2.7, 4, 1, 4), 0.12, 2), mat(s.winter ? C.snow : C.bough), 0, 0.92, -0.4, 0.88, 0, 0);
+      const roof = mesh(rough(new THREE.BoxGeometry(3.0, 0.16, 2.7, 4, 1, 4), 0.12, 2), mat(s.winter ? C.snow : C.bough), 0, 0.92, -0.4, -0.7, 0, 0);
       g.add(roof);
       if (s.winter) icicles(g, v(-1.45, 1.6, 0.66), v(1.45, 1.6, 0.66), 31);
       break;
@@ -271,7 +277,7 @@ function shelter(s: PropState): THREE.Group {
       }
       log(g, v(0, 2.1, 1.5), v(0, 2.1, -1.7), 0.07);
       for (const side of [-1, 1]) {
-        const r = mesh(rough(new THREE.BoxGeometry(0.18, 2.55, 3.0, 1, 4, 4), 0.1, side + 4), mat(s.winter ? C.snow : C.bough), side * 0.72, 1.05, -0.1, 0, 0, side * -0.59);
+        const r = mesh(rough(new THREE.BoxGeometry(0.18, 2.55, 3.0, 1, 4, 4), 0.1, side + 4), mat(s.winter ? C.snow : C.bough), side * 0.72, 1.05, -0.1, 0, 0, side * 0.59);
         g.add(r);
       }
       g.add(mesh(new THREE.BoxGeometry(2.4, 1.6, 0.12), mat(C.woodDark), 0, 0.7, -1.45, 0, 0, 0));
@@ -300,6 +306,8 @@ function shelter(s: PropState): THREE.Group {
     }
   }
   if (s.secondTarp && s.structure > 0) secondTarp(g, s.structure);
+  if (s.late?.includes('shingles') && s.structure > 0) shingles(g, s.structure);
+  if (s.late?.includes('snowWall')) snowWall(g, s.structure);
   if ((s.buildProg ?? 0) > 0 && s.structure < 3) workSite(g, s);
   if (s.insulation > 0 && s.structure > 0 && !s.winter) {
     const rnd = seeded(8);
@@ -314,13 +322,67 @@ function secondTarp(g: THREE.Group, structure: number) {
   const blue = mat(0x2f5f86, { key: 'ds' });
   if (structure === 1) {
     g.add(mesh(new THREE.BoxGeometry(0.03, 1.2, 2.2), blue, -1.55, 0.6, -0.4, 0, 0, 0.06));
-    g.add(mesh(new THREE.BoxGeometry(3.1, 0.03, 2.0), blue, 0, 1.06, -0.45, 0.88, 0, 0));
+    g.add(mesh(new THREE.BoxGeometry(3.1, 0.03, 2.0), blue, 0, 1.06, -0.45, -0.7, 0, 0));
   } else if (structure === 2) {
-    for (const side of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.03, 1.4, 3.2), blue, side * 0.45, 1.6, -0.1, 0, 0, side * -0.59));
+    for (const side of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.03, 1.4, 3.2), blue, side * 0.45, 1.6, -0.1, 0, 0, side * 0.59));
   } else {
     for (const side of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(2.2, 0.03, 3.4), blue, side * 0.95, 2.1, 0, 0, 0, side * -0.5));
   }
   for (const [x, z] of [[-1.6, 1.6], [1.6, 1.6]] as const) log(g, v(x, 0, z), v(x * 0.9, 1.2, z * 0.9), 0.015, 0xd8d0b0);
+}
+
+// rc.7: birch-bark shingles laid in overlapping courses over the roof, pale with dark flecks.
+function shingles(g: THREE.Group, structure: number) {
+  const bark = mat(0xe4ddcc);
+  const fleck = mat(0x3a3028);
+  const course = (parent: THREE.Group, w: number, d: number, n: number) => {
+    for (let i = 0; i < n; i++) {
+      const z = -d / 2 + (i + 0.5) * (d / n);
+      parent.add(mesh(new THREE.BoxGeometry(w, 0.025, d / n + 0.08), bark, 0, 0.16 + (i % 2) * 0.012, z, 0.05, 0, 0));
+      for (let k = 0; k < 4; k++) parent.add(mesh(new THREE.BoxGeometry(0.12, 0.03, 0.02), fleck, -w / 2 + 0.3 + k * (w / 4), 0.175, z, 0, k, 0));
+    }
+  };
+  const plane = (x: number, y: number, z: number, rx: number, rz: number, w: number, d: number, n: number) => {
+    const p = new THREE.Group();
+    p.position.set(x, y, z);
+    p.rotation.set(rx, 0, rz);
+    // Courses run along the ridge; a roof sloping sideways turns them a quarter.
+    const inner = new THREE.Group();
+    if (rz !== 0) inner.rotation.y = Math.PI / 2;
+    course(inner, rz !== 0 ? d : w, rz !== 0 ? w : d, n);
+    p.add(inner);
+    g.add(p);
+  };
+  if (structure === 1) plane(0, 0.92, -0.4, -0.7, 0, 2.9, 2.6, 6);
+  else if (structure === 2) for (const side of [-1, 1]) plane(side * 0.72, 1.05, -0.1, 0, side * -0.983, 2.5, 2.9, 6);
+  else for (const side of [-1, 1]) plane(side * 0.92, 2.0, 0, 0, side * -0.5, 2.0, 3.4, 7);
+}
+
+// rc.7: a shoulder-high ring of snow blocks round the shelter, open at the front.
+function snowWall(g: THREE.Group, structure: number) {
+  const snow = mat(C.snow);
+  const r = structure >= 3 ? 2.6 : 2.3;
+  for (let row = 0; row < 3; row++)
+    for (let i = 0; i < 16; i++) {
+      const a = Math.PI * 0.16 + (i / 15) * Math.PI * 1.68 + (row % 2) * 0.05;
+      const b = mesh(new THREE.BoxGeometry(0.55, 0.32, 0.3), snow, Math.sin(a) * r, 0.16 + row * 0.33, Math.cos(a) * r - 0.2, 0, a, 0);
+      b.scale.setScalar(0.92 + ((i * 7 + row) % 5) * 0.03);
+      g.add(b);
+    }
+}
+
+// rc.7: the reflector wall: logs stacked between stakes on the far side of the fire, so the heat
+// comes back to the shelter.
+function reflector(g: THREE.Group) {
+  const w = new THREE.Group();
+  for (let i = 0; i < 5; i++) log(w, v(-1.1, 0.1 + i * 0.2, 0), v(1.1, 0.1 + i * 0.2, 0), 0.1);
+  for (const x of [-1.2, 1.2]) for (const z of [-0.14, 0.14]) log(w, v(x, 0, z), v(x, 1.2, z), 0.035, C.wood);
+  for (let i = 0; i < 4; i++) w.add(mesh(stoneGeo(0.12, 70 + i), mat(C.stone), -0.9 + i * 0.6, 0.08, 0.2));
+  // Camp's shelter is up and to the left of the fire; the wall stands opposite it, facing it.
+  const dir = new THREE.Vector2(6.5, 3).normalize();
+  w.position.set(dir.x * 1.45, 0, dir.y * 1.45);
+  w.rotation.y = Math.atan2(dir.x, dir.y);
+  g.add(w);
 }
 
 // rc.4: the next tier going up beside the old one, a piece at a time, so the camp shows how far
@@ -911,7 +973,11 @@ function tracks(s: PropState): THREE.Group {
 /** Builds the prop for one station. */
 export function buildProp(id: string, s: PropState): THREE.Group {
   switch (id) {
-    case 'fire': return fire(s);
+    case 'fire': {
+      const g = fire(s);
+      if (s.late?.includes('reflector')) reflector(g);
+      return g;
+    }
     case 'water': return water();
     case 'shelter': {
       const g = shelter(s);
@@ -961,8 +1027,8 @@ export function buildProp(id: string, s: PropState): THREE.Group {
 /** Which parts of the run a prop shows, so it is rebuilt only when one of them changes. */
 export function propKey(id: string, s: PropState): string {
   switch (id) {
-    case 'fire': return `${s.firepitTier}-${s.fireLit}`;
-    case 'shelter': return `${s.structure}-${s.buildProg ?? 0}-${s.dugout}-${s.dugoutProg ?? 0}-${s.insulation}-${s.bed}-${s.winter}-${!!s.stove}-${!!s.secondTarp}`;
+    case 'fire': return `${s.firepitTier}-${s.fireLit}-${!!s.late?.includes('reflector')}`;
+    case 'shelter': return `${s.structure}-${s.buildProg ?? 0}-${s.dugout}-${s.dugoutProg ?? 0}-${s.insulation}-${s.bed}-${s.winter}-${!!s.stove}-${!!s.secondTarp}-${(s.late ?? []).join('.')}`;
     case 'rack': return `${s.rackTier}-${s.hugeRack}-${Math.min(10, s.smoking)}-${Math.min(10, s.smoked)}`;
     case 'cache': return `${s.cacheTier}`;
     case 'post': return `${Math.min(s.day, 40)}`;

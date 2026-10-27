@@ -24,6 +24,8 @@ export interface WorldArea {
   walkRadius: number;
   /** The lake's near edge (z), if the lake is in view; open water beyond it. */
   shoreZ?: number;
+  /** rc.7: in winter you can walk this many metres out onto the frozen lake. */
+  iceWalk?: number;
   /**
    * A place that sits up above the water (rc.2, camp): the ground falls `drop` metres from
    * `fromZ` down to the shore, and the trees thin out in a window towards the lake.
@@ -74,6 +76,7 @@ export const WORLD: Readonly<Record<LocationId, WorldArea>> = {
     spawn: { x: 0, z: 7, look: 0 },
     walkRadius: 14,
     shoreZ: -2,
+    iceWalk: 18,
     trees: { count: 110, clearing: 17, outer: 55, seed: 23, birchShare: 0.25 },
     rocks: { count: 26, seed: 9 },
     stations: {
