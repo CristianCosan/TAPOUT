@@ -298,13 +298,26 @@ export function actPoultice(){
   applyPoulticeDose();
   if (!RULES.poulticeOnce) afterAction('poultice'); // LEG-005: the dose already resolved the action
 }
+// rc.4 (oneRoute): the shelter and the dugout are one or the other for the run.
+export function routeClosed(kind?){
+  if (!RULES.oneRoute) return false;
+  return kind === 'shelter' ? (S.dugout || S.dugoutProg > 0) : (S.structure > 0 || S.buildProg > 0);
+}
+// rc.4 (buildPace): one building session per build per day (the lean-to is the exception).
+export function builtToday(id?){
+  return RULES.buildPace && !!S.buildDay && S.buildDay[id] === S.day;
+}
+function markBuilt(id?){
+  if (RULES.buildPace) (S.buildDay ||= {})[id] = S.day;
+}
 export function actShelter(){
-  if (S.structure >= 3) return;
+  if (S.structure >= 3 || routeClosed('shelter') || (S.structure >= 1 && builtToday('shelter'))) return;
   const c = SHELTER_COST[S.structure];
   if (S.stock.wood < c.wood || (c.moss && S.stock.moss < c.moss) || (c.clay && S.stock.clay < c.clay)) return;
   if (!spend(c.e, c.h, true, 'ohw wood')) return;
   S.stock.wood -= c.wood; if (c.moss) S.stock.moss -= c.moss; if (c.clay) S.stock.clay -= c.clay;
   S.buildProg++;
+  if (S.structure >= 1) markBuilt('shelter');
   sfxBuild();
   const need = BUILD_NEED[S.structure];
   if (S.buildProg >= need){
@@ -317,12 +330,13 @@ export function actShelter(){
 // kit-draft §3.3: earth dugout - shovel-only shelter path, high labor, near-immune to storm damage,
 // top-tier warmth retention. Independent of the tarp/lean-to/hut/timber ladder.
 export function actDugout(){
-  if (!hasKit('shovel') || S.dugout || S.dugoutProg >= DUGOUT_NEED) return;
+  if (!hasKit('shovel') || S.dugout || S.dugoutProg >= DUGOUT_NEED || routeClosed('dugout') || builtToday('dugout')) return;
   const c = dugoutStep(S.dugoutProg);
   if (S.stock.wood < c.wood || (c.moss && S.stock.moss < c.moss)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   S.stock.wood -= c.wood; if (c.moss) S.stock.moss -= c.moss;
   S.dugoutProg++;
+  markBuilt('dugout');
   sfxBuild();
   if (S.dugoutProg >= DUGOUT_NEED){
     S.dugout = true;
@@ -333,20 +347,22 @@ export function actDugout(){
   afterAction('dugout');
 }
 export function actInsulate(){
-  if (S.structure < 1 || S.insulation >= 3 || S.stock.moss < 4) return;
+  if (S.structure < 1 || S.insulation >= 3 || S.stock.moss < 4 || builtToday('insulate')) return;
   if (!spend(6,1,true,'oh')) return;
   S.stock.moss -= 4; S.insulation++;
+  markBuilt('insulate');
   sfxBuild();
   log(`You pack moss into every gap. Insulation ${S.insulation}/3.`, 'good');
   afterAction('insulate');
 }
 export function actFirepit(){
-  if (S.firepitTier >= 2) return;
+  if (S.firepitTier >= 2 || builtToday('firepit')) return;
   const c = FIREPIT_COST[S.firepitTier+1];
   if (S.stock.rocks < c.rocks || (c.clay && S.stock.clay < c.clay)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   S.stock.rocks -= c.rocks; if (c.clay) S.stock.clay -= c.clay;
   S.firepitProg++;
+  markBuilt('firepit');
   sfxBuild();
   const need = FIREPIT_NEED[S.firepitTier+1];
   if (S.firepitProg >= need){
@@ -356,12 +372,13 @@ export function actFirepit(){
   afterAction('firepit');
 }
 export function actRack(){
-  if (S.rackTier >= 2) return;
+  if (S.rackTier >= 2 || builtToday('rack')) return;
   const c = RACK_COST[S.rackTier+1];
   if (S.stock.wood < c.wood || (c.rocks && S.stock.rocks < c.rocks)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   S.stock.wood -= c.wood; if (c.rocks) S.stock.rocks -= c.rocks;
   S.rackTier++;
+  markBuilt('rack');
   sfxBuild();
   log(S.rackTier===1 ? 'A tripod rack stands over the fire pit. Meat can be smoked and kept.' : 'You weave a bark roof over the rack and stack stone at its base. It sheds rain, and it\'s a lot more work to get into now.', 'good');
   afterAction('rack');
@@ -378,12 +395,13 @@ export function actHugeRack(){
   afterAction('hugeRack');
 }
 export function actCache(){
-  if (S.cacheTier >= 3) return;
+  if (S.cacheTier >= 3 || builtToday('cache')) return;
   const c = CACHE_COST[S.cacheTier+1];
   if ((c.wood && S.stock.wood < c.wood) || (c.rocks && S.stock.rocks < c.rocks) || (c.clay && S.stock.clay < c.clay)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   if (c.wood) S.stock.wood -= c.wood; if (c.rocks) S.stock.rocks -= c.rocks; if (c.clay) S.stock.clay -= c.clay;
   S.cacheProg++;
+  markBuilt('cache');
   sfxBuild();
   const need = CACHE_NEED[S.cacheTier+1];
   if (S.cacheProg >= need){

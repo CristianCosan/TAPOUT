@@ -9,6 +9,8 @@ import { mat, mesh, pole, rough, seeded, signTexture, v } from './kit.ts';
 export interface PropState {
   structure: number;
   dugout: boolean;
+  /** rc.4: dugout sessions done (1-2 the pit, 3 the walls), so each stage shows. */
+  dugoutProg?: number;
   insulation: number;
   bed: boolean;
   firepitTier: number;
@@ -193,6 +195,30 @@ function shelter(s: PropState): THREE.Group {
   if (s.dugout) {
     g.add(mesh(rough(new THREE.SphereGeometry(1.8, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), 0.25, 5), mat(s.winter ? C.snow : 0x5a4a36), 0, 0, -0.6));
     g.add(mesh(new THREE.BoxGeometry(0.9, 1.0, 0.4), mat(C.black), 0, 0.5, 1.05));
+    return g;
+  }
+  const dug = s.dugoutProg ?? 0;
+  if (dug > 0) {
+    // rc.4: the dugout as it stands: a pit with its spoil heaped beside it, then log walls round
+    // the rim. Until the roof, the tarp is stretched flat over it on four stakes.
+    const earth = mat(s.winter ? C.snow : 0x5a4a36);
+    g.add(mesh(new THREE.BoxGeometry(2.6, 0.04, 3.0), mat(0x2a2016), 0, 0.02, -0.2));
+    for (const [x, z, r] of [[-2.0, 0.2, 0.55], [-1.9, -1.2, 0.5], [2.0, -0.6, 0.45]] as const) {
+      g.add(mesh(rough(new THREE.SphereGeometry(r * (0.6 + dug * 0.25), 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0.15, x * 3), earth, x, 0, z));
+    }
+    if (dug >= 3) {
+      for (let i = 0; i < 3; i++) {
+        const y = 0.1 + i * 0.2;
+        log(g, v(-1.4, y, 1.3), v(1.4, y, 1.3), 0.1);
+        log(g, v(-1.4, y, -1.7), v(1.4, y, -1.7), 0.1);
+        log(g, v(-1.4, y, 1.3), v(-1.4, y, -1.7), 0.1);
+        log(g, v(1.4, y, 1.3), v(1.4, y, -1.7), 0.1);
+      }
+    }
+    const top = dug >= 3 ? 0.75 : 0.55;
+    for (const x of [-1.3, 1.3]) for (const z of [1.2, -1.6]) log(g, v(x, 0, z), v(x, top, z), 0.03, C.wood);
+    const sheet = mesh(new THREE.BoxGeometry(2.8, 0.02, 3.1), mat(C.tarp, { key: 'ds' }), 0, top, -0.2, 0.04, 0, 0);
+    g.add(sheet);
     return g;
   }
 
@@ -817,7 +843,7 @@ export function buildProp(id: string, s: PropState): THREE.Group {
 export function propKey(id: string, s: PropState): string {
   switch (id) {
     case 'fire': return `${s.firepitTier}-${s.fireLit}`;
-    case 'shelter': return `${s.structure}-${s.dugout}-${s.insulation}-${s.bed}-${s.winter}`;
+    case 'shelter': return `${s.structure}-${s.dugout}-${s.dugoutProg ?? 0}-${s.insulation}-${s.bed}-${s.winter}`;
     case 'rack': return `${s.rackTier}-${s.hugeRack}-${Math.min(10, s.smoking)}-${Math.min(10, s.smoked)}`;
     case 'cache': return `${s.cacheTier}`;
     case 'post': return `${Math.min(s.day, 40)}`;

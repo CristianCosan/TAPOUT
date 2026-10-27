@@ -81,6 +81,12 @@ function face(g: THREE.Object3D, vx: number, vz: number): void {
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
+/**
+ * rc.4 (Sir): a deer wandering past every minute or two made big game feel common, and it was
+ * scenery the hunt knew nothing about. Big game now shows only when a hunt finds it.
+ */
+const AMBIENT_DEER = false;
+
 /** A white-tailed deer facing -z: legs, neck and tail named so they can move. */
 function deer(winter: boolean): THREE.Group {
   const coat = winter ? 0x6b5b4b : 0x8a5f3a;
@@ -429,7 +435,7 @@ export class Wildlife {
       this.root.add(g);
     }
 
-    if (area.id === 'woods') {
+    if (area.id === 'woods' && AMBIENT_DEER) {
       const g = deer(winter);
       g.visible = false;
       this.deer = { g, x: 0, z: 0, heading: 0, state: 'gone', timer: rand(15, 40), run: 0 };

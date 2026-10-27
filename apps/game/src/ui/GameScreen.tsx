@@ -742,6 +742,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     return {
       structure: S.structure,
       dugout: !!S.dugout,
+      dugoutProg: S.dugoutProg ?? 0,
       insulation: S.insulation,
       bed: !!S.bed,
       firepitTier: S.firepitTier,
