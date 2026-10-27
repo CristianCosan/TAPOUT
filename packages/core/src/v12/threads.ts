@@ -187,10 +187,25 @@ export function maybeSlip(nightRisk?){
 // carries the reason when disabled; this covers the case where a live-looking enabled button is pressed
 // and still can't legally resolve (a race between render() and the click).
 export function refuse(reason?){ S.lastRefusalReason = reason; toastRefusal(reason); return false; }
+// rc.8 (jobBuilds): one job of a build step pays its share of the step's energy and hours. A probe
+// asks a build what it would spend, without spending anything.
+let share = 1, partJob = false;
+let probing: { seen?: { cost: number; hrs: number; outdoor: boolean; tags: string } } | null = null;
+export function withShare<T>(w: number, part: boolean, fn: () => T): T {
+  const was = [share, partJob] as const;
+  share = w; partJob = part;
+  try { return fn(); } finally { [share, partJob] = was; }
+}
+export function probeSpend(fn: () => unknown){
+  probing = {};
+  try { fn(); return probing.seen ?? null; } finally { probing = null; }
+}
 export function spend(cost?, hrs?, outdoor?, tags='', cap?){
+  if (probing){ probing.seen = { cost, hrs, outdoor: !!outdoor, tags }; return false; }
   if (cap === undefined) cap = curfewCapForLoc(S.loc);
-  const c = eCost(cost, tags);
+  let c = eCost(cost, tags);
   let h = eTime(hrs, tags);
+  if (share !== 1){ c = Math.round(c * share); h *= share; }
   if (S.over) return false;
   const physical = (outdoor || tags.includes('w')) && h > 0;
   const night = isNightNow() && physical;
@@ -203,7 +218,7 @@ export function spend(cost?, hrs?, outdoor?, tags='', cap?){
   if (h > 0) tickHours(h, outdoor, tags);
   if (night) S.stress = clamp(S.stress + (fireLit ? TUNING.night.stressPerHourFireLit : TUNING.night.stressPerHour) * h * sensitivityMul());
   if (h > 0) accruePastCurfewDebt(beforeHour, h);
-  if (outdoor) maybeSlip(night);
+  if (outdoor && !partJob) maybeSlip(night);
   return true;
 }
 export function spendOrDebt(cost?, hrs?, cap?, tags=''){
@@ -225,7 +240,15 @@ export function spendOrDebt(cost?, hrs?, cap?, tags=''){
 export function afterAction(act?){
   if (act){ S.lastAct = act; S.acts[act] = (S.acts[act]||0) + 1; }
   testTopUp();
-  if (S.health <= 0){ if (!S.deathSource) S.deathSource = 'collapse'; endGame('dead'); return; }
+  if (S.health <= 0){
+    // rc.7 (medicWatch): by day as by night, the feed is watched and the medics come first.
+    if (RULES.medicWatch){
+      S.health = 1; S.minHealth = Math.min(S.minHealth, S.health);
+      log('🩺 You go down and cannot get up. Somebody was watching the feed: the boat is at the shore inside the hour, and the medics carry you to it. This is the end of the run.', 'bad');
+      endGame('med'); return;
+    }
+    if (!S.deathSource) S.deathSource = 'collapse'; endGame('dead'); return;
+  }
   render();
 }
 

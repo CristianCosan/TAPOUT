@@ -6,7 +6,8 @@ import { letterPanel } from './letters.ts';
 import { RULES } from './rules.ts';
 import { lateBuilt, lateKnown } from './late.ts';
 import { iceCm, thinIce } from './ice.ts';
-import { builtToday, fireCap, routeClosed, stoveReady } from './camp.ts';
+import { builtToday, fireCap, fireMinutes, routeClosed, stoveReady } from './camp.ts';
+import { travelHours } from './travel.ts';
 import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { ambientTempC, eCost, eTime, shiveringActive } from './cost.ts';
 import { berryCount, cookedMealSpoiled, meatCount, oldestBerriesSpoiled, oldestMeatSpoiled } from './food.ts';
@@ -679,7 +680,7 @@ function panelPass(){
   for (const l of ['camp','shore','woods']){
     const tab = $('tab-' + l);
     tab.classList.toggle('here', S.loc === l);
-    const hrs = eTime(travelHrsBase,'ot');
+    const hrs = eTime(RULES.sirTimes ? travelHours() : travelHrsBase,'ot');
     const cap = curfewCapForLoc(l);
     const travelNight = isNightNow();
     const effHrs = travelNight ? hrs * TUNING.night.timeMultiplier : hrs;
@@ -715,12 +716,12 @@ function panelPass(){
   } else if (!hasKit('ferro')){
     $('a-fire-name').textContent = '🔥 Friction fire';
     const ok = S.stock.firewood >= lightWoodCost && S.tinder >= 1;
-    r = S.over ? [false,'-'] : (!ok ? [false, S.tinder<1?'need tinder':`need ${lightWoodCost} firewood`] : [true, `−6⚡ · 1h30m · bow-drill, weather-dependent, morale sting on fail`]);
+    r = S.over ? [false,'-'] : (!ok ? [false, S.tinder<1?'need tinder':`need ${lightWoodCost} firewood`] : [true, `−6⚡ · ${RULES.sirTimes ? '1-3h' : '1h30m'} · bow-drill, weather-dependent, morale sting on fail`]);
   } else {
     $('a-fire-name').textContent = '🔥 Light fire';
     const ok = S.stock.firewood >= lightWoodCost && S.tinder >= 1;
     const missing = S.tinder<1 ? 'need tinder' : `need ${lightWoodCost} firewood`;
-    r = S.over ? [false,'-'] : (!ok ? [false,missing] : [true, `${RULES.realTimes ? '1-15 min · ' : 'free · '}${lightWoodCost} firewood + 1 tinder · ${Math.round(Math.min(0.95, WEATHER[S.weather].fireChance + S.structure*0.05)*100)}%`]);
+    r = S.over ? [false,'-'] : (!ok ? [false,missing] : [true, `${RULES.sirTimes ? fireMinutes() + ' · ' : RULES.realTimes ? '1-15 min · ' : 'free · '}${lightWoodCost} firewood + 1 tinder · ${Math.round(Math.min(0.95, WEATHER[S.weather].fireChance + S.structure*0.05)*100)}%`]);
   }
   setBtn('a-fire', r[0], r[1]);
   r = !hasKit('pot') ? [false,'no pot drafted - no boiling this run'] : S.fireH <= 0 ? [false,'fire needed'] : (S.rawWater<=0 ? [false,'need raw water - fetch some at the shore'] : (S.water >= waterCap() ? [false,'storage full'] : [true, S.energy<3 ? `${durTxt(0.25)} · up to +3 safe water · running on empty - borrows energy` : `−3⚡ · ${durTxt(0.25)} · up to +3 safe water`]));

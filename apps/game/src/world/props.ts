@@ -213,32 +213,12 @@ function shelter(s: PropState): THREE.Group {
   g.add(mesh(rough(new THREE.CapsuleGeometry(0.28, 1.3, 3, 6), 0.03), mat(C.bag), 0, 0.22, -0.1, Math.PI / 2, 0, 0));
 
   if (s.dugout) {
-    g.add(mesh(rough(new THREE.SphereGeometry(1.8, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), 0.25, 5), mat(s.winter ? C.snow : 0x5a4a36), 0, 0, -0.6));
-    g.add(mesh(new THREE.BoxGeometry(0.9, 1.0, 0.4), mat(C.black), 0, 0.5, 1.05));
+    dugoutDone(g, s);
     return g;
   }
   const dug = s.dugoutProg ?? 0;
   if (dug > 0) {
-    // rc.4: the dugout as it stands: a pit with its spoil heaped beside it, then log walls round
-    // the rim. Until the roof, the tarp is stretched flat over it on four stakes.
-    const earth = mat(s.winter ? C.snow : 0x5a4a36);
-    g.add(mesh(new THREE.BoxGeometry(2.6, 0.04, 3.0), mat(0x2a2016), 0, 0.02, -0.2));
-    for (const [x, z, r] of [[-2.0, 0.2, 0.55], [-1.9, -1.2, 0.5], [2.0, -0.6, 0.45]] as const) {
-      g.add(mesh(rough(new THREE.SphereGeometry(r * (0.6 + dug * 0.25), 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0.15, x * 3), earth, x, 0, z));
-    }
-    if (dug >= 3) {
-      for (let i = 0; i < 3; i++) {
-        const y = 0.1 + i * 0.2;
-        log(g, v(-1.4, y, 1.3), v(1.4, y, 1.3), 0.1);
-        log(g, v(-1.4, y, -1.7), v(1.4, y, -1.7), 0.1);
-        log(g, v(-1.4, y, 1.3), v(-1.4, y, -1.7), 0.1);
-        log(g, v(1.4, y, 1.3), v(1.4, y, -1.7), 0.1);
-      }
-    }
-    const top = dug >= 3 ? 0.75 : 0.55;
-    for (const x of [-1.3, 1.3]) for (const z of [1.2, -1.6]) log(g, v(x, 0, z), v(x, top, z), 0.03, C.wood);
-    const sheet = mesh(new THREE.BoxGeometry(2.8, 0.02, 3.1), mat(C.tarp, { key: 'ds' }), 0, top, -0.2, 0.04, 0, 0);
-    g.add(sheet);
+    dugoutPit(g, s, dug);
     return g;
   }
 
@@ -264,8 +244,7 @@ function shelter(s: PropState): THREE.Group {
         const x = -1.3 + i * 0.37;
         log(g, v(x, 1.7, 0.6), v(x, 0, -1.4), 0.04, C.wood);
       }
-      const roof = mesh(rough(new THREE.BoxGeometry(3.0, 0.16, 2.7, 4, 1, 4), 0.12, 2), mat(s.winter ? C.snow : C.bough), 0, 0.92, -0.4, -0.7, 0, 0);
-      g.add(roof);
+      boughs(g, { x: 0, y: 0.92, z: -0.4, rx: -0.7, rz: 0 }, 3.0, 2.7, 'z', s.winter, 2);
       if (s.winter) icicles(g, v(-1.45, 1.6, 0.66), v(1.45, 1.6, 0.66), 31);
       break;
     }
@@ -276,11 +255,12 @@ function shelter(s: PropState): THREE.Group {
         log(g, v(1.4, 0, z), v(0, 2.1, z), 0.07);
       }
       log(g, v(0, 2.1, 1.5), v(0, 2.1, -1.7), 0.07);
-      for (const side of [-1, 1]) {
-        const r = mesh(rough(new THREE.BoxGeometry(0.18, 2.55, 3.0, 1, 4, 4), 0.1, side + 4), mat(s.winter ? C.snow : C.bough), side * 0.72, 1.05, -0.1, 0, 0, side * 0.59);
-        g.add(r);
+      for (const side of [-1, 1]) boughs(g, { x: side * 0.72, y: 1.05, z: -0.1, rx: 0, rz: side * 0.59 }, 3.0, 2.55, 'y', s.winter, side + 4);
+      // The back wall: poles side by side, tallest under the ridge, moss in the gaps.
+      for (let i = 0; i < 11; i++) {
+        const x = -1.25 + i * 0.25;
+        log(g, v(x, 0, -1.45), v(x, Math.max(0.2, 2.0 - Math.abs(x) * 1.45), -1.45), 0.06, i % 2 ? C.bark : C.woodDark);
       }
-      g.add(mesh(new THREE.BoxGeometry(2.4, 1.6, 0.12), mat(C.woodDark), 0, 0.7, -1.45, 0, 0, 0));
       break;
     }
     default: {
@@ -299,9 +279,33 @@ function shelter(s: PropState): THREE.Group {
         }
       }
       for (const side of [-1, 1]) {
-        g.add(mesh(new THREE.BoxGeometry(2.1, 0.12, d + 0.8), mat(s.winter ? C.snow : C.woodDark), side * 0.92, 2.0, 0, 0, 0, side * -0.5));
+        // Split-log boards laid side by side on the roof, a sod line along the ridge.
+        const roof = new THREE.Group();
+        roof.position.set(side * 0.92, 2.0, 0);
+        roof.rotation.set(0, 0, side * -0.5);
+        const n = 9;
+        for (let i = 0; i < n; i++) {
+          const z = -(d + 0.8) / 2 + (i + 0.5) * ((d + 0.8) / n);
+          roof.add(mesh(rough(new THREE.BoxGeometry(2.1, 0.1, (d + 0.8) / n - 0.02, 2, 1, 1), 0.03, 30 + i + side * 10), mat(s.winter ? C.snow : i % 3 === 0 ? C.bark : C.woodDark), 0, (i % 2) * 0.02, z));
+        }
+        g.add(roof);
         if (s.winter) icicles(g, v(side * 1.85, 1.46, -d / 2 - 0.35), v(side * 1.85, 1.46, d / 2 + 0.35), 40 + side);
       }
+      g.add(mesh(new THREE.BoxGeometry(0.3, 0.14, d + 0.9), mat(s.winter ? C.snow : SOD), 0, 2.47, 0));
+      // Gable ends filled with short logs, and a plank door hung open on the fire side.
+      for (const z of [-d / 2, d / 2]) {
+        for (let i = 0; i < 4; i++) {
+          const y = 1.6 + i * 0.22, half = Math.max(0.15, (w / 2) * (1 - (i + 0.5) / 4.3));
+          log(g, v(-half, y, z), v(half, y, z), 0.1, i % 2 ? C.bark : C.woodDark);
+        }
+      }
+      const door = new THREE.Group();
+      for (let i = 0; i < 4; i++) door.add(mesh(new THREE.BoxGeometry(0.24, 1.0, 0.05), mat(i % 2 ? C.wood : C.woodDark), -0.36 + i * 0.24, 0.5, 0));
+      for (const y of [0.2, 0.8]) door.add(mesh(new THREE.BoxGeometry(0.9, 0.08, 0.04), mat(C.bark), 0, y, 0.04));
+      door.position.set(0.95, 0, d / 2 + 0.45);
+      door.rotation.y = -1.2;
+      g.add(door);
+      if (s.stove) for (let i = 0; i < 5; i++) g.add(mesh(stoneGeo(0.17 - i * 0.012, 64 + i), mat(C.stone), -0.9, 1.9 + i * 0.17, -0.7 + (i % 2) * 0.03));
       break;
     }
   }
@@ -314,6 +318,173 @@ function shelter(s: PropState): THREE.Group {
     for (let i = 0; i < s.insulation * 4; i++) g.add(mesh(rough(new THREE.SphereGeometry(0.22, 5, 3), 0.08, i), mat(C.moss), -1.2 + rnd() * 2.4, 0.15, -1.3 + rnd() * 0.3));
   }
   return g;
+}
+
+// ---- rc.8: the earth dugout, rebuilt (Sir: "horrible"). A pit house: a rectangular pit dug
+// into the slope, its spoil heaped round the rim, walled with logs, then roofed with logs, bark and
+// sod until it is a low grassy mound with a log-framed doorway and steps cut down into it.
+
+const EARTH = 0x5e4a33;
+const EARTH_DARK = 0x3a2c1e;
+const SOD = 0x4f6b32;
+
+/** An open pit: earth walls sloping in to a floor, seen from above (inner faces only). */
+function pit(g: THREE.Group, hx: number, hz: number, depth: number, rim: number) {
+  const wall = new THREE.MeshStandardMaterial({ color: EARTH_DARK, roughness: 1, flatShading: true, side: THREE.BackSide });
+  const geo = new THREE.CylinderGeometry(Math.SQRT2, Math.SQRT2 * 0.82, 1, 4, 2, true).rotateY(Math.PI / 4);
+  const m = mesh(rough(geo, 0.08, 9), wall, 0, rim / 2 - depth, -0.2);
+  m.scale.set(hx, rim, hz);
+  g.add(m);
+  g.add(mesh(new THREE.PlaneGeometry(hx * 1.62, hz * 1.62), mat(0x241a10), 0, 0.012, -0.2, -Math.PI / 2, 0, 0));
+}
+
+/** A heap of dug earth, flattened on top, along one side of the pit. */
+function spoil(g: THREE.Group, x: number, z: number, len: number, h: number, alongZ: boolean, winter: boolean, seed: number) {
+  const geo = rough(new THREE.SphereGeometry(1, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2), 0.18, seed);
+  const m = mesh(geo, mat(winter ? C.snow : EARTH), x, 0, z);
+  m.scale.set(alongZ ? 0.55 : len, h, alongZ ? len : 0.55);
+  g.add(m);
+}
+
+/** Squares of cut sod stacked beside the pit, grass up, waiting to go back on the roof. */
+function sodStack(g: THREE.Group, n: number, winter: boolean) {
+  const rnd = seeded(77);
+  for (let i = 0; i < n; i++) {
+    const x = -2.5 + (i % 3) * 0.46, z = 1.6 + Math.floor(i / 6) * 0.48, y = 0.07 + (Math.floor(i / 3) % 2) * 0.14;
+    const b = new THREE.Group();
+    b.add(mesh(new THREE.BoxGeometry(0.42, 0.1, 0.42), mat(EARTH), 0, 0, 0));
+    b.add(mesh(new THREE.BoxGeometry(0.43, 0.04, 0.43), mat(winter ? C.snow : SOD), 0, 0.07, 0));
+    b.position.set(x, y, z);
+    b.rotation.y = (rnd() - 0.5) * 0.3;
+    g.add(b);
+  }
+}
+
+function shovel(g: THREE.Group, x: number, z: number) {
+  log(g, v(x, 0.25, z), v(x + 0.25, 1.25, z + 0.15), 0.025, C.woodLight);
+  g.add(mesh(new THREE.BoxGeometry(0.24, 0.32, 0.03), mat(C.metal, { metal: 0.5, rough: 0.5 }), x - 0.03, 0.14, z - 0.02, 0, 0.5, -0.24));
+}
+
+function dugoutPit(g: THREE.Group, s: PropState, dug: number) {
+  // Steps 1-3 dig deeper (the spoil grows), step 4 lines it with logs; the roof finishes it.
+  const deep = Math.min(dug, 3);
+  const rim = 0.14 + deep * 0.13;
+  pit(g, 1.45, 1.75, 0, rim);
+  spoil(g, -1.95, -0.3, 1.6, rim + 0.12, true, s.winter, 4);
+  spoil(g, 1.95, -0.5, 1.4, rim + 0.06, true, s.winter, 5);
+  spoil(g, 0.2, -2.35, 1.3, rim, false, s.winter, 6);
+  sodStack(g, dug >= 1 ? 9 : 0, s.winter);
+  if (deep >= 3) {
+    // The step cut down at the doorway end.
+    g.add(mesh(new THREE.BoxGeometry(0.7, 0.12, 0.35), mat(EARTH), 0, 0.06, 1.35));
+  }
+  if (dug >= 4) {
+    // Log walls lining the pit, moss in the seams.
+    for (let i = 0; i < 3; i++) {
+      const y = 0.08 + i * 0.16;
+      for (const x of [-1.15, 1.15]) log(g, v(x, y, 1.1), v(x, y, -1.6), 0.08);
+      log(g, v(-1.2, y, -1.62), v(1.2, y, -1.62), 0.08);
+      if (i < 2) g.add(mesh(new THREE.BoxGeometry(2.3, 0.04, 0.06), mat(C.moss), 0, y + 0.08, -1.55));
+    }
+  } else {
+    shovel(g, 1.4, 1.5);
+  }
+  // Until the roof, the tarp rigged as a fly over the back half of the pit, where you sleep; the
+  // front half stays open to dig.
+  const top = rim + 0.75;
+  for (const x of [-1.35, 1.35]) {
+    log(g, v(x, 0, -0.2), v(x, top, -0.2), 0.035, C.wood);
+    log(g, v(x, 0, -1.9), v(x, top - 0.5, -1.9), 0.03, C.wood);
+  }
+  log(g, v(-1.45, top, -0.2), v(1.45, top, -0.2), 0.03, C.wood);
+  g.add(mesh(new THREE.BoxGeometry(2.9, 0.02, 1.8), mat(C.tarp, { key: 'ds' }), 0, top - 0.25, -1.05, 0.28, 0, 0));
+}
+
+function dugoutDone(g: THREE.Group, s: PropState) {
+  const rnd = seeded(41);
+  const cover = s.winter ? C.snow : SOD;
+  // The mound: earth over the roof logs, grass growing back over the sod.
+  const mound = mesh(rough(new THREE.SphereGeometry(1, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0.05, 3), mat(s.winter ? 0xd6dde2 : EARTH), 0, 0, -0.5);
+  mound.scale.set(2.0, 1.2, 2.35);
+  g.add(mound);
+  const cap = mesh(rough(new THREE.SphereGeometry(1, 20, 6, 0, Math.PI * 2, 0, Math.PI * 0.36), 0.04, 4), mat(cover), 0, 0.012, -0.5);
+  cap.scale.set(2.03, 1.21, 2.38);
+  g.add(cap);
+  // Tufts of grass and a few stones on it (or bare stalks through the snow).
+  for (let i = 0; i < 26; i++) {
+    const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 0.85;
+    const x = Math.cos(a) * r * 2.0, z = Math.sin(a) * r * 2.35 - 0.5;
+    const y = 1.2 * Math.sqrt(Math.max(0, 1 - r * r));
+    if (z > 1.0 && Math.abs(x) < 1.0) continue;
+    g.add(mesh(new THREE.ConeGeometry(0.05, 0.22 + rnd() * 0.16, 3), mat(s.winter ? 0x8a8064 : 0x5f7d34), x, y + 0.08, z, (rnd() - 0.5) * 0.4, rnd() * 3, (rnd() - 0.5) * 0.4));
+  }
+  for (let i = 0; i < 5; i++) {
+    const a = rnd() * Math.PI * 2;
+    g.add(mesh(stoneGeo(0.12 + rnd() * 0.08, 90 + i), mat(C.stone), Math.cos(a) * 1.85, 0.08, Math.sin(a) * 2.2 - 0.5));
+  }
+  // The doorway: a trench with log-retained sides and two steps down to a log frame.
+  const front = 1.95;
+  g.add(mesh(new THREE.BoxGeometry(1.1, 0.02, 1.4), mat(0x2a1f14), 0, 0.012, front + 0.35));
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      const y = 0.07 + i * 0.14;
+      log(g, v(side * 0.62, y, front - 0.2), v(side * 0.62, y, front + 1.0 - i * 0.3), 0.07);
+    }
+    const bank = mesh(rough(new THREE.SphereGeometry(1, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0.1, 12 + side), mat(s.winter ? C.snow : EARTH), side * 0.95, 0, front + 0.25);
+    bank.scale.set(0.32, 0.36, 0.7);
+    g.add(bank);
+  }
+  for (let i = 0; i < 2; i++) g.add(mesh(new THREE.BoxGeometry(0.9, 0.05, 0.28), mat(C.woodDark), 0, 0.03 + i * 0.001, front + 0.55 + i * 0.4));
+  // Frame: two posts and a lintel log, roof-log ends poking out above it.
+  for (const x of [-0.5, 0.5]) log(g, v(x, 0, front - 0.15), v(x, 1.12, front - 0.15), 0.07);
+  log(g, v(-0.8, 1.15, front - 0.15), v(0.8, 1.15, front - 0.15), 0.08);
+  for (let i = 0; i < 7; i++) {
+    const x = -0.9 + i * 0.3;
+    log(g, v(x, 1.27, front - 0.5), v(x, 1.27 - 0.06, front + 0.1), 0.065, i % 2 ? C.bark : C.woodDark);
+    g.add(mesh(new THREE.CircleGeometry(0.06, 7), mat(C.cut), x, 1.21, front + 0.11, 0.1, 0, 0));
+  }
+  // The dark doorway, a little warm light inside once the stove is in.
+  g.add(mesh(new THREE.BoxGeometry(0.92, 1.08, 0.9), mat(C.black), 0, 0.56, front - 0.6));
+  if (s.stove) g.add(mesh(new THREE.CircleGeometry(0.2, 10), new THREE.MeshBasicMaterial({ color: 0xc8662a, transparent: true, opacity: 0.3 }), 0, 0.18, front - 0.14));
+  // A door of lashed poles, swung open against the trench wall.
+  const door = new THREE.Group();
+  for (let i = 0; i < 5; i++) log(door, v(-0.4 + i * 0.2, 0, 0), v(-0.4 + i * 0.2, 1.05, 0), 0.045, C.wood);
+  for (const y of [0.2, 0.85]) log(door, v(-0.5, y, 0.05), v(0.5, y, 0.05), 0.03, C.rope);
+  door.position.set(0.95, 0.02, front + 0.35);
+  door.rotation.y = -1.35;
+  g.add(door);
+  // Smoke hole, or a stone chimney once there is a stove.
+  if (s.stove) {
+    for (let i = 0; i < 4; i++) g.add(mesh(stoneGeo(0.17 - i * 0.015, 60 + i), mat(C.stone), 0.5, 0.95 + i * 0.16, -1.25 + (i % 2) * 0.03));
+  } else {
+    g.add(mesh(new THREE.TorusGeometry(0.14, 0.05, 4, 8), mat(C.woodDark), 0.5, 1.0, -1.2, -Math.PI / 2 + 0.35, 0, 0));
+  }
+  if (s.winter) icicles(g, v(-0.8, 1.08, front - 0.06), v(0.8, 1.08, front - 0.06), 52);
+}
+
+/** A thatch of spruce boughs in overlapping rows, laid on a sloping frame (the bottom row first). */
+function boughs(g: THREE.Group, at: { x: number; y: number; z: number; rx: number; rz: number }, w: number, len: number, along: 'y' | 'z', winter: boolean, seed: number) {
+  const p = new THREE.Group();
+  p.position.set(at.x, at.y, at.z);
+  p.rotation.set(at.rx, 0, at.rz);
+  const rnd = seeded(seed * 13 + 7);
+  const rows = 5;
+  const greens = [0x2f4a30, 0x36522f, 0x29432c, 0x3b5a34];
+  for (let i = 0; i < rows; i++) {
+    const t = -len / 2 + (i + 0.5) * (len / rows);
+    const color = winter ? (i % 2 ? C.snow : 0xdfe6ea) : greens[i % greens.length]!;
+    const lift = 0.04 + (rows - i) * 0.012;
+    const geo = rough(along === 'z' ? new THREE.BoxGeometry(w + 0.1, 0.12, len / rows + 0.22, 5, 1, 1) : new THREE.BoxGeometry(0.12, len / rows + 0.22, w + 0.1, 1, 1, 5), 0.1, seed * 31 + i);
+    p.add(along === 'z' ? mesh(geo, mat(color), 0, lift, t, 0.06) : mesh(geo, mat(color), (lift + 0.08) * Math.sign(at.rz || 1), t, 0, 0, 0, 0));
+    // Bough tips hanging over the lower edge of each row.
+    if (!winter)
+      for (let k = 0; k < 6; k++) {
+        const u = -w / 2 + (k + rnd()) * (w / 6);
+        const tip = new THREE.ConeGeometry(0.09, 0.32, 4);
+        p.add(along === 'z' ? mesh(tip, mat(greens[(i + k) % 4]!), u, lift + 0.03, t + len / rows / 2 + 0.05, Math.PI / 2 + 0.25, 0, 0) : mesh(tip, mat(greens[(i + k) % 4]!), (lift + 0.12) * Math.sign(at.rz || 1), t - len / rows / 2 - 0.05, u, Math.PI, 0, 0));
+      }
+  }
+  g.add(p);
 }
 
 // rc.6: the heavy second tarp rigged into the shelter: a windbreak along the open side of the

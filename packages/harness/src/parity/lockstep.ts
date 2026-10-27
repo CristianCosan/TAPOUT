@@ -28,6 +28,8 @@ export interface LockstepOptions {
   resumeEvery?: number;
   /** Chance per waking decision of considering the sat phone at all. Default: never. */
   tapOutChance?: number;
+  /** Called with the state after every solo decision (rc.8's build timeline). */
+  onStep?: (S: any) => void;
 }
 
 export interface LockstepResult {
@@ -53,6 +55,7 @@ export class PortSide {
       },
       hideModal: () => {
         this.modal = null;
+        this.pressed.clear();
       },
       typewriterInto: (_id, text) => {
         this.transcript.push(text);
@@ -60,11 +63,18 @@ export class PortSide {
     });
   }
 
+  /** Buttons pressed while the current window has been open. */
+  readonly pressed = new Set<string>();
+
   click(handler: string): void {
+    if (this.modal) this.pressed.add(handler.trim());
     const calls = parseHandler(handler);
     if (!calls) throw new Error(`Cannot replay handler: ${handler}`);
     for (const call of calls) {
-      if (call.fn === 'hideModal') this.modal = null;
+      if (call.fn === 'hideModal') {
+        this.modal = null;
+        this.pressed.clear();
+      }
       else if (call.fn === 'skipTypewriter') continue;
       else this.run.call(call.fn, ...call.args);
     }
@@ -101,6 +111,12 @@ export function chooseDecision(port: PortSide, bot: RngState, options: LockstepO
     let buttons = modalButtons(port.modal).filter((b) => !b.disabled && parseHandler(b.onclick));
     // v12's modal watchdog injects a Continue when nothing is clickable.
     if (buttons.length === 0) buttons = [{ label: 'Continue', onclick: 'hideModal()', disabled: false }];
+    // A player with a plan does not press the same button twice in one window (a snare that has
+    // not soaked yet stays listed, and a random pick would check it over and over).
+    if (options.persona === 'competent' || options.persona === 'survivor') {
+      const fresh = buttons.filter((b) => !port.pressed.has(b.onclick.trim()));
+      if (fresh.length > 0) buttons = fresh;
+    }
     const staying = buttons.filter((b) => !QUITTING.test(b.onclick));
     const pool = staying.length > 0 ? staying : buttons;
     // A careful player throws turned food out.
@@ -112,7 +128,7 @@ export function chooseDecision(port: PortSide, bot: RngState, options: LockstepO
   }
 
   if (options.persona === 'competent') {
-    const planned = competentDecision(S);
+    const planned = competentDecision(S, port);
     if (planned) return planned;
   }
 
@@ -187,7 +203,7 @@ function survivorDecision(S: any): Decision | null {
   const carrying = S.carry.wood + S.carry.rocks + S.carry.moss + S.carry.clay;
   if (S.loc === 'camp') {
     if (carrying > 0) return act('a-dropoff');
-    const order = ['a-fire', 'a-boil', 'a-cook', 'a-smoke', 'a-smokeHuge', 'a-shelter', 'a-dugout', 'a-firepit', 'a-insulate', 'a-rack', 'a-cache', 'a-jug', 'a-picker', 'a-bed', 'a-chair', 'a-table', 'a-flute', 'a-haftAxe', 'a-repairBoots', 'a-patchRoof', 'a-poultice', 'a-sharpenAxe', 'a-maintainFerro', 'a-campSnares', 'a-treemark', 'a-confess', 'a-wash', 'a-haul', 'a-carve'];
+    const order = ['a-fire', 'a-boil', 'a-cook', 'a-smoke', 'a-smokeHuge', 'a-shelter', 'a-dugout', 'a-firepit', 'a-insulate', 'a-rack', 'a-cache', 'a-jug', 'a-picker', 'a-bed', 'a-stove', 'a-reflector', 'a-shingles', 'a-snowWall', 'a-chair', 'a-table', 'a-flute', 'a-haftAxe', 'a-repairBoots', 'a-patchRoof', 'a-poultice', 'a-sharpenAxe', 'a-maintainFerro', 'a-campSnares', 'a-treemark', 'a-confess', 'a-wash', 'a-haul', 'a-carve'];
     for (const id of order) {
       if (id === 'a-fire' && S.fireH > 2) continue;
       const d = act(id);
@@ -226,14 +242,15 @@ function survivorDecision(S: any): Decision | null {
  * a woodpile that never runs low, lines and snares out early and checked every day, meat cooked
  * or smoked, and home with the fire banked before dark. Returns null when nothing fits.
  */
+// Kept per player (the port), not per state object, so a save and reload does not wipe it.
 const competentMemo = new WeakMap<object, { day: number; done: Set<string>; last: string }>();
 /** Checks and looks that a careful player does once a day, not again and again. */
 const DAILY = new Set(['a-checkShore', 'a-checkTraps', 'a-trail', 'a-iceFish', 'a-confess']);
 
-function competentDecision(S: any): Decision | null {
-  const decision = competentPlan(S);
+function competentDecision(S: any, who: object): Decision | null {
+  const decision = competentPlan(S, who);
   // Something it cannot do right now (a walk too long on a bad ankle): rest, or let the fallback choose.
-  const memo = competentMemo.get(S)!;
+  const memo = competentMemo.get(who)!;
   const key = `${decision?.handler}@${S.hour}@${S.energy}`;
   const stuck = key === memo.last;
   memo.last = key;
@@ -242,10 +259,10 @@ function competentDecision(S: any): Decision | null {
   return rest && decision?.handler !== rest.onclick ? { handler: rest.onclick, label: rest.label } : null;
 }
 
-function competentPlan(S: any): Decision | null {
+function competentPlan(S: any, who: object): Decision | null {
   const panel = new Map(actionPanel().map((entry) => [entry.id, entry]));
-  let memo = competentMemo.get(S);
-  if (!memo || memo.day !== S.day) competentMemo.set(S, (memo = { day: S.day, done: new Set(), last: '' }));
+  let memo = competentMemo.get(who);
+  if (!memo || memo.day !== S.day) competentMemo.set(who, (memo = { day: S.day, done: new Set(), last: '' }));
   const act = (id: string): Decision | null => {
     const entry = panel.get(id);
     if (!entry || !entry.enabled || !entry.visible) return null;
@@ -480,6 +497,7 @@ export function runSolo(start: LegacyStartOptions, options: LockstepOptions, rul
     if (!decision) break;
     decisions++;
     port.click(decision.handler);
+    options.onStep?.(port.run.state);
     if (options.resumeEvery && decisions % options.resumeEvery === 0) {
       port.run = restoreRun(JSON.parse(JSON.stringify(snapshotRun(port.run))));
     }

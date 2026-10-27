@@ -127,6 +127,42 @@
   "hash": "1c26437f7c0f",
   "seconds": 2.81
  },
+ "b-a-reflector-0": {
+  "hash": "187ffe7956c8",
+  "seconds": 4.33
+ },
+ "b-a-reflector-1": {
+  "hash": "0f62081f10f0",
+  "seconds": 2.31
+ },
+ "b-a-reflector-2": {
+  "hash": "83a90c4a43ac",
+  "seconds": 3.1
+ },
+ "b-a-shingles-0": {
+  "hash": "148fb24c146f",
+  "seconds": 2.5
+ },
+ "b-a-shingles-1": {
+  "hash": "a4606d97febc",
+  "seconds": 2.46
+ },
+ "b-a-shingles-2": {
+  "hash": "55bfa39d8539",
+  "seconds": 3.22
+ },
+ "b-a-snowWall-0": {
+  "hash": "c6b84be591f1",
+  "seconds": 2.98
+ },
+ "b-a-snowWall-1": {
+  "hash": "1c01936b6a88",
+  "seconds": 2.18
+ },
+ "b-a-snowWall-2": {
+  "hash": "a1f8272a13c3",
+  "seconds": 3.41
+ },
  "b-a-stove-0": {
   "hash": "7c02f036c5e2",
   "seconds": 4.23

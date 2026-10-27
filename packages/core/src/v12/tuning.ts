@@ -282,7 +282,23 @@ export const ACTION_HOURS: any = {
   forage: [15/60, 30/60], tinder: [5/60, 10/60], setSnare: [0.0833, 0.25], checkSnare: [0.0167, 5/60],
   scout: [0.5, 1], follow: [0.75, 1], carveBig: [2, 2], carveMoose: [2, 4], wood: [1, 1.5],
 };
-export function hoursFor(key: string): number { const [v12, ours] = ACTION_HOURS[key]; return RULES.realTimes ? ours : v12; }
+export function hoursFor(key: string): number {
+  if (RULES.sirTimes && key in SIR_HOURS) return SIR_HOURS[key];
+  const [v12, ours] = ACTION_HOURS[key]; return RULES.realTimes ? ours : v12;
+}
+// rc.8 (sirTimes): Sir's own times, where he gave them. Foraging 20 min at most, tinder 2-5 min,
+// a snare 2 min to set and 2 to check, tracks 15 min to look for and 20-30 to follow, a deer 2-2.5 h
+// and a moose 5 h to carve (two thirds of that with a good knife), felling and bucking 30-45 min.
+export const SIR_HOURS: any = {
+  forage: 20/60, tinder: 3/60, setSnare: 2/60, checkSnare: 2/60, scout: 15/60, follow: 25/60,
+  carveBig: 2.25, carveMoose: 5, wood: 40/60,
+};
+// Travel 10 min between places, 20 once the snow has come; a friction fire takes 1-3 h; lighting
+// with the ferro rod 1-2 min when dry, 1-5 in rain, 5-15 after days of it.
+export const SIR_TIMES: any = {
+  knifeCarveMul: 2/3, travelHours: 10/60, travelSnowHours: 20/60, frictionHours: [1, 3],
+  fireDryMin: [1, 2], fireWetMin: [1, 5], fireSpellMin: [5, 15], wetSpellDays: 2,
+};
 // Per v12 session, by build and tier index (realTimes): the lean-to 2h, the stone ring 1h30, the
 // tripod rack 2h, the dugout 3h30 a step.
 export const BUILD_HOURS: any = { shelter: {0: 2}, firepit: {1: 1.5}, rack: {1: 2}, dugout: {0: 5.25, 1: 3.5, 2: 3.5} };
@@ -457,3 +473,55 @@ export const MAX_LINES_TOTAL = 3;
 // LEG-002 (TAP / OUT): the rations v12's kit draft describes. Calories match two berry handfuls,
 // which v12 values at +10 hunger / 80 kcal each.
 export const RATIONS = {uses:8, hunger:20, morale:1, energy:4, kcal:160} as const;
+// rc.8 (jobBuilds, Sir: "split the timings and the energy logically, for each and every one"). Each
+// build step's small jobs, in order, as [share of the step's time and energy, the materials it
+// uses]. A step's materials are shared out between the jobs that name them, whole units, the
+// remainder on the earlier jobs. The jobs' names are in @tapout/content BUILD_TASKS.
+export const JOB_SPLIT: Readonly<Record<string, ReadonlyArray<readonly [number, string]>>> = {
+  'shelter.1': [[1, ''], [3, 'wood'], [1, ''], [2, '']],
+  'shelter.2': [[3, 'wood'], [1, ''], [3, ''], [3, '']],
+  'shelter.3': [[3, 'wood'], [2, ''], [2, ''], [1, 'moss']],
+  'shelter.4': [[3, 'wood'], [2, ''], [1, ''], [2, 'moss']],
+  'shelter.5': [[3, ''], [2, 'moss'], [3, ''], [1, 'wood']],
+  'shelter.6': [[2, 'rocks'], [3, 'wood'], [2, ''], [3, 'wood moss clay']],
+  'shelter.7': [[3, 'wood'], [1, ''], [2, ''], [2, 'rocks moss clay']],
+  'shelter.8': [[2, 'wood'], [3, 'rocks'], [2, ''], [2, 'moss clay']],
+  'shelter.9': [[2, 'wood'], [2, 'rocks'], [2, 'moss clay'], [1, '']],
+  'shelter.10': [[3, 'moss'], [3, 'clay rocks'], [2, 'wood'], [0.5, '']],
+  'dugout.1': [[1, ''], [2, ''], [2, '']],
+  'dugout.2': [[2, ''], [3, ''], [3, ''], [1, '']],
+  'dugout.3': [[3, ''], [2, ''], [1, ''], [1, '']],
+  'dugout.4': [[2, 'wood'], [3, ''], [2, 'moss']],
+  'dugout.5': [[2, 'wood'], [2, 'moss'], [3, ''], [1, '']],
+  'firepit.1': [[1, ''], [2, ''], [2, 'rocks']],
+  'firepit.2': [[1, 'rocks'], [2, ''], [1, '']],
+  'firepit.3': [[3, 'clay'], [2, 'rocks'], [1, '']],
+  'firepit.4': [[2, 'clay'], [2, 'rocks'], [1, '']],
+  'firepit.5': [[1, 'clay rocks'], [3, ''], [1, '']],
+  'rack.1': [[2, ''], [2, 'wood'], [1, '']],
+  'rack.2': [[2, 'wood'], [1, ''], [1, '']],
+  'rack.3': [[2, 'wood'], [2, ''], [1, '']],
+  'rack.4': [[2, 'rocks'], [2, ''], [1, 'wood']],
+  'rack.5': [[2, ''], [2, 'wood'], [1, 'rocks']],
+  'cache.1': [[1, ''], [3, 'rocks'], [2, 'wood']],
+  'cache.2': [[2, 'wood'], [3, 'wood'], [2, 'rocks']],
+  'cache.3': [[3, 'clay'], [1, ''], [1, ''], [2, 'rocks']],
+  'cache.4': [[3, 'clay'], [2, 'rocks'], [1, '']],
+  'cache.5': [[3, 'wood'], [2, ''], [1, ''], [2, 'rocks']],
+  'cache.6': [[2, ''], [2, 'rocks'], [3, 'wood']],
+  'cache.7': [[1, ''], [2, 'wood'], [3, 'rocks'], [1, '']],
+  'a-bed': [[3, ''], [1, ''], [2, ''], [2, 'moss']],
+  'a-stove': [[2, 'rocks'], [3, 'rocks'], [1, 'clay'], [2, ''], [3, 'rocks']],
+  'a-insulate.1': [[2, 'moss'], [3, ''], [1, '']],
+  'a-insulate.2': [[2, 'moss'], [3, ''], [1, '']],
+  'a-insulate.3': [[2, 'moss'], [3, ''], [1, '']],
+  'a-picker': [[1, 'wood'], [2, ''], [1, '']],
+  'a-chair': [[2, 'wood'], [2, ''], [3, ''], [1, '']],
+  'a-table': [[2, 'wood'], [1, ''], [3, 'wood'], [1, '']],
+  'a-jug': [[2, 'clay'], [2, ''], [1, ''], [2, '']],
+  'a-flute': [[1, 'wood'], [1, ''], [1, ''], [1, '']],
+  'a-hugeRack': [[3, 'wood'], [2, 'rocks'], [1, ''], [2, '']],
+  'a-reflector': [[1, ''], [3, 'wood'], [1, 'rocks']],
+  'a-shingles': [[3, ''], [3, ''], [1, 'wood']],
+  'a-snowWall': [[1, ''], [3, ''], [3, ''], [1, '']],
+};
