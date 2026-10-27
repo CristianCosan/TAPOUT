@@ -137,6 +137,8 @@ function softTexture(): THREE.Texture {
   soft = new THREE.CanvasTexture(c);
   return soft;
 }
+/** rc.7: the top of the lake ice, a hair above the frozen lake's surface. */
+const ICE_TOP = -0.2;
 const WEATHER_GREY: Record<string, number> = { clear: 0, cold: 0.05, overcast: 0.6, rain: 0.8, snow: 0.75, storm: 1 };
 /** How much of the sky clouds take, by v12 weather. */
 const CLOUD_COVER: Record<string, number> = { clear: 0.4, cold: 0.3, overcast: 0.72, rain: 0.85, snow: 0.85, storm: 0.95 };
@@ -483,6 +485,7 @@ export class World {
     }
     this.syncStations(input);
     this.syncTrail(input);
+    this.syncIce(input);
     this.hands.hold(input.held ?? null);
     this.syncWalk(input);
   }
@@ -629,6 +632,7 @@ export class World {
     }
     this.stations.clear();
     this.water = null;
+    this.iceMarks = null;
     this.trail = null;
     this.trailKey = '';
     this.glide = null;
@@ -652,6 +656,7 @@ export class World {
       w.receiveShadow = true;
       this.water = w;
       this.areaRoot.add(w);
+      if (ice && area.iceWalk) this.areaRoot.add(this.makeIceMarks(area.shoreZ, -0.2 - (area.perch?.drop ?? 0)));
       if (!ice) {
         this.areaRoot.add(this.makeMist(area.shoreZ));
         this.areaRoot.add(this.makeRings());
@@ -667,9 +672,78 @@ export class World {
     this.areaRoot.add(this.life.root);
   }
 
+  /** rc.7: pressure cracks across the ice (they show while it is thin) and today's test hole. */
+  private makeIceMarks(shoreZ: number, y: number): THREE.Group {
+    const g = new THREE.Group();
+    const rnd = seeded(41);
+    const cracks = new THREE.Group();
+    cracks.name = 'cracks';
+    const dark = new THREE.MeshBasicMaterial({ color: 0x1c2e38, transparent: true, opacity: 0.7, depthWrite: false });
+    for (let i = 0; i < 9; i++) {
+      let x = (rnd() - 0.5) * 30;
+      let z = shoreZ - 2 - rnd() * 20;
+      let a = rnd() * Math.PI;
+      for (let k = 0; k < 6; k++) {
+        const len = 0.8 + rnd() * 1.8;
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.035), dark);
+        m.rotation.set(-Math.PI / 2, 0, a);
+        m.position.set(x + (Math.cos(a) * len) / 2, y, z - (Math.sin(a) * len) / 2);
+        cracks.add(m);
+        x += Math.cos(a) * len;
+        z -= Math.sin(a) * len;
+        a += (rnd() - 0.5) * 1.2;
+      }
+    }
+    g.add(cracks);
+    const hole = new THREE.Group();
+    hole.name = 'testHole';
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.22, 12), mat(0x0a1820, { rough: 0.1 }));
+    disc.rotation.x = -Math.PI / 2;
+    disc.position.set(0.6, y + 0.005, shoreZ - 1.6);
+    hole.add(disc);
+    for (let i = 0; i < 6; i++) {
+      const chip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.08), mat(0xdfe9ee));
+      chip.position.set(0.6 + Math.cos(i) * 0.38, y + 0.02, shoreZ - 1.6 + Math.sin(i) * 0.38);
+      chip.rotation.y = i;
+      hole.add(chip);
+    }
+    g.add(hole);
+    this.iceMarks = g;
+    return g;
+  }
+  private iceMarks: THREE.Group | null = null;
+
+  /** rc.7: the ice looks like what it is: grey, wet and see-through while thin, white once it holds. */
+  private syncIce(input: WorldInput): void {
+    const marks = this.iceMarks;
+    if (!marks || !input.winter || !this.water) return;
+    const cm = input.props.iceCm ?? 0;
+    const t = Math.max(0, Math.min(1, (cm - 4) / 26));
+    const m = this.water.material as THREE.MeshStandardMaterial;
+    m.color.setHex(0x6f8a98).lerp(new THREE.Color(0xd2dde3), t);
+    m.roughness = 0.12 + t * 0.5;
+    marks.getObjectByName('cracks')!.visible = !!input.props.thinIce;
+    marks.getObjectByName('testHole')!.visible = !!input.props.testHole;
+  }
+
   /** How far the lake lies below the place you stand (a perched camp looks down on it). */
   private waterDrop(): number {
     return this.input?.area.perch?.drop ?? 0;
+  }
+
+  /** rc.7: how far out onto the frozen lake you can walk (0 when there is no ice here). */
+  private iceWalk(): number {
+    const input = this.input;
+    return input?.winter ? input.area.iceWalk ?? 0 : 0;
+  }
+  private onIce(): boolean {
+    const shore = this.input?.area.shoreZ;
+    return this.iceWalk() > 0 && shore !== undefined && this.pos.z < shore;
+  }
+  /** Where your feet are: the ground, or the top of the ice. */
+  private feet(area: WorldArea, x: number, z: number): number {
+    const h = this.ground(area, x, z);
+    return this.iceWalk() > 0 && area.shoreZ !== undefined && z < area.shoreZ + 0.5 ? Math.max(h, ICE_TOP - (area.perch?.drop ?? 0)) : h;
   }
 
   /** Ground height: flat where you walk, rising into hills, dropping into the lake. */
@@ -1162,7 +1236,7 @@ export class World {
 
   private eye(): THREE.Vector3 {
     const area = this.input!.area;
-    return new THREE.Vector3(this.pos.x, this.ground(area, this.pos.x, this.pos.z) + FIRST_PERSON.eyeHeight + (settings().headBob ? Math.sin(this.bob) * 0.035 : 0), this.pos.z);
+    return new THREE.Vector3(this.pos.x, this.feet(area, this.pos.x, this.pos.z) + FIRST_PERSON.eyeHeight + (settings().headBob ? Math.sin(this.bob) * 0.035 : 0), this.pos.z);
   }
 
   private keepInside(): void {
@@ -1180,6 +1254,12 @@ export class World {
       }
     }
     const r = Math.hypot(this.pos.x, this.pos.z);
+    if (this.iceWalk() && area.shoreZ !== undefined && this.pos.z < area.shoreZ + 0.8) {
+      // rc.7: in winter the frozen lake is ground too, out to a point.
+      this.pos.x = Math.max(-area.walkRadius, Math.min(area.walkRadius, this.pos.x));
+      this.pos.z = Math.max(this.pos.z, area.shoreZ - this.iceWalk());
+      return;
+    }
     if (r > area.walkRadius) this.pos.multiplyScalar(area.walkRadius / r);
     if (area.shoreZ !== undefined) this.pos.z = Math.max(this.pos.z, area.shoreZ + 0.8);
   }
@@ -1248,6 +1328,7 @@ export class World {
         this.bob += dt * speed * 2.6;
         if (before > 0 && Math.sin(this.bob) <= 0) {
           this.sound.step(speed > FIRST_PERSON.walkSpeed, input.winter);
+          if (this.onIce()) this.sound.creak(!!input.props.thinIce);
           if (input.winter) this.footprint(input.area);
         }
         this.keepInside();
@@ -2015,7 +2096,7 @@ export class World {
     const x = this.pos.x + Math.cos(this.yaw) * side;
     const z = this.pos.z - Math.sin(this.yaw) * side;
     const d = this.leafDummy;
-    d.position.set(x, this.ground(area, x, z) + 0.012, z);
+    d.position.set(x, this.feet(area, x, z) + 0.012, z);
     d.rotation.set(0, this.yaw, 0);
     d.scale.set(0.75, 1, 1.5);
     d.updateMatrix();

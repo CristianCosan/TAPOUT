@@ -176,6 +176,8 @@ export { upgradePath, type UpgradeId, type UpgradePath, type UpgradeStep, type M
  */
 export { KIT_POOL, WEATHER, SHELTERS, BUILD_NEED, CARRY_CAP, GAME, MAX_SNARES_PER_SPOT, MAX_LINES_TOTAL } from './v12/tuning.ts';
 export { wearing, type Garment } from './v12/gear.ts';
+export { iceCm, thinIce } from './v12/ice.ts';
+export { lateBuilt, type LateId } from './v12/late.ts';
 export { CLOTHES } from './v12/tuning.ts';
 export { ambientTempC } from './v12/cost.ts';
 export { fireCap } from './v12/camp.ts';

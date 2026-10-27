@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { CAMP_HARVEST, GAME, ambientTempC, campLeft, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
+import { CAMP_HARVEST, GAME, iceCm, lateBuilt, thinIce, ambientTempC, campLeft, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
 import { BUILD_MENU, BUILD_STATIONS, FALL_SCENE, BUILD_TASKS, BUILD_TASK_TEXT, ENERGY_HUD, HUNT_TEXT, HUNT_VOICE, INVENTORY_TEXT, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
@@ -1049,6 +1049,10 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       bed: !!S.bed,
       stove: !!S.stove,
       secondTarp: !!(S.kit as Set<string> | undefined)?.has('tarp'),
+      late: (['reflector', 'shingles', 'snowWall'] as const).filter((id) => lateBuilt(id)),
+      iceCm: S.winter ? iceCm() : 0,
+      thinIce: thinIce(),
+      testHole: S.iceCheckedDay === S.day,
       firepitTier: S.firepitTier,
       fireLit: S.fireH > 0,
       rackTier: S.rackTier,

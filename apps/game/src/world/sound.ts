@@ -255,6 +255,15 @@ export class Ambience {
     else burst(this.out, { len: 0.12, peak: running ? 0.22 : 0.15, freq: 260 + Math.random() * 120, type: 'lowpass' });
   }
 
+  /** rc.7: out on thin ice, now and then it answers your weight: a groan and a high zing. */
+  creak(thin: boolean): void {
+    if (!this.out || this.t - this.lastCreak < (thin ? 2.5 : 9) || Math.random() > (thin ? 0.35 : 0.08)) return;
+    this.lastCreak = this.t;
+    burst(this.out, { len: 0.7, peak: thin ? 0.16 : 0.07, freq: 180, to: 90, q: 3, attack: 0.05 });
+    tone(this.out, { at: 0.1, len: 0.5, freqs: [[0, 2400], [0.5, 900]], peak: thin ? 0.05 : 0.025 });
+  }
+  private lastCreak = -10;
+
   update(dt: number, s: SoundState): void {
     const ctx = audio.ctx;
     if (!ctx || !this.out) return;
