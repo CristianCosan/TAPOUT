@@ -173,6 +173,8 @@ export { upgradePath, type UpgradeId, type UpgradePath, type UpgradeStep, type M
 export { KIT_POOL, WEATHER, SHELTERS, BUILD_NEED, CARRY_CAP, GAME, MAX_SNARES_PER_SPOT, MAX_LINES_TOTAL } from './v12/tuning.ts';
 export { ambientTempC } from './v12/cost.ts';
 export { fireCap } from './v12/camp.ts';
+export { campLeft } from './v12/helpers.ts';
+export { CAMP_HARVEST } from './v12/tuning.ts';
 export { waterCap, computeBMI } from './v12/setup.ts';
 export { meatCount, berryCount } from './v12/food.ts';
 export { roundDisplay, hh, duskHour, dawnHour } from './v12/helpers.ts';

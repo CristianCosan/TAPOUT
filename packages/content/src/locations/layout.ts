@@ -44,6 +44,8 @@ export interface Station {
   spot?: string;
   /** Only shown when the run has something here (a kill site, a spotted animal, winter ice). */
   when?: 'killSite' | 'hunt' | 'winter' | 'jay';
+  /** rc.4: a camp build that does not exist until you start building it. */
+  built?: 'rack' | 'cache' | 'comforts';
 }
 
 export interface LocationLayout {

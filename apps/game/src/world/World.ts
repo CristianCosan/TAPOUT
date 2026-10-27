@@ -11,7 +11,7 @@ import { buildProp, propKey, type PropState } from './props.ts';
 import { audio } from '../audio/engine.ts';
 import { settings } from '../settings.ts';
 import { Wildlife } from './life.ts';
-import { Hands, MOTIONS } from './hands.ts';
+import { Hands, MOTIONS, type Motion } from './hands.ts';
 import { Ambience } from './sound.ts';
 
 export interface WorldInput {
@@ -238,6 +238,13 @@ export class World {
   private mouse: { x: number; y: number } | null = null;
   private hovered: Hover | null = null;
   private raycaster = new THREE.Raycaster();
+  /**
+   * rc.4 (Sir: if you can see it, you can pick it up): scenery that stands for a station, such as
+   * the logs and stones lying about camp or the trees in the woods. Looking at one is looking at
+   * that station; camp's own pieces disappear as the timber and stone there are used up.
+   */
+  private proxies: Array<{ obj: THREE.Mesh; station: string; kind?: 'logs' | 'rocks' }> = [];
+  private hoveredProxy: THREE.Mesh | null = null;
   private clock = new THREE.Clock();
   private time = 0;
   private disposed = false;
@@ -507,7 +514,8 @@ export class World {
 
   /** Shows the motion for a v12 action you just did: chopping, gathering, casting a line. */
   perform(fn: string): void {
-    const motion = MOTIONS[fn];
+    // A handler name, or (a build's small jobs, rc.4) the motion itself.
+    const motion = MOTIONS[fn] ?? (Object.values(MOTIONS).includes(fn as Motion) ? (fn as Motion) : undefined);
     if (motion) this.hands.play(motion);
   }
 
@@ -541,6 +549,7 @@ export class World {
   // ---- building an area
 
   private buildArea(input: WorldInput): void {
+    this.proxies = [];
     for (const child of [...this.areaRoot.children]) {
       this.areaRoot.remove(child);
       child.traverse((o) => {
@@ -677,6 +686,8 @@ export class World {
     const bCrown = rough(new THREE.IcosahedronGeometry(1.6, 0), 0.5, 5).translate(0, 7, 0);
     const add = (geo: THREE.BufferGeometry, color: number, list: typeof spots, tint: boolean, sway = false) => {
       const m = new THREE.InstancedMesh(geo, sway ? swayMat(color) : mat(color), list.length);
+      // Every trunk in the woods is timber to fell.
+      if (area.id === 'woods' && (geo === trunk || geo === bTrunk) && area.stations.timber) this.proxies.push({ obj: m, station: 'timber' });
       const o = new THREE.Object3D();
       const col = new THREE.Color();
       list.forEach((t, i) => {
@@ -708,7 +719,10 @@ export class World {
       const z = Math.sin(a) * r;
       if (area.shoreZ !== undefined && z < area.shoreZ - 3) continue;
       const s = 0.3 + rnd() * 1.1;
-      const m = new THREE.Mesh(rough(new THREE.DodecahedronGeometry(s, 0), s * 0.4, i + 100), mat(winter && rnd() < 0.5 ? 0xb8c0c4 : 0x76746e));
+      const m = new THREE.Mesh(rough(new THREE.DodecahedronGeometry(s, 0), s * 0.4, i + 100), mat(winter && rnd() < 0.5 ? 0xb8c0c4 : 0x76746e).clone());
+      // Stones on the shore are rocks to gather; in the woods they carry the moss.
+      const stands = area.id === 'shore' ? 'rocks' : area.id === 'woods' ? 'moss' : '';
+      if (stands && area.stations[stands]) this.proxies.push({ obj: m, station: stands });
       m.position.set(x, this.ground(area, x, z) + s * 0.25, z);
       m.rotation.set(rnd(), rnd() * 3, rnd());
       m.castShadow = true;
@@ -819,7 +833,8 @@ export class World {
         n++;
         const len = 2.4 + rnd() * 2.6;
         const thick = 0.16 + rnd() * 0.12;
-        const log = new THREE.Mesh(rough(new THREE.CylinderGeometry(thick * 0.85, thick, len, 7), 0.03, i + 40), bark);
+        const log = new THREE.Mesh(rough(new THREE.CylinderGeometry(thick * 0.85, thick, len, 7), 0.03, i + 40), bark.clone());
+        this.proxies.push({ obj: log, station: 'fallen', kind: 'logs' });
         log.position.set(x, ground(x, z) + thick * 0.8, z);
         log.rotation.set(0, rnd() * Math.PI, Math.PI / 2);
         log.castShadow = true;
@@ -834,7 +849,8 @@ export class World {
         if (nearStation(x, z, 1.4)) continue;
         n++;
         const sz = 0.2 + rnd() * rnd() * 0.7;
-        const rock = new THREE.Mesh(rough(new THREE.DodecahedronGeometry(sz, 0), sz * 0.35, i + 140).scale(1, 0.7, 1), stone);
+        const rock = new THREE.Mesh(rough(new THREE.DodecahedronGeometry(sz, 0), sz * 0.35, i + 140).scale(1, 0.7, 1), stone.clone());
+        this.proxies.push({ obj: rock, station: 'stones', kind: 'rocks' });
         rock.position.set(x, ground(x, z) + sz * 0.3, z);
         rock.rotation.set(rnd(), rnd() * 3, rnd());
         rock.castShadow = true;
@@ -951,6 +967,14 @@ export class World {
         this.stations.set(station.id, node);
       }
       node.group.visible = !hidden.has(station.id);
+    }
+    // Camp's loose timber and stone go as they are used: as many pieces as are left, in proportion.
+    for (const kind of ['logs', 'rocks'] as const) {
+      const pieces = this.proxies.filter((p) => p.kind === kind);
+      const left = kind === 'logs' ? props.campLogs : props.campRocks;
+      if (left === undefined) continue;
+      const shown = Math.ceil(pieces.length * left);
+      pieces.forEach((p, i) => (p.obj.visible = i < shown));
     }
     const fire = this.stations.get('fire');
     this.fireLight.visible = !!fire && fire.group.visible && props.fireLit;
@@ -1195,14 +1219,23 @@ export class World {
   private updateHover(eye: THREE.Vector3): void {
     const input = this.input!;
     let next: Hover | null = null;
+    const lastProxy = this.hoveredProxy;
+    this.hoveredProxy = null;
     if (!input.frozen && (this.locked || this.mouse)) {
       const ndc = this.locked ? new THREE.Vector2(0, 0) : new THREE.Vector2((this.mouse!.x / 1920) * 2 - 1, -(this.mouse!.y / 1080) * 2 + 1);
       this.raycaster.setFromCamera(ndc, this.camera);
       const groups = [...this.stations.values()].filter((n) => n.group.visible).map((n) => n.group);
       let id: string | null = null;
       let dist = Infinity;
-      const hit = this.raycaster.intersectObjects(groups, true).find((h) => h.object.visible);
-      if (hit) {
+      const proxyOf = new Map<THREE.Object3D, string>(this.proxies.filter((p) => p.obj.visible && this.stations.get(p.station)?.group.visible).map((p) => [p.obj, p.station]));
+      const hit = this.raycaster.intersectObjects([...groups, ...proxyOf.keys()], true).find((h) => h.object.visible);
+      let proxyNear: boolean | null = null;
+      if (hit && proxyOf.has(hit.object)) {
+        id = proxyOf.get(hit.object)!;
+        dist = hit.distance;
+        proxyNear = Math.hypot(hit.point.x - this.pos.x, hit.point.z - this.pos.z) <= FIRST_PERSON.reach + 0.8;
+        this.hoveredProxy = hit.object instanceof THREE.InstancedMesh ? null : (hit.object as THREE.Mesh);
+      } else if (hit) {
         let o: THREE.Object3D | null = hit.object;
         while (o && !o.userData.stationId) o = o.parent;
         if (o) {
@@ -1225,7 +1258,7 @@ export class World {
         const st = input.area.stations[id]!;
         const station = input.layout.stations.find((s) => s.id === id);
         const flat = Math.hypot(this.pos.x - st.x, this.pos.z - st.z);
-        const near = flat <= Math.max(st.reach ?? 0, st.radius + FIRST_PERSON.reach);
+        const near = proxyNear ?? flat <= Math.max(st.reach ?? 0, st.radius + FIRST_PERSON.reach);
         next = { id, label: station?.label ?? id, near, x: this.locked ? 960 : this.mouse!.x, y: this.locked ? 540 : this.mouse!.y };
       }
     }
@@ -1239,6 +1272,15 @@ export class World {
       for (const m of node.mats) {
         m.emissive.setHex(0xffa040);
         m.emissiveIntensity = lit;
+      }
+    }
+    if (lastProxy !== this.hoveredProxy) {
+      for (const p of [lastProxy, this.hoveredProxy]) {
+        const m = p?.material;
+        if (m instanceof THREE.MeshStandardMaterial) {
+          m.emissive.setHex(0xffa040);
+          m.emissiveIntensity = p === this.hoveredProxy ? (next?.near ? 0.16 : 0.06) : 0;
+        }
       }
     }
     this.renderer.domElement.style.cursor = !this.locked && next?.near ? 'pointer' : this.locked ? 'none' : 'crosshair';

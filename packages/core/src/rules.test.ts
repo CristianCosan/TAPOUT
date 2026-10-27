@@ -308,10 +308,31 @@ describe('rc.3 dugout stages: dig, then walls and roof', () => {
       run.call('actDugout');
       expect(run.state.dugoutProg).toBe(1);
       expect(run.state.stock.wood).toBe(rules === V12_RULES ? 18 : 20);
-      Object.assign(run.state, { hour: 8, energy: 120 }); run.call('actDugout');
-      Object.assign(run.state, { hour: 8, energy: 120 }); run.call('actDugout');
+      Object.assign(run.state, { hour: 8, energy: 120, day: run.state.day + 1 }); run.call('actDugout');
+      // rc.4 (stepBuilds): the pit is three steps in TAP / OUT, so the walls are the fourth.
+      if (rules === TAPOUT_RULES) { Object.assign(run.state, { hour: 8, energy: 120, day: run.state.day + 1 }); run.call('actDugout'); }
+      expect(run.state.stock.wood).toBe(rules === V12_RULES ? 16 : 20);
+      Object.assign(run.state, { hour: 8, energy: 120, day: run.state.day + 1 }); run.call('actDugout');
       expect(run.state.stock.wood).toBe(rules === V12_RULES ? 14 : 16);
       expect(run.state.stock.moss).toBe(rules === V12_RULES ? 10 : 8);
+    }
+  });
+});
+
+describe('rc.4 step builds', () => {
+  it('v12 raises the tripod rack in one session; TAP / OUT in three steps for the same 4 logs', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'camp', hour: 8, energy: 120, maxEnergy: 120 });
+      run.state.stock.wood = 20;
+      run.call('actRack');
+      expect(run.state.rackTier).toBe(rules === V12_RULES ? 1 : 0);
+      if (rules === TAPOUT_RULES) {
+        Object.assign(run.state, { energy: 120 }); run.call('actRack');
+        Object.assign(run.state, { energy: 120 }); run.call('actRack');
+        expect(run.state.rackTier).toBe(1);
+      }
+      expect(run.state.stock.wood).toBe(16);
     }
   });
 });
@@ -325,5 +346,53 @@ describe('rc.3 test mode (Settings)', () => {
     run.call('testSetInfinite', true);
     run.call('actFirewood');
     expect(run.state.energy).toBe(run.state.maxEnergy);
+  });
+});
+
+describe('rc.4 one route and build pace', () => {
+  const kit = ['shovel', 'saw', 'ferro', 'pot', 'knife', 'sleeping', 'tarp', 'line', 'snare', 'bow'];
+  it('starting the dugout closes the shelter route only in TAP / OUT', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules, kit);
+      Object.assign(run.state, { loc: 'camp', hour: 8, energy: 120, maxEnergy: 120 });
+      run.state.stock.wood = 30; run.state.stock.moss = 10;
+      run.call('actDugout');
+      Object.assign(run.state, { hour: 8, energy: 120 });
+      run.call('actShelter');
+      expect(run.state.buildProg).toBe(rules === V12_RULES ? 1 : 0);
+    }
+  });
+  it('past the lean-to, one session a day only in TAP / OUT', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'camp', hour: 8, energy: 120, maxEnergy: 120, structure: 1, buildProg: 0 });
+      run.state.stock.wood = 40; run.state.stock.moss = 10; run.state.stock.clay = 10;
+      run.call('actShelter');
+      Object.assign(run.state, { hour: 8, energy: 120 });
+      run.call('actShelter');
+      expect(run.state.buildProg).toBe(rules === V12_RULES ? 2 : 1);
+    }
+  });
+});
+
+describe('rc.4 real times', () => {
+  it('foraging takes 15 minutes in v12 and 30 in TAP / OUT, for the same energy', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'woods', hour: 9, energy: 120, maxEnergy: 120 });
+      run.call('actForage');
+      expect(run.state.hour - 9).toBeCloseTo(rules === V12_RULES ? 0.25 : 0.5, 5);
+    }
+  });
+  it('lighting a fire with the ferro rod is free of time in v12 and takes 1 to 30 minutes in TAP / OUT', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'camp', hour: 9, fireH: 0, tinder: 3, weather: 'clear' });
+      run.state.stock.firewood = 5;
+      run.call('actFire');
+      const took = run.state.hour - 9;
+      if (rules === V12_RULES) expect(took).toBe(0);
+      else { expect(took).toBeGreaterThanOrEqual(1 / 60 - 1e-9); expect(took).toBeLessThanOrEqual(0.5 + 1e-9); }
+    }
   });
 });

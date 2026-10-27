@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay, upgradePath } from '@tapout/core';
-import { BUILD_STATIONS, ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { CAMP_HARVEST, GAME, ambientTempC, campLeft, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
+import { BUILD_MENU, BUILD_STATIONS, BUILD_TASKS, BUILD_TASK_TEXT, ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -14,11 +14,13 @@ import { useSoundCues } from '../audio/cues.ts';
 import { useThoughts } from '../audio/useThoughts.ts';
 import { ThoughtSubtitle } from './ThoughtSubtitle.tsx';
 import { playUi } from '../audio/effects.ts';
+import { speakPieces } from '../audio/thoughts.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
 import { NoteBox } from './NoteBox.tsx';
 import { Glyph, ResIcon, Tooltip, Txt, WithIcons, resourceTip } from './icons.tsx';
-import { glyphHtml, noEmoji } from './glyphs.ts';
+import { glyphHtml, noEmoji, type GlyphId } from './glyphs.ts';
+import { BUILD_PICS } from './buildPics.ts';
 
 const BARS = [
   ['health', 'Health'],
@@ -73,7 +75,7 @@ function onHandlerClick(event: MouseEvent) {
 
 // ---- rails and bars
 
-function TopBar({ view, onJournal, onMap, onSound }: { view: View; onJournal: () => void; onMap: () => void; onSound: () => void }) {
+function TopBar({ view, onBuild, onJournal, onMap, onSound }: { view: View; onBuild: () => void; onJournal: () => void; onMap: () => void; onSound: () => void }) {
   const { hud } = view;
   return (
     <header className="hud-top">
@@ -85,6 +87,9 @@ function TopBar({ view, onJournal, onMap, onSound }: { view: View; onJournal: ()
           <Html key={id} className="pill" html={hudText(hud, id)} />
         ))}
       </div>
+      <button className="hud-btn" onClick={onBuild} title={`${BUILD_MENU.title} (${BUILD_MENU.key})`}>
+        <Glyph id="build" /> {BUILD_MENU.title}
+      </button>
       <button className="hud-btn" onClick={onMap} title="Map (M)">
         Map
       </button>
@@ -238,7 +243,7 @@ function EnergyHud({ view, cost, onBed }: { view: View; cost: number; onBed: (of
 
 // ---- the context panel, next to the station you clicked
 
-function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onKeepsake: (note: IntroNote) => void; onCost: (cost: number) => void; beside?: boolean }) {
+function ContextPanel({ station, view, onClose, onAct, onBuild, onKeepsake, onCost, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onBuild: (b: BuildStart) => void; onKeepsake: (note: IntroNote) => void; onCost: (cost: number) => void; beside?: boolean }) {
   const all = offersFor(station, view);
   const building = BUILD_STATIONS[station.id];
   const builds = new Set(building ? [...building.paths.map((p) => p.action), ...building.extras] : []);
@@ -276,7 +281,7 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
           ))}
         </div>
       )}
-      {BUILD_STATIONS[station.id] && <BuildPanel station={station.id} view={view} onAct={onAct} onCost={onCost} />}
+      {BUILD_STATIONS[station.id] && <BuildPanel station={station.id} view={view} onBuild={onBuild} onCost={onCost} />}
       {BUILD_STATIONS[station.id] && uses.length > 0 && (
         <h4 className="use-head">
           <Glyph id="look" /> {UPGRADE_TEXT.use}
@@ -319,103 +324,312 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
 }
 
 /**
- * What can be built here (rc.3): each path as a row of stages, the next stage with what it takes
- * and its own build button, set apart from the things you use. Facts only, no advice.
+ * What can be built here (rc.4, Sir's layout). The main build sits on top in its own frame: what
+ * it is now, as a picture with what it does for you, then its steps and the next one. At the
+ * shelter you first pick the shelter or the dugout, and the other goes away. Everything else built
+ * here goes below. Facts only, no advice.
  */
-function BuildPanel({ station, view, onAct, onCost }: { station: string; view: View; onAct: (offer: Offer) => void; onCost: (cost: number) => void }) {
+function BuildPanel({ station, view, onBuild, onCost }: { station: string; view: View; onBuild: (b: BuildStart) => void; onCost: (cost: number) => void }) {
   const spec = BUILD_STATIONS[station];
   if (!spec) return null;
   const panel = new Map(view.panel.map((e) => [e.id, e]));
   const extras = spec.extras.map((id) => panel.get(id)).filter((e): e is NonNullable<typeof e> => !!e && e.visible);
+  const locked = spec.extras.filter((id) => !panel.get(id)?.visible && UPGRADE_TEXT.locked[id]);
   if (spec.paths.length === 0 && extras.length === 0) return null;
-  const S = view.state;
-  const buildButton = (entry: { id: string; label: string; detail: string; enabled: boolean; onclick: string }, label: string) => (
-    <button
-      className="build-btn"
-      disabled={!entry.enabled}
-      onClick={() => onAct({ key: entry.id, label: entry.label, detail: entry.detail, enabled: entry.enabled, handler: entry.onclick })}
-      onMouseEnter={() => onCost(entry.enabled ? energyCost(entry.detail) : 0)}
-      onMouseLeave={() => onCost(0)}
-    >
-      <Glyph id="build" /> <span>{label}</span>
-      {!entry.enabled && entry.detail && <em>{noEmoji(entry.detail)}</em>}
-    </button>
+  const routes = spec.paths.map((p) => ({ ...p, path: upgradePath(p.id) })).filter((r) => !r.path.closed);
+  const have = (m: string) => Number(hudText(view.hud, STOCK_OF[m]!)) || 0;
+  const hover = (entry?: { enabled: boolean; detail: string }) => ({
+    onMouseEnter: () => onCost(entry?.enabled ? energyCost(entry.detail) : 0),
+    onMouseLeave: () => onCost(0),
+  });
+  const needs = (n: Partial<Record<string, number>>, showHave: boolean) =>
+    Object.entries(n).map(([m, k]) => (
+      <span key={m} className={`build-need${showHave && have(m) < (k ?? 0) ? ' short' : ''}`}>
+        <ResIcon id={m as ResourceId} size={17} />
+        {showHave ? `${have(m)}/${k}` : k}
+      </span>
+    ));
+  // A build with nothing finished yet but its first steps done shows what is going up, faded.
+  const state = (id: UpgradeId, tier: number, underWay = false) => (
+    <div className="bstate">
+      <div className={`bpic${underWay ? ' under-way' : ''}`} dangerouslySetInnerHTML={{ __html: BUILD_PICS[id]![underWay ? tier + 1 : tier] ?? '' }} />
+      <b>{underWay ? UPGRADE_TEXT.underWay(UPGRADE_TEXT.names[id][tier + 1]!) : UPGRADE_TEXT.names[id][tier]}</b>
+      <p>{UPGRADE_TEXT.about[id][tier]}</p>
+    </div>
   );
+  // The shelter spot before either way is started: the tarp, and the choice.
+  const choosing = routes.length > 1 && routes.every((r) => r.path.done === 0);
+
+  let main: ReactNode = null;
+  if (choosing) {
+    main = (
+      <div className="main-build">
+        <div className="mb-label">{UPGRADE_TEXT.mainChoose}</div>
+        {state('shelter', 0)}
+        <div className="route-choice">
+          {routes.map(({ id, action, path }) => {
+            const entry = panel.get(action);
+            const first = path.steps[0]!;
+            const open = !!entry?.visible;
+            return (
+              <button key={id} className="route-card" disabled={!open || !entry?.enabled} onClick={() => entry && onBuild({ key: `${id}.1`, name: UPGRADE_TEXT.steps[id][0]!, entry, hours: first.hours })} {...hover(entry)}>
+                <span className="bpic small" dangerouslySetInnerHTML={{ __html: BUILD_PICS[id]![id === 'dugout' ? 3 : 1] ?? '' }} />
+                <b>{UPGRADE_TEXT.routes[id].title}</b>
+                <small>{UPGRADE_TEXT.routes[id].hint}</small>
+                {open ? (
+                  <span className="route-start">
+                    {Object.keys(first.needs).length ? needs(first.needs, true) : null}
+                    <em>{entry?.enabled ? UPGRADE_TEXT.start[id as 'shelter' | 'dugout'] : noEmoji(entry?.detail ?? '')}</em>
+                  </span>
+                ) : (
+                  <span className="route-start">
+                    <Glyph id="shovel" size={16} /> <em>{UPGRADE_TEXT.needsShovel}</em>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mb-note">{UPGRADE_TEXT.chooseNote}</p>
+      </div>
+    );
+  } else if (routes[0]) {
+    const { id, action, path } = routes[0];
+    const entry = panel.get(action);
+    const next = path.steps.find((st) => st.state === 'next');
+    const tiers = UPGRADE_TEXT.names[id];
+    const stepNames = UPGRADE_TEXT.steps[id];
+    const milestones = tiers.slice(1).map((name, i) => ({ name, n: path.steps.filter((st) => st.tier === i + 1).length, have: path.current >= i + 1 }));
+    const lastOfTier = next ? path.steps.filter((st) => st.tier === next.tier).pop()! : null;
+    main = (
+      <div className="main-build">
+        <div className="mb-label">{UPGRADE_TEXT.mainNow(UPGRADE_TEXT.noun[id])}</div>
+        {state(id, path.current, path.current === 0 && path.done > 0 && id !== 'shelter' && id !== 'dugout')}
+        <div className="bstrip">
+          {path.steps.map((st) => (
+            <i key={st.step} className={`${st.state}${st.within === st.of ? ' mile' : ''}`} title={stepNames[st.step - 1]}>
+              {st.step}
+            </i>
+          ))}
+        </div>
+        <div className="bmiles">
+          {milestones.map((m) => (
+            <span key={m.name} style={{ flex: m.n }} className={m.have ? 'have' : ''}>
+              {m.name}
+            </span>
+          ))}
+        </div>
+        {next ? (
+          <div className="bnext">
+            <big>{UPGRADE_TEXT.stepOf(next.step, path.steps.length, stepNames[next.step - 1] ?? '')}</big>
+            <div className="stage-cost">
+              {needs(next.needs, true)}
+              <span>
+                <Glyph id="energy" size={16} /> {next.energy}
+              </span>
+              <span>
+                <Glyph id="time" size={16} /> {duration(Math.round(next.hours * 60))}
+              </span>
+            </div>
+            {entry?.visible && (
+              <button className="build-btn" disabled={!entry.enabled} onClick={() => onBuild({ key: `${id}.${next.step}`, name: stepNames[next.step - 1] ?? '', entry, hours: next.hours })} {...hover(entry)}>
+                <Glyph id="build" /> <span>{jobsDone()[`${id}.${next.step}`] ? UPGRADE_TEXT.resume(stepNames[next.step - 1] ?? '') : UPGRADE_TEXT.go(stepNames[next.step - 1] ?? '')}</span>
+                {!entry.enabled && entry.detail && !path.settling && <em>{noEmoji(entry.detail)}</em>}
+              </button>
+            )}
+            {path.settling ? <p className="mb-note">{UPGRADE_TEXT.settling}</p> : lastOfTier && <p className="mb-note">{UPGRADE_TEXT.becomes(lastOfTier.step, tiers[next.tier]!)}</p>}
+          </div>
+        ) : (
+          <p className="mb-note">{UPGRADE_TEXT.done}</p>
+        )}
+      </div>
+    );
+  }
   return (
     <section className="build-panel">
-      <h4>
-        <Glyph id="build" /> {UPGRADE_TEXT.build}
-      </h4>
-      {spec.paths.map(({ id, action }, i) => {
-        const path = upgradePath(id);
-        const names = UPGRADE_TEXT.names[id];
-        const route = UPGRADE_TEXT.routes[id];
-        const entry = panel.get(action);
-        const next = path.steps.find((st) => st.state === 'next');
-        const finished = !next;
-        const closed = id === 'shelter' && S.dugout ? UPGRADE_TEXT.closed(names[names.length - 1]!) : id === 'dugout' && !S.dugout && !entry?.visible ? UPGRADE_TEXT.needsShovel : '';
-        return (
-          <div key={id} className={`build-route${closed ? ' closed' : ''}`}>
-            {i > 0 && <div className="build-or">{UPGRADE_TEXT.or}</div>}
-            {spec.paths.length > 1 && <b className="route-title">{route.title}</b>}
-            <p className="route-hint">{route.hint}</p>
-            <ol className="stages">
-              {path.steps.map((step) => (
-                <li key={step.tier} className={`bstage ${step.state}`}>
-                  {step.state === 'built' ? <Glyph id="star" size={14} /> : <i className="dot" />}
-                  <span>{names[step.tier]}</span>
-                  {step.sessions > 1 && step.state === 'next' && <small>{UPGRADE_TEXT.sessions(step.done, step.sessions)}</small>}
-                </li>
-              ))}
-            </ol>
-            {closed ? (
-              <p className="route-closed">{closed}</p>
-            ) : finished ? (
-              <p className="route-closed">{UPGRADE_TEXT.done}</p>
-            ) : (
-              next && (
-                <div className="stage-next">
-                  <div className="stage-cost">
-                    <span>
-                      <Glyph id="energy" size={16} /> {next.energy}
-                    </span>
-                    <span>
-                      <Glyph id="time" size={16} /> {duration(Math.round(next.hours * 60))}
-                    </span>
-                    {Object.entries(next.needs).map(([m, n]) => {
-                      const have = Number(hudText(view.hud, STOCK_OF[m]!)) || 0;
-                      return (
-                        <span key={m} className={`build-need${have < n ? ' short' : ''}`}>
-                          <ResIcon id={m as ResourceId} size={18} />
-                          {have}/{n}
-                        </span>
-                      );
-                    })}
-                    {next.sessions > 1 && <i>{UPGRADE_TEXT.perSession}</i>}
-                  </div>
-                  {entry?.visible && buildButton(entry, UPGRADE_TEXT.next(names[next.tier]!))}
-                </div>
-              )
-            )}
-          </div>
-        );
-      })}
-      {extras.length > 0 && (
+      {main}
+      {(extras.length > 0 || locked.length > 0) && (
         <div className="build-extras">
-          {spec.paths.length > 0 && <b className="route-title">{UPGRADE_TEXT.also}</b>}
+          {main && <div className="mb-label quiet">{UPGRADE_TEXT.also}</div>}
           {extras.map((entry) => (
-            <div key={entry.id} className="build-extra">
-              {buildButton(entry, noEmoji(entry.label))}
-              {entry.enabled && entry.detail && (
-                <span className="act-detail">
-                  <WithIcons text={entry.detail} />
-                </span>
+            <div key={entry.id} className={`bsub${entry.enabled ? '' : ' off'}`}>
+              <span className="bsub-name">
+                <Txt text={entry.label} />
+              </span>
+              {entry.enabled && (
+                <button className="bsub-go" onClick={() => onBuild({ key: entry.id === 'a-insulate' ? `a-insulate.${(view.state.insulation ?? 0) + 1}` : entry.id, name: noEmoji(entry.label), entry })} {...hover(entry)}>
+                  <Glyph id="build" size={15} /> {UPGRADE_TEXT.build}
+                </button>
               )}
+              {entry.detail && (
+                <small>
+                  <WithIcons text={entry.detail} />
+                </small>
+              )}
+            </div>
+          ))}
+          {locked.map((id) => (
+            <div key={id} className="bsub off">
+              <span className="bsub-name">{UPGRADE_TEXT.locked[id]!.name}</span>
+              <small>{UPGRADE_TEXT.locked[id]!.why}</small>
             </div>
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+/** A build step about to start (rc.4): which jobs to show, and the v12 button that does it. */
+interface BuildStart {
+  key: string;
+  name: string;
+  entry: { id: string; label: string; detail: string; enabled: boolean; onclick: string };
+  hours?: number;
+}
+
+/** Jobs done on build steps you stopped partway through (per player, this computer). */
+function jobsDone(): Record<string, number> {
+  try {
+    return JSON.parse(localStorage.getItem('tapout.buildJobs') ?? '{}') as Record<string, number>;
+  } catch {
+    return {};
+  }
+}
+function saveJobs(jobs: Record<string, number>): void {
+  try {
+    localStorage.setItem('tapout.buildJobs', JSON.stringify(jobs));
+  } catch {
+    // Without storage a stopped step simply starts over.
+  }
+}
+
+/**
+ * rc.4: the small jobs of one build step, one click each with a hands motion. Dan says one of his
+ * lines for the step partway through. Nothing is spent until the last job runs the v12 action.
+ */
+function BuildTaskCard({ task, onStop, onDone }: { task: BuildStart; onStop: () => void; onDone: () => void }) {
+  const spec = BUILD_TASKS[task.key]!;
+  // You can stop anywhere and pick up from the same job later.
+  const [done, setDoneState] = useState(() => jobsDone()[task.key] ?? 0);
+  const setDone = (n: number) => {
+    setDoneState(n);
+    saveJobs({ ...jobsDone(), [task.key]: n });
+  };
+  // Which line, and on which job he says it.
+  const [pick] = useState(() => ({ line: Math.floor(Math.random() * spec.say.length), at: Math.max(1, Math.floor(spec.jobs.length / 2)) }));
+  const said = done >= pick.at;
+  const per = task.hours ? duration(Math.max(5, Math.round((task.hours * 60) / spec.jobs.length / 5) * 5)) : '';
+  const click = () => {
+    const next = done + 1;
+    if (next >= spec.jobs.length) {
+      const { [task.key]: _finished, ...rest } = jobsDone();
+      saveJobs(rest);
+      onDone();
+      return;
+    }
+    session.gesture(spec.motion);
+    if (next === pick.at) speakPieces([`b-${task.key}-${pick.line}`], spec.say[pick.line]!, 0);
+    setDone(next);
+  };
+  return (
+    <div className="build-task">
+      <h3>{BUILD_TASK_TEXT.title(task.name)}</h3>
+      <ol>
+        {spec.jobs.map((job, i) => (
+          <li key={job} className={i < done ? 'ok' : i === done ? 'now' : ''}>
+            {i < done ? <Glyph id="star" size={15} /> : <Glyph id="build" size={15} />} {job}
+          </li>
+        ))}
+      </ol>
+      {said && <p className="build-say">{spec.say[pick.line]}</p>}
+      <button className="build-btn" onClick={click}>
+        <Glyph id="build" /> <span>{per ? BUILD_TASK_TEXT.next(spec.jobs[done]!, per) : spec.jobs[done]}</span>
+      </button>
+      <div className="build-task-foot">
+        <button className="hud-btn" onClick={onStop}>
+          {BUILD_TASK_TEXT.stop}
+        </button>
+        <small>{BUILD_TASK_TEXT.note}</small>
+      </div>
+    </div>
+  );
+}
+
+/** rc.4: whether a build that is not there until started has been started. */
+function started(what: 'rack' | 'cache' | 'comforts', view: View): boolean {
+  const S = view.state;
+  if (what === 'comforts') return !!S.chair || !!S.table;
+  return upgradePath(what).done > 0 || (what === 'rack' && !!S.hugeRack);
+}
+
+/** rc.4: the build menu (B). Everything you can build, with what it takes; starting one puts it up. */
+function BuildMenu({ view, onClose, onOpen, onBuild }: { view: View; onClose: () => void; onOpen: (station: string) => void; onBuild: (b: BuildStart) => void }) {
+  const panel = new Map(view.panel.map((e) => [e.id, e]));
+  const atCamp = view.state.loc === 'camp';
+  const shelter = upgradePath('shelter');
+  const dugout = upgradePath('dugout');
+  const bed = dugout.done > 0 ? { id: 'dugout' as const, path: dugout } : { id: 'shelter' as const, path: shelter };
+  const row = (key: string, icon: GlyphId, name: string, line: string, button: ReactNode) => (
+    <div key={key} className="bsub">
+      <span className="bsub-name">
+        <Glyph id={icon} size={18} /> {name}
+      </span>
+      {button}
+      <small>{line}</small>
+    </div>
+  );
+  const go = (label: string, onClick: () => void, enabled = true) => (
+    <button className="bsub-go" disabled={!enabled || !atCamp} onClick={onClick}>
+      {label}
+    </button>
+  );
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="build-menu" onClick={(e) => e.stopPropagation()}>
+        <h3>
+          {BUILD_MENU.title} <small>{BUILD_MENU.key}</small>
+        </h3>
+        <p className="mb-note">{atCamp ? BUILD_MENU.note : BUILD_MENU.notCamp}</p>
+        <div className="mb-label">{BUILD_MENU.main}</div>
+        {row('main', 'shelter', UPGRADE_TEXT.names[bed.id][bed.path.current]!, UPGRADE_TEXT.about[bed.id][bed.path.current]!, go(BUILD_MENU.open, () => onOpen('shelter')))}
+        <div className="mb-label quiet">{BUILD_MENU.camp}</div>
+        {BUILD_MENU.builds.map((b) => {
+          const path = upgradePath(b.id);
+          const entry = panel.get(b.action);
+          const first = path.done === 0;
+          const next = path.steps.find((st) => st.state === 'next');
+          const line = next ? `${path.steps.length} steps. ${first ? '' : `${UPGRADE_TEXT.names[b.id][path.current]}, step ${next.step} next.`}` : UPGRADE_TEXT.done;
+          return row(
+            b.id,
+            b.id,
+            b.name,
+            line,
+            first && entry
+              ? go(BUILD_MENU.start, () => onBuild({ key: `${b.id}.1`, name: UPGRADE_TEXT.steps[b.id][0]!, entry, hours: next?.hours }), entry.enabled)
+              : go(BUILD_MENU.open, () => onOpen(b.station)),
+          );
+        })}
+        <div className="mb-label quiet">{BUILD_MENU.make}</div>
+        {BUILD_MENU.things.map((id) => {
+          const entry = panel.get(id);
+          if (!entry?.visible) return null;
+          return (
+            <div key={id} className={`bsub${entry.enabled ? '' : ' off'}`}>
+              <span className="bsub-name">
+                <Txt text={entry.label} />
+              </span>
+              {entry.enabled && go(BUILD_MENU.start, () => onBuild({ key: id, name: noEmoji(entry.label), entry }))}
+              {entry.detail && (
+                <small>
+                  <WithIcons text={entry.detail} />
+                </small>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -634,6 +848,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [labels, setLabels] = useState(false);
   const [debug, setDebug] = useState(!!guide);
   const [journal, setJournal] = useState(false);
+  const [build, setBuild] = useState(false);
+  const [task, setTask] = useState<BuildStart | null>(null);
   const [map, setMap] = useState(false);
   const [night, setNight] = useState<Offer | null>(null);
   const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
@@ -690,13 +906,15 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
         setSound(false);
         setJournal(false);
         setMap(false);
+        setBuild(false);
       } else if (e.key === 'Tab') {
         e.preventDefault();
         setSelected((current) => (current === 'you' ? null : 'you'));
       } else if (e.key === 'r' || e.key === 'R') {
         const rest = session.getView()?.panel.find((p) => p.id === 'a-rest');
         if (rest?.visible && rest.enabled && !session.getView()?.modal) session.click(rest.onclick);
-      } else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
+      } else if (e.key === 'b' || e.key === 'B') setBuild((open) => !open);
+      else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
       else if (e.key === 'm' || e.key === 'M') setMap((open) => !open);
       else if (e.key === 'F3') {
         e.preventDefault();
@@ -721,6 +939,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       const offers = offersFor(station, view);
       // Conditional stations exist only while v12 offers something there.
       if (station.when && offers.length === 0 && !guide) hiddenIds.add(station.id);
+      // rc.4: a build is not there until you start it.
+      if (station.built && !guide && !started(station.built, view)) hiddenIds.add(station.id);
       if (!offers.some((o) => o.enabled)) idleIds.add(station.id);
     }
     return { hidden: hiddenIds, idle: idleIds };
@@ -742,6 +962,12 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     return {
       structure: S.structure,
       dugout: !!S.dugout,
+      // The picture reads 1-2 as digging and 3 as walled, whatever the number of steps.
+      dugoutProg: ((d) => (d.current >= 2 ? 3 : Math.min(2, d.done)))(upgradePath('dugout')),
+      buildProg: S.buildProg ?? 0,
+      campLogs: campLeft('logs') / CAMP_HARVEST.logs,
+      campRocks: campLeft('rocks') / CAMP_HARVEST.rocks,
+      buildNeed: upgradePath('shelter').steps.find((st) => st.state === 'next')?.of ?? 1,
       insulation: S.insulation,
       bed: !!S.bed,
       firepitTier: S.firepitTier,
@@ -800,6 +1026,14 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   if (view.endScreen && !view.modal) return <EndScreen view={view} />;
   const station = selected ? layout.stations.find((s) => s.id === selected) : null;
 
+  // rc.4: a build is a few small jobs first; the step itself happens with the last one.
+  const startBuild = (b: BuildStart) => {
+    setSelected(null);
+    setBuild(false);
+    if (BUILD_TASKS[b.key]) setTask(b);
+    else session.click(b.entry.onclick);
+  };
+
   const act = (offer: Offer) => {
     if ((offer.key === 'sleep' || offer.key === 'turnInEarly') && offer.enabled) {
       setSelected(null);
@@ -825,7 +1059,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <div className="travel-fade" key={loc}>
             {layout.label}
           </div>
-          <TopBar view={view} onJournal={() => setJournal(true)} onMap={() => setMap(true)} onSound={() => setSound(true)} />
+          <TopBar view={view} onBuild={() => setBuild(true)} onJournal={() => setJournal(true)} onMap={() => setMap(true)} onSound={() => setSound(true)} />
           <BodyRail view={view} />
           {!frozen && <EnergyHud view={view} cost={station ? cost : 0} onBed={setNight} />}
           <StoresRail view={view} />
@@ -833,7 +1067,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <button className="you-btn" onClick={() => setSelected(selected === 'you' ? null : 'you')} title="Things only you need (Tab)">
             You
           </button>
-          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} onKeepsake={(note) => {
+          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} onBuild={startBuild} onKeepsake={(note) => {
             setSelected(null);
             setKeepsake(note);
           }} onCost={setCost} beside />}
@@ -867,6 +1101,28 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {sound && <SettingsPanel onClose={() => setSound(false)} />}
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
+          {build && (
+            <BuildMenu
+              view={view}
+              onClose={() => setBuild(false)}
+              onOpen={(id) => {
+                setBuild(false);
+                setSelected(id);
+              }}
+              onBuild={startBuild}
+            />
+          )}
+          {task && (
+            <BuildTaskCard
+              key={task.key}
+              task={task}
+              onStop={() => setTask(null)}
+              onDone={() => {
+                setTask(null);
+                session.click(task.entry.onclick);
+              }}
+            />
+          )}
           <Modal view={view} />
           <Tooltip root={root} />
         </>

@@ -12,9 +12,10 @@ import { takeSmoked } from './person.ts';
 import { resolveDelta } from './resolve.ts';
 import { hasKit, log, registerWasteDiscard, waterCap } from './setup.ts';
 import { RULES, say } from './rules.ts';
+import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { S } from './state.ts';
 import { afterAction, spend, spendOrDebt, tickShiverClear } from './threads.ts';
-import { BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
+import { FIRE_LIGHT, hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
 import { render, sfxBuild, sfxCooking, sfxDrink, sfxEat, sfxFireLight, showModal } from './ui.ts';
 import { triggerBearDread } from './worry.ts';
 // ============================== actions: camp ==============================
@@ -22,6 +23,17 @@ export function fireCap(){ return [8,12,16][S.firepitTier]; }
 // v12 kit-draft §2/§3.2: fire runs on FIREWOOD (hand-gatherable, never structurally gated); without a
 // ferro rod, lighting one is a friction-fire attempt instead - slower, weather-dependent, a morale
 // sting per failed try, never impossible (the safety-valve rule from kit-draft §5.1).
+// rc.4 (realTimes): how long getting a fire going takes this time.
+function lightFireHours(){
+  if (!RULES.realTimes) return 0;
+  const wet = !!WEATHER[S.weather]?.wetGain;
+  if (rand() < (wet ? FIRE_LIGHT.slowChanceWet : FIRE_LIGHT.slowChance)){
+    log(pick(['Half an hour on your knees blowing on a coal that will not take. Then it takes.', 'Everything is damp. Shave after shave of birch until it finally catches. Half an hour gone.', 'Sparks, smoke, nothing. Sparks, smoke, nothing. Thirty minutes, and then a flame.', 'Your hands are shaking too much to aim the sparks. It takes half an hour.']), 'bad');
+    return FIRE_LIGHT.slowHours;
+  }
+  const [lo, hi] = wet ? FIRE_LIGHT.wetMin : FIRE_LIGHT.dryMin;
+  return (lo + Math.floor(rand() * (hi - lo + 1))) / 60;
+}
 export function actFire(){
   if (S.over) return;
   const lightWoodCost = S.firepitTier>=2 ? 1 : 2;
@@ -38,7 +50,7 @@ export function actFire(){
   }
   if (!hasKit('ferro')){ actFrictionFire(); return; }
   if (S.stock.firewood < lightWoodCost || S.tinder < 1) return;
-  if (!spend(0,0,false,'')) return;
+  if (!spend(0,lightFireHours(),false,'')) return;
   S.tinder--;
   const ferroMul = S.gear.ferro <= 0 ? 0.55 : S.gear.ferro < 30 ? 0.8 : 1;
   S.gear.ferro = Math.max(0, S.gear.ferro - 2);
@@ -139,7 +151,7 @@ export function doSmoke(contaminated?, which?){
   const woodCost = isHuge ? 2 : 1;
   if (S.stock.firewood < woodCost || S.tinder < 1) return;
   const knifeMul = hasKit('knife') ? 0.75 : 1;
-  if (!spend(5, 0.25*knifeMul, false, '')) return;
+  if (!spend(5, hoursFor('smoke')*knifeMul, false, '')) return;
   S.stock.firewood -= woodCost; S.tinder -= 1;
   const cap = isHuge ? HUGE_RACK_CAP : RACK_CAP[S.rackTier];
   const n = takeMeat(Math.min(cap, meatCount()));
@@ -246,7 +258,7 @@ export function actAxeHandleBreak(){
 }
 export function actHaftAxe(){
   if (!hasKit('axe') || !S.chains.axeHandle || S.stock.wood<2) return;
-  if (!spend(10,1.5,false,'hw')) return;
+  if (!spend(10,hoursFor('haftAxe'),false,'hw')) return;
   S.stock.wood -= 2;
   S.gear.axe = 100;
   S.chains.axeHandle = null;
@@ -263,7 +275,7 @@ export function actBootFailure(){
 }
 export function actRepairBoots(){
   if (!S.chains.boot || S.hide<2) return;
-  if (!spend(10,1.5,false,'hw')) return;
+  if (!spend(10,hoursFor('haftAxe'),false,'hw')) return;
   S.hide -= 2;
   S.gear.boots = 100;
   S.chains.boot = null;
@@ -298,15 +310,30 @@ export function actPoultice(){
   applyPoulticeDose();
   if (!RULES.poulticeOnce) afterAction('poultice'); // LEG-005: the dose already resolved the action
 }
+// rc.4 (oneRoute): the shelter and the dugout are one or the other for the run.
+export function routeClosed(kind?){
+  if (!RULES.oneRoute) return false;
+  return kind === 'shelter' ? (S.dugout || S.dugoutProg > 0) : (S.structure > 0 || S.buildProg > 0);
+}
+// rc.4 (buildPace): one building session per build per day (the lean-to is the exception).
+// Only the shelter, the dugout and its insulation are paced; the smaller builds go by their hours.
+const PACED = ['shelter', 'dugout', 'insulate'];
+export function builtToday(id?){
+  return RULES.buildPace && PACED.includes(id) && !!S.buildDay && S.buildDay[id] === S.day;
+}
+function markBuilt(id?){
+  if (RULES.buildPace && PACED.includes(id)) (S.buildDay ||= {})[id] = S.day;
+}
 export function actShelter(){
-  if (S.structure >= 3) return;
-  const c = SHELTER_COST[S.structure];
+  if (S.structure >= 3 || routeClosed('shelter') || (S.structure >= 1 && builtToday('shelter'))) return;
+  const c = stepCost('shelter', S.structure, S.buildProg);
   if (S.stock.wood < c.wood || (c.moss && S.stock.moss < c.moss) || (c.clay && S.stock.clay < c.clay)) return;
   if (!spend(c.e, c.h, true, 'ohw wood')) return;
   S.stock.wood -= c.wood; if (c.moss) S.stock.moss -= c.moss; if (c.clay) S.stock.clay -= c.clay;
   S.buildProg++;
+  if (S.structure >= 1) markBuilt('shelter');
   sfxBuild();
-  const need = BUILD_NEED[S.structure];
+  const need = tierSteps('shelter', S.structure);
   if (S.buildProg >= need){
     S.structure++; S.buildProg = 0;
     S.morale = clamp(S.morale + 8);
@@ -317,38 +344,43 @@ export function actShelter(){
 // kit-draft §3.3: earth dugout - shovel-only shelter path, high labor, near-immune to storm damage,
 // top-tier warmth retention. Independent of the tarp/lean-to/hut/timber ladder.
 export function actDugout(){
-  if (!hasKit('shovel') || S.dugout || S.dugoutProg >= DUGOUT_NEED) return;
-  const c = dugoutStep(S.dugoutProg);
+  if (!hasKit('shovel') || S.dugout || S.dugoutProg >= dugoutTotal() || routeClosed('dugout') || builtToday('dugout')) return;
+  const at = dugoutAt(S.dugoutProg);
+  const c = RULES.stepBuilds ? stepCost('dugout', at.t, at.k) : dugoutStep(S.dugoutProg);
   if (S.stock.wood < c.wood || (c.moss && S.stock.moss < c.moss)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   S.stock.wood -= c.wood; if (c.moss) S.stock.moss -= c.moss;
   S.dugoutProg++;
+  markBuilt('dugout');
   sfxBuild();
-  if (S.dugoutProg >= DUGOUT_NEED){
+  if (S.dugoutProg >= dugoutTotal()){
     S.dugout = true;
     S.morale = clamp(S.morale + 10);
     log('The earth dugout is finished - dug deep, roofed over, banked with soil. The cold-country gambit pays off: this holds heat like nothing built above ground. +morale', 'good');
-  } else if (RULES.dugoutStages) log(c.stage === 'dig' ? (S.dugoutProg === 1 ? 'You break the ground and dig. Half a pit by dusk.' : 'The pit is deep enough to stand in. It needs walls next.') : 'Logs set along the sides and chinked with moss. The walls hold back the soil. It needs a roof.', 'good');
+  } else if (RULES.stepBuilds) log(c.stage === 'dig' ? (dugoutAt(S.dugoutProg).t === 0 ? 'You dig until your hands shake. The pit is deeper.' : 'The pit is deep enough to stand in. It needs walls next.') : 'Logs set along the sides and chinked with moss. The walls hold back the soil. It needs a roof.', 'good');
+  else if (RULES.dugoutStages) log(c.stage === 'dig' ? (S.dugoutProg === 1 ? 'You break the ground and dig. Half a pit by dusk.' : 'The pit is deep enough to stand in. It needs walls next.') : 'Logs set along the sides and chinked with moss. The walls hold back the soil. It needs a roof.', 'good');
   else log(`Another long session digging. ${S.dugoutProg}/${DUGOUT_NEED} done.`, 'good');
   afterAction('dugout');
 }
 export function actInsulate(){
-  if (S.structure < 1 || S.insulation >= 3 || S.stock.moss < 4) return;
-  if (!spend(6,1,true,'oh')) return;
+  if (S.structure < 1 || S.insulation >= 3 || S.stock.moss < 4 || builtToday('insulate')) return;
+  if (!spend(6,hoursFor('insulate'),true,'oh')) return;
   S.stock.moss -= 4; S.insulation++;
+  markBuilt('insulate');
   sfxBuild();
   log(`You pack moss into every gap. Insulation ${S.insulation}/3.`, 'good');
   afterAction('insulate');
 }
 export function actFirepit(){
-  if (S.firepitTier >= 2) return;
-  const c = FIREPIT_COST[S.firepitTier+1];
+  if (S.firepitTier >= 2 || builtToday('firepit')) return;
+  const c = stepCost('firepit', S.firepitTier+1, S.firepitProg);
   if (S.stock.rocks < c.rocks || (c.clay && S.stock.clay < c.clay)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   S.stock.rocks -= c.rocks; if (c.clay) S.stock.clay -= c.clay;
   S.firepitProg++;
+  markBuilt('firepit');
   sfxBuild();
-  const need = FIREPIT_NEED[S.firepitTier+1];
+  const need = tierSteps('firepit', S.firepitTier+1);
   if (S.firepitProg >= need){
     S.firepitTier++; S.firepitProg = 0;
     log(S.firepitTier===1 ? 'You set the stones in a tight ring. The rock holds heat - fires burn longer and hotter now.' : 'You line the pit with wet clay, fired hard by the coals. Heat holds even longer, and every stoke goes further.', 'good');
@@ -356,13 +388,19 @@ export function actFirepit(){
   afterAction('firepit');
 }
 export function actRack(){
-  if (S.rackTier >= 2) return;
-  const c = RACK_COST[S.rackTier+1];
-  if (S.stock.wood < c.wood || (c.rocks && S.stock.rocks < c.rocks)) return;
+  if (S.rackTier >= 2 || builtToday('rack')) return;
+  const c = stepCost('rack', S.rackTier+1, buildState('rack').k);
+  if ((c.wood && S.stock.wood < c.wood) || (c.rocks && S.stock.rocks < c.rocks)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
-  S.stock.wood -= c.wood; if (c.rocks) S.stock.rocks -= c.rocks;
-  S.rackTier++;
+  if (c.wood) S.stock.wood -= c.wood; if (c.rocks) S.stock.rocks -= c.rocks;
+  markBuilt('rack');
   sfxBuild();
+  if (RULES.stepBuilds){
+    S.rackProg = (S.rackProg || 0) + 1;
+    if (S.rackProg < tierSteps('rack', S.rackTier+1)){ log(`Another piece of the rack lashed in place. ${S.rackProg}/${tierSteps('rack', S.rackTier+1)} done.`, 'good'); afterAction('rack'); return; }
+    S.rackProg = 0;
+  }
+  S.rackTier++;
   log(S.rackTier===1 ? 'A tripod rack stands over the fire pit. Meat can be smoked and kept.' : 'You weave a bark roof over the rack and stack stone at its base. It sheds rain, and it\'s a lot more work to get into now.', 'good');
   afterAction('rack');
 }
@@ -378,14 +416,15 @@ export function actHugeRack(){
   afterAction('hugeRack');
 }
 export function actCache(){
-  if (S.cacheTier >= 3) return;
-  const c = CACHE_COST[S.cacheTier+1];
+  if (S.cacheTier >= 3 || builtToday('cache')) return;
+  const c = stepCost('cache', S.cacheTier+1, S.cacheProg);
   if ((c.wood && S.stock.wood < c.wood) || (c.rocks && S.stock.rocks < c.rocks) || (c.clay && S.stock.clay < c.clay)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   if (c.wood) S.stock.wood -= c.wood; if (c.rocks) S.stock.rocks -= c.rocks; if (c.clay) S.stock.clay -= c.clay;
   S.cacheProg++;
+  markBuilt('cache');
   sfxBuild();
-  const need = CACHE_NEED[S.cacheTier+1];
+  const need = tierSteps('cache', S.cacheTier+1);
   if (S.cacheProg >= need){
     S.cacheTier++; S.cacheProg = 0;
     const msg = S.cacheTier===1 ? 'A rock-and-timber cache, lid weighted with stone.' : S.cacheTier===2 ? 'You seal every seam with clay. Nothing is smelling its way in now.' : 'You raise the whole cache onto a timber platform, out of reach of anything on four legs.';
@@ -407,7 +446,7 @@ export function actIceCache(){
 export function actJug(){
   if (!hasKit('pot')) return; // no reason to fire a water vessel if there's nothing to fill it for
   if (S.jug || S.stock.clay < TUNING.costs.jugClayNeed || S.fireH <= 0) return;
-  if (!spend(8,1,false,'h')) return;
+  if (!spend(8,hoursFor('jug'),false,'h')) return;
   S.stock.clay -= TUNING.costs.jugClayNeed; S.jug = true;
   sfxBuild();
   log('You shape a jug from wet clay and fire it hard in the coals. Your water storage just doubled.', 'good');
@@ -415,7 +454,7 @@ export function actJug(){
 }
 export function actBerryPicker(){
   if (S.berryPicker || S.stock.wood < 2) return;
-  if (!spend(4,1,false,'h')) return;
+  if (!spend(4,hoursFor('picker'),false,'h')) return;
   S.stock.wood -= 2; S.berryPicker = true;
   sfxBuild();
   log('You lash a long-handled picker from a forked branch. Foraging will go faster now.', 'good');
@@ -423,7 +462,7 @@ export function actBerryPicker(){
 }
 export function actFlute(){
   if (S.instrument || S.stock.wood < 1) return;
-  if (!spend(6,1.5,false,'h')) return;
+  if (!spend(6,hoursFor('flute'),false,'h')) return;
   S.stock.wood--; S.instrument = true;
   S.morale = clamp(S.morale + 5);
   sfxBuild();
@@ -486,7 +525,7 @@ export function actTreeMark(){
 }
 export function actChair(){
   if (S.chair || S.stock.wood < 3) return;
-  if (!spend(6,1,false,'h')) return;
+  if (!spend(6,hoursFor('chair'),false,'h')) return;
   S.stock.wood -= 3; S.chair = true;
   sfxBuild();
   log('A real chair, lashed and solid. Sitting like a human being again is worth every splinter. (+comfort)', 'good');
@@ -494,7 +533,7 @@ export function actChair(){
 }
 export function actTable(){
   if (S.table || S.stock.wood < 3) return;
-  if (!spend(6,1,false,'h')) return;
+  if (!spend(6,hoursFor('table'),false,'h')) return;
   S.stock.wood -= 3; S.table = true;
   sfxBuild();
   log('A slab table by the fire. Somewhere to gut fish that isn\'t your knee. (+comfort)', 'good');
@@ -502,7 +541,7 @@ export function actTable(){
 }
 export function actBed(){
   if (S.bed || S.stock.moss < 4) return;
-  if (!spend(5,1,false,'h')) return;
+  if (!spend(5,hoursFor('bed'),false,'h')) return;
   S.stock.moss -= 4; S.bed = true;
   sfxBuild();
   log('A deep bough-and-moss bed off the cold ground. Tonight might actually be sleep. (+comfort)', 'good');

@@ -270,6 +270,25 @@ export const DUGOUT_STAGES: any = [
   {stage:'walls',e:26,h:4,wood:4,moss:2},
   {stage:'roof', e:26,h:4,wood:4,moss:2},
 ];
+// rc.4 (stepBuilds): the steps each tier is built in (indexed as each cost table is). Each step gets an
+// even share of the tier's v12 energy, hours and materials. The shelter's steps are its v12 sessions.
+export const BUILD_STEPS: any = { shelter:[2,3,5], dugout:[3,1,1], firepit:[null,2,3], rack:[null,3,2], cache:[null,2,2,3] };
+// rc.4 (realTimes): game hours per action, as [v12, TAP / OUT]. Sir asked for realistic times;
+// energy and materials stay v12's. Build tiers' hours are in BUILD_HOURS.
+export const ACTION_HOURS: any = {
+  smoke: [0.25, 0.5], haftAxe: [1.5, 3], insulate: [1, 2], bed: [1, 2], picker: [1, 2.5], chair: [1, 2.5], table: [1, 3], jug: [1, 2], flute: [1.5, 2],
+  fetchWater: [5/60, 10/60], setLine: [0.25, 1/3], setIceLine: [0.5, 0.75], checkLine: [0.0167, 5/60], checkNet: [0.033, 10/60], setNet: [0.25, 0.5],
+  rocks: [10/60, 20/60], clay: [10/60, 30/60], clayAxe: [10/60, 20/60], clayShovel: [10/60, 10/60],
+  forage: [15/60, 30/60], tinder: [5/60, 10/60], setSnare: [0.0833, 0.25], checkSnare: [0.0167, 5/60],
+  scout: [0.5, 1], follow: [0.75, 1], carveBig: [2, 2], carveMoose: [2, 4], wood: [1, 1.5],
+};
+export function hoursFor(key: string): number { const [v12, ours] = ACTION_HOURS[key]; return RULES.realTimes ? ours : v12; }
+// Per v12 session, by build and tier index (realTimes): the lean-to 2h, the stone ring 1h30, the
+// tripod rack 2h, the dugout 3h30 a step.
+export const BUILD_HOURS: any = { shelter: {0: 2}, firepit: {1: 1.5}, rack: {1: 2}, dugout: {0: 5.25, 1: 3.5, 2: 3.5} };
+// Lighting a fire with the ferro rod (realTimes): a few minutes when dry, longer after rain, and
+// now and then half an hour of fighting it.
+export const FIRE_LIGHT: any = { dryMin: [1, 8], wetMin: [5, 15], slowHours: 0.5, slowChance: 0.04, slowChanceWet: 0.12 };
 export function dugoutStep(prog: number){ return RULES.dugoutStages ? DUGOUT_STAGES[prog] : DUGOUT_COST; }
 // rc.3 (campHarvest): how much fallen timber and loose stone lies around camp before it is picked clean.
 export const CAMP_HARVEST: any = { logs: 15, rocks: 12 };

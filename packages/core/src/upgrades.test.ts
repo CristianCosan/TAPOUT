@@ -10,16 +10,16 @@ function start() {
 }
 
 describe('upgrade path', () => {
-  it('lists every shelter tier with v12 costs, the next one first', () => {
+  it('lists every shelter step with v12 costs, the next one first (rc.4: steps)', () => {
     start();
     const path = upgradePath('shelter');
     expect(path.current).toBe(0);
-    expect(path.steps.map((s) => [s.tier, s.sessions, s.energy, s.state])).toEqual([
-      [1, 2, 12, 'next'],
-      [2, 3, 22, 'later'],
-      [3, 5, 24, 'later'],
-    ]);
-    expect(path.steps[2]!.needs).toEqual({ wood: 6, moss: 2, clay: 2, rocks: 3 });
+    expect(path.steps).toHaveLength(10);
+    expect(path.steps.map((s) => s.tier)).toEqual([1, 1, 2, 2, 2, 3, 3, 3, 3, 3]);
+    expect(path.steps[0]!.state).toBe('next');
+    expect(path.steps[0]!.energy).toBe(12);
+    expect(path.steps[2]!.energy).toBe(22);
+    expect(path.steps[9]!.needs).toEqual({ wood: 6, moss: 2, clay: 2, rocks: 3 });
   });
 
   it('follows progress and marks what is built', () => {
@@ -27,32 +27,44 @@ describe('upgrade path', () => {
     run.state.structure = 1;
     run.state.buildProg = 2;
     const path = upgradePath('shelter');
-    expect(path.steps.map((s) => [s.state, s.done])).toEqual([['built', 2], ['next', 2], ['later', 0]]);
-    expect(upgradePath('firepit').steps.map((s) => s.tier)).toEqual([1, 2]);
-    expect(upgradePath('cache').steps).toHaveLength(3);
-    expect(upgradePath('rack').steps.every((s) => s.sessions === 1)).toBe(true);
+    expect(path.steps.map((s) => s.state)).toEqual(['built', 'built', 'built', 'built', 'next', 'later', 'later', 'later', 'later', 'later']);
+    expect(path.done).toBe(4);
+    expect(upgradePath('firepit').steps.map((s) => s.tier)).toEqual([1, 1, 2, 2, 2]);
+    expect(upgradePath('cache').steps).toHaveLength(7);
+    expect(upgradePath('rack').steps).toHaveLength(5);
+  });
+
+  it('shares a tier out across its steps without changing the total', () => {
+    start();
+    const rack = upgradePath('rack').steps.filter((s) => s.tier === 1);
+    expect(rack.reduce((a, s) => a + (s.needs.wood ?? 0), 0)).toBe(4);
+    const pit = upgradePath('firepit').steps.filter((s) => s.tier === 2);
+    expect(pit.reduce((a, s) => a + (s.needs.clay ?? 0), 0)).toBe(6);
+    expect(pit.reduce((a, s) => a + (s.needs.rocks ?? 0), 0)).toBe(8);
   });
 
   it('does not touch the run', () => {
     const run = start();
     const before = JSON.stringify(snapshotRun(run));
-    for (const id of ['shelter', 'firepit', 'rack', 'cache'] as const) upgradePath(id);
+    for (const id of ['shelter', 'dugout', 'firepit', 'rack', 'cache'] as const) upgradePath(id);
     expect(JSON.stringify(snapshotRun(run))).toBe(before);
   });
 
-  it('splits the dugout into the pit, the walls and the roof (rc.3)', () => {
+  it('digs the dugout in three steps, then walls and roof (rc.3, rc.4)', () => {
     const run = start();
     let path = upgradePath('dugout');
-    expect(path.steps.map((s) => [s.tier, s.sessions, s.needs, s.state])).toEqual([
-      [1, 2, {}, 'next'],
-      [2, 1, { wood: 4, moss: 2 }, 'later'],
-      [3, 1, { wood: 4, moss: 2 }, 'later'],
+    expect(path.steps.map((s) => [s.tier, s.needs, s.state])).toEqual([
+      [1, {}, 'next'],
+      [1, {}, 'later'],
+      [1, {}, 'later'],
+      [2, { wood: 4, moss: 2 }, 'later'],
+      [3, { wood: 4, moss: 2 }, 'later'],
     ]);
     run.state.dugoutProg = 1;
-    expect(upgradePath('dugout').steps[0]!.done).toBe(1);
-    run.state.dugoutProg = 3;
+    expect(upgradePath('dugout').steps[1]!.state).toBe('next');
+    run.state.dugoutProg = 4;
     path = upgradePath('dugout');
     expect(path.current).toBe(2);
-    expect(path.steps.map((s) => s.state)).toEqual(['built', 'built', 'next']);
+    expect(path.steps.map((s) => s.state)).toEqual(['built', 'built', 'built', 'built', 'next']);
   });
 });

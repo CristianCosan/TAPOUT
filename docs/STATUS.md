@@ -200,7 +200,9 @@ A release job in CI puts every build merged into main on the GitHub release page
 
 **1.0.0-rc.3** answers Sir's rc.2 run (D-081 to D-087). You never learn who is left; medics come from day 14 every six to eight days, and the win arrives as a med check that becomes a scene with Kerry and Mara. Traps need 12 hours before a catch. Camp has fallen timber and loose stones to gather. The dugout is dug, then walled and roofed. Build panels show routes and stages apart from uses. No emojis: every icon is the game's own. Only people talking are voiced; Dan is faster. Test mode in Settings. Signposts walk straight; cards restyled; smaller energy meter; birds sit still.
 
-**Next:** Sir plays rc.3 (F8 notes), then rc.4 or launch.
+**1.0.0-rc.4** answers Sir's rc.3 notes on building (D-088 to D-092). Shelter or dugout, one per run, and the other route disappears once one is started. The main build takes days (one sitting a day). Every build climbs in named steps (shelter 10, dugout 5, firepit 5, rack 5, cache 7) at v12's total costs. Each build panel puts the main build on top in a gold frame: a picture of what it is now, the steps, then the next one; the bed and other builds sit below. A build menu (B) starts everything; the rack, cache and chair and table appear only once started. Each step is three or four small jobs with hands motions and a spoken line from Dan (three or four versions), and you can stop and carry on later. Actions take realistic time (D-093). Logs and stones you can see in camp, stones on the shore and trees and mossy rocks in the woods are all pickable, and camp's run out as you use them. The dugout shows its pit, spoil and walls under a flat tarp; a shelter tier under way grows beside the old one. No deer wander about.
+
+**Next:** Sir's answers on the action times (proposal 5) and the rc.5 list (hunting in the world, small game, inventory, clothes, tools in hand, smaller side panels, the stone stove).
 
 ## First person — build 0.0.3
 - `packages/content/src/locations/world.ts`: where every station stands in its area, in metres,

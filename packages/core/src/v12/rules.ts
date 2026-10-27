@@ -42,6 +42,14 @@ export interface RuleSet {
   campHarvest: boolean;
   /** rc.3: the dugout is dug, then walled and roofed with logs and moss, not dug four times. */
   dugoutStages: boolean;
+  /** rc.4 (Sir): the shelter and the dugout are one or the other; starting one closes the other. */
+  oneRoute: boolean;
+  /** rc.4 (Sir): past the lean-to, each build takes at most one session a day, so camp grows across the run. */
+  buildPace: boolean;
+  /** rc.4 (Sir): every camp build climbs in named steps (at least five a path), sharing v12's costs. */
+  stepBuilds: boolean;
+  /** rc.4 (Sir): realistic game time per action; energy and materials stay v12's. */
+  realTimes: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -62,6 +70,10 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   soakTime: false,
   campHarvest: false,
   dugoutStages: false,
+  oneRoute: false,
+  buildPace: false,
+  stepBuilds: false,
+  realTimes: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

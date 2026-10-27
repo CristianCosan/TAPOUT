@@ -42,35 +42,95 @@ export const RESOURCE_WORDS: ReadonlyArray<readonly [RegExp, ResourceId]> = [
   [/\btinder\b/gi, 'tinder'],
 ];
 
-/** The build path shown on a camp build (rc.2): what each tier is called. */
+/**
+ * The build panels (rc.2, rc.4). The main build sits on top: what it is now, as a picture with a
+ * line on what it does for you, then its steps. Everything else built at the same spot goes below.
+ */
 export const UPGRADE_TEXT = {
-  title: 'Build path',
-  build: 'Build',
   use: 'Use',
-  also: 'Also to build here',
+  build: 'Build',
+  also: 'Also here',
   or: 'or',
   built: 'Built',
-  next: (name: string) => `Build: ${name}`,
-  sessions: (done: number, of: number) => (of > 1 ? `${done}/${of} sessions` : '1 session'),
-  perSession: 'each session',
-  closed: (other: string) => `${other} stands instead`,
+  done: 'Finished. Nothing more to build on it.',
   needsShovel: 'Needs the shovel, which you did not pack.',
-  done: 'Finished',
+  settling: 'Worked on today. It can go on tomorrow.',
+  underWay: (name: string) => `${name}, going up`,
+  mainChoose: 'Main build · pick one for this run',
+  mainNow: (what: string) => `Main build · your ${what} now`,
+  chooseNote: 'Starting one makes the other disappear.',
+  toStart: 'to start',
+  start: { shelter: 'Start the shelter', dugout: 'Start digging' },
+  stepOf: (n: number, of: number, name: string) => `Next · step ${n} of ${of} · ${name}`,
+  becomes: (n: number, name: string) => `After step ${n} it becomes: ${name}.`,
+  resume: (name: string) => `Carry on: ${name.charAt(0).toLowerCase()}${name.slice(1)}`,
+  go: (name: string) => `Start: ${name.charAt(0).toLowerCase()}${name.slice(1)}`,
+  noun: { shelter: 'shelter', dugout: 'dugout', firepit: 'firepit', rack: 'rack', cache: 'cache' },
   names: {
     shelter: ['Tarp on the ground', 'Lean-to', 'Framed hut', 'Timber shelter'],
-    dugout: ['Bare ground', 'Dug pit', 'Log walls', 'Roofed dugout'],
-    firepit: ['Bare fire', 'Stone ring', 'Clay-lined pit'],
-    rack: ['No rack', 'Tripod rack', 'Roofed rack'],
-    cache: ['No cache', 'Rock-and-timber cache', 'Clay-sealed cache', 'Raised cache'],
+    dugout: ['Tarp on the ground', 'Dug pit', 'Walled pit', 'Earth dugout'],
+    firepit: ['A fire on the ground', 'Stone ring', 'Clay-lined pit'],
+    rack: ['No rack yet', 'Tripod rack', 'Roofed rack'],
+    cache: ['No cache yet', 'Rock-and-timber cache', 'Clay-sealed cache', 'Raised cache'],
   },
-  /** rc.3: the two ways to a warm bed, shown side by side so the choice is clear. */
+  /** What each tier does for you, shown under its picture. */
+  about: {
+    shelter: [
+      'What you have tonight. It keeps the worst of the rain off.',
+      'Rain off, wind off one side. A fire in front warms you through the night.',
+      'Closed on three sides with a bough roof. It holds heat far better.',
+      'Log walls and a sod roof. Warm and dry, and it will take a storm.',
+    ],
+    dugout: [
+      'What you have tonight. It keeps the worst of the rain off.',
+      'Out of the wind, below the frost line. The tarp is stretched over it on four stakes.',
+      'Log walls hold the soil back. The tarp is still the roof.',
+      'Dug deep, roofed and banked with soil. The warmest bed there is, and storms barely touch it.',
+    ],
+    firepit: ['A fire on bare ground. It burns fast.', 'The stones hold the heat: fires burn longer and hotter.', 'Clay holds the heat longer still. Every stoke goes further.'],
+    rack: ['Fresh meat spoils within a day or two.', 'Holds 6 lbs of meat over the smoke.', 'Sheds rain and is harder to raid. Holds 6 lbs.'],
+    cache: ['Food lies where animals can reach it.', 'Rock and timber, the lid weighted with stone.', 'Every seam sealed with clay. Nothing smells its way in.', 'Up on a platform, out of reach of anything on four legs.'],
+  },
+  /** Every step along each path, in order. */
+  steps: {
+    shelter: ['Posts and ridge pole', 'Poles and boughs', 'The A-frame', 'Wall poles', 'Bough thatch', 'Base logs', 'Walls to the waist', 'Walls to head height', 'Roof beams', 'Sod roof and a door'],
+    dugout: ['Cut the sod', 'Dig the pit', 'Deepen and square it', 'Log walls', 'Roof and sod over'],
+    firepit: ['Dig a fire bowl', 'Ring of stones', 'Dig clay and wet it', 'Line the pit', 'Fire it hard'],
+    rack: ['Cut straight poles', 'Lash the tripod', 'Drying rails', 'Stone base', 'Bark roof'],
+    cache: ['Gather flat stones', 'Timber box and stone lid', 'Mix the clay', 'Seal every seam', 'Cut the platform posts', 'Raise the platform', 'Lift the cache up'],
+  },
+  /** The two ways to a warm bed, side by side until you pick one. */
   routes: {
-    shelter: { title: 'Shelter route', hint: 'Built above ground from logs, moss and clay. Moss insulation helps it hold heat.' },
-    dugout: { title: 'Earth dugout route', hint: 'Needs the shovel. Dig the pit, then wall and roof it with logs and moss. The warmest bed, and storms barely touch it.' },
-    firepit: { title: 'Firepit', hint: 'Stones hold the heat; clay holds it longer.' },
-    rack: { title: 'Smoking rack', hint: 'Smoked meat keeps where fresh meat spoils.' },
-    cache: { title: 'Food cache', hint: 'Keeps stored food from what comes at night.' },
+    shelter: { title: 'Shelter', hint: '10 steps above ground: lean-to, framed hut, timber shelter.' },
+    dugout: { title: 'Earth dugout', hint: '5 steps into the ground. The warmest bed, and storms barely touch it.' },
+    firepit: { title: 'Firepit', hint: '' },
+    rack: { title: 'Smoking rack', hint: '' },
+    cache: { title: 'Food cache', hint: '' },
   },
+  /** Things built at a spot that are not open yet, and why, so they show from the start. */
+  locked: {
+    'a-hugeRack': { name: 'Second, huge rack', why: 'Once the tripod rack stands.' },
+  } as Record<string, { name: string; why: string }>,
+} as const;
+
+/** rc.4: the build menu (B). Nothing stands in camp until you start it; Dan picks the spot. */
+export const BUILD_MENU = {
+  title: 'Build',
+  key: 'B',
+  note: 'Nothing stands in camp until you start it. Pick one and Dan puts it in a sensible spot.',
+  notCamp: 'You build at camp. Head back there to start something.',
+  main: 'Main build',
+  camp: 'Camp builds',
+  make: 'Things to make',
+  open: 'Open',
+  start: 'Start',
+  made: 'Made',
+  builds: [
+    { id: 'firepit', action: 'a-firepit', station: 'fire', name: 'Firepit' },
+    { id: 'rack', action: 'a-rack', station: 'rack', name: 'Smoking rack' },
+    { id: 'cache', action: 'a-cache', station: 'cache', name: 'Food cache' },
+  ],
+  things: ['a-picker', 'a-chair', 'a-table', 'a-jug', 'a-flute'],
 } as const;
 
 /**
@@ -78,7 +138,7 @@ export const UPGRADE_TEXT = {
  * stages with their build button inside; extras are one-off builds.
  */
 export const BUILD_STATIONS: Readonly<Record<string, { paths: ReadonlyArray<{ id: 'shelter' | 'dugout' | 'firepit' | 'rack' | 'cache'; action: string }>; extras: readonly string[] }>> = {
-  shelter: { paths: [{ id: 'shelter', action: 'a-shelter' }, { id: 'dugout', action: 'a-dugout' }], extras: ['a-insulate', 'a-bed'] },
+  shelter: { paths: [{ id: 'shelter', action: 'a-shelter' }, { id: 'dugout', action: 'a-dugout' }], extras: ['a-bed', 'a-insulate'] },
   fire: { paths: [{ id: 'firepit', action: 'a-firepit' }], extras: [] },
   rack: { paths: [{ id: 'rack', action: 'a-rack' }], extras: ['a-hugeRack'] },
   cache: { paths: [{ id: 'cache', action: 'a-cache' }], extras: [] },
