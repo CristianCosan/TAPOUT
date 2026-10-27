@@ -30,6 +30,8 @@ export interface PropState {
   winter: boolean;
   /** The animal you spotted, if any (v12's species id). */
   species: string;
+  /** rc.6: the heavy second tarp was packed; it shows in every shelter stage. */
+  secondTarp?: boolean;
   /** rc.5: the stone stove is built. */
   stove?: boolean;
   /** v12's hunt state (rc.5: the trail on the ground shows it). */
@@ -297,12 +299,28 @@ function shelter(s: PropState): THREE.Group {
       break;
     }
   }
+  if (s.secondTarp && s.structure > 0) secondTarp(g, s.structure);
   if ((s.buildProg ?? 0) > 0 && s.structure < 3) workSite(g, s);
   if (s.insulation > 0 && s.structure > 0 && !s.winter) {
     const rnd = seeded(8);
     for (let i = 0; i < s.insulation * 4; i++) g.add(mesh(rough(new THREE.SphereGeometry(0.22, 5, 3), 0.08, i), mat(C.moss), -1.2 + rnd() * 2.4, 0.15, -1.3 + rnd() * 0.3));
   }
   return g;
+}
+
+// rc.6: the heavy second tarp rigged into the shelter: a windbreak along the open side of the
+// lean-to, a liner over the hut's ridge, a fly over the cabin roof.
+function secondTarp(g: THREE.Group, structure: number) {
+  const blue = mat(0x2f5f86, { key: 'ds' });
+  if (structure === 1) {
+    g.add(mesh(new THREE.BoxGeometry(0.03, 1.2, 2.2), blue, -1.55, 0.6, -0.4, 0, 0, 0.06));
+    g.add(mesh(new THREE.BoxGeometry(3.1, 0.03, 2.0), blue, 0, 1.06, -0.45, 0.88, 0, 0));
+  } else if (structure === 2) {
+    for (const side of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.03, 1.4, 3.2), blue, side * 0.45, 1.6, -0.1, 0, 0, side * -0.59));
+  } else {
+    for (const side of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(2.2, 0.03, 3.4), blue, side * 0.95, 2.1, 0, 0, 0, side * -0.5));
+  }
+  for (const [x, z] of [[-1.6, 1.6], [1.6, 1.6]] as const) log(g, v(x, 0, z), v(x * 0.9, 1.2, z * 0.9), 0.015, 0xd8d0b0);
 }
 
 // rc.4: the next tier going up beside the old one, a piece at a time, so the camp shows how far
@@ -944,7 +962,7 @@ export function buildProp(id: string, s: PropState): THREE.Group {
 export function propKey(id: string, s: PropState): string {
   switch (id) {
     case 'fire': return `${s.firepitTier}-${s.fireLit}`;
-    case 'shelter': return `${s.structure}-${s.buildProg ?? 0}-${s.dugout}-${s.dugoutProg ?? 0}-${s.insulation}-${s.bed}-${s.winter}-${!!s.stove}`;
+    case 'shelter': return `${s.structure}-${s.buildProg ?? 0}-${s.dugout}-${s.dugoutProg ?? 0}-${s.insulation}-${s.bed}-${s.winter}-${!!s.stove}-${!!s.secondTarp}`;
     case 'rack': return `${s.rackTier}-${s.hugeRack}-${Math.min(10, s.smoking)}-${Math.min(10, s.smoked)}`;
     case 'cache': return `${s.cacheTier}`;
     case 'post': return `${Math.min(s.day, 40)}`;

@@ -7,6 +7,7 @@ import { addMeat } from './food.ts';
 import { campHarvesting, campLeft, clamp, nowAbs, soakHours } from './helpers.ts';
 import { triggerMedicalArc } from './medical.ts';
 import { consumeKitStock, hasKit, log, maybeRenameSpot, registerEmptyCheck } from './setup.ts';
+import { iceGamble, iceSlow, rockGamble } from './ice.ts';
 import { RULES } from './rules.ts';
 import { S } from './state.ts';
 import { afterAction, spend } from './threads.ts';
@@ -36,12 +37,14 @@ export function placeLineAt(id?){
   const sp = S.shoreSpots.find(s=>s.id===id);
   const countHere = S.lineList.filter(ln=>ln.spotId===id).length;
   if (!sp || countHere>=1 || S.lineList.length>=MAX_LINES_TOTAL || S.lineStock<=0){ hideModal(); return; }
-  const e = S.winter?6:4, h = S.winter?hoursFor('setIceLine'):hoursFor('setLine');
+  const e = S.winter?6:4, h = S.winter?hoursFor('setIceLine')*iceSlow():hoursFor('setLine');
   if (!spend(e,h,true,'oh')){ hideModal(); return; }
+  if (S.winter && iceGamble()){ hideModal(); afterAction('fell'); return; }
   S.lineList.push(RULES.soakTime ? {spotId:id, day:S.day, lastCheck:S.day, setAbs:nowAbs()} : {spotId:id, day:S.day, lastCheck:S.day});
   consumeKitStock('line');
   hideModal();
   log(S.winter ? `You chop through a foot of ice and drop a line down the hole at the ${sp.name}.` : `You bait hooks and set a line off the ${sp.name}.`, 'good');
+  rockGamble();
   afterAction('lines');
 }
 export function openMoveLineModal(){
@@ -222,8 +225,9 @@ export function actIceFish(){
 export function iceFishAt(id?){
   const sp = S.shoreSpots.find(s=>s.id===id);
   if (!sp){ hideModal(); return; }
-  if (!spend(10,2,true,'oh')){ hideModal(); return; }
+  if (!spend(10,2*iceSlow(),true,'oh')){ hideModal(); return; }
   hideModal();
+  if (iceGamble()){ afterAction('fell'); return; }
   const p = Math.min(0.85, sp.q*2.4);
   if (rand() < p){
     const fish = rollFish();
@@ -238,6 +242,7 @@ export function actFetchWater(){
   if (!spend(TUNING.costs.fetchWaterE,hoursFor('fetchWater'),true,'o')) return;
   S.rawWater = 4;
   log('You haul the pot down to the water\'s edge and fill it. Raw water - needs boiling before it\'s safe.', 'good');
+  rockGamble();
   afterAction('fetch');
 }
 export function actRocks(){
@@ -253,6 +258,7 @@ export function actRocks(){
   const n = Math.min(3, CARRY_CAP.rocks - S.carry.rocks);
   S.carry.rocks += n;
   log(`You haul flat stones up from the shoreline. +${n} rocks (carrying ${S.carry.rocks}/${CARRY_CAP.rocks})`, 'good');
+  rockGamble();
   afterAction('rocks');
 }
 // rc.4 (realTimes): the shovel digs clay fastest, the axe next, bare hands slowest.
@@ -264,6 +270,7 @@ export function actClay(){
   n = Math.min(n, CARRY_CAP.clay - S.carry.clay);
   S.carry.clay += n;
   log(`You cut wet clay from the bank in slabs. +${n} clay (carrying ${S.carry.clay}/${CARRY_CAP.clay})`, 'good');
+  rockGamble();
   afterAction('clay');
 }
 export function actStream(){

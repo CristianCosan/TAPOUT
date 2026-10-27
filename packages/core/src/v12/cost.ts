@@ -6,7 +6,9 @@ import { clamp } from './helpers.ts';
 import { hasTrait } from './interior.ts';
 import { hasKit, tempFor } from './setup.ts';
 import { S } from './state.ts';
-import { TUNING } from './tuning.ts';
+import { LATE_UPGRADES, TARP_STAGE, TUNING } from './tuning.ts';
+import { lateBuilt } from './late.ts';
+import { RULES } from './rules.ts';
 // ============================== time, cost & injury engine ==============================
 // v12 §6.1: ankle-specific multiplier table replaces the old blanket 1.5x - travel/wood are hammered
 // (x3.5), most physical work is heavily taxed (x3.0), cooking/boiling stay near-normal (x1.1).
@@ -57,7 +59,9 @@ export function effectiveInsulation(indoors?, fireActive?){
   if (indoors && !hasKit('bag')) ins -= 1.2; // kit-draft: no sleeping bag is a real handicap until moss bed + shelter T2
   if (fireActive === undefined) fireActive = (S.fireH > 0 && S.loc==='camp');
   if (fireActive) ins += 3;
-  if (hasKit('tarp')) ins += 0.8;
+  if (fireActive && lateBuilt('reflector')) ins += LATE_UPGRADES.insulation.reflector;
+  if (S.loc === 'camp' && lateBuilt('snowWall')) ins += LATE_UPGRADES.insulation.snowWall;
+  if (hasKit('tarp')) ins += 0.8 + (RULES.tarpStages ? TARP_STAGE.perTier * (S.dugout ? 2 : S.structure) : 0);
   ins *= (1 - Math.min(0.6, S.wet/150));
   if (S.day <= 5) ins += TUNING.temperature.arrivalFitnessBuffer / 10;
   return ins;

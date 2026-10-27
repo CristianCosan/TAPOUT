@@ -177,3 +177,17 @@ export function playUi(kind: UiSound): void {
     case 'page': burst(out, { len: 0.18, peak: 0.12, freq: 3500, to: 2000, q: 0.8, attack: 0.03 }); break;
   }
 }
+
+/** rc.6: going through the ice (a crack like a shot, then the plunge) or off a wet rock (a scrape, then the plunge). */
+export function playFall(kind: 'ice' | 'rocks'): void {
+  const out = strip('effects', 0.9);
+  if (!out) return;
+  if (kind === 'ice') {
+    burst(out, { len: 0.08, peak: 0.6, freq: 3200, to: 900, q: 1.2 });
+    tone(out, { at: 0.02, len: 0.5, freqs: [[0, 180], [0.5, 60]], peak: 0.25 });
+  } else {
+    burst(out, { len: 0.25, peak: 0.3, freq: 2200, to: 800, q: 2, attack: 0.02 });
+  }
+  burst(out, { at: 0.35, len: 1.4, peak: 0.55, freq: 900, to: 300, q: 0.7, attack: 0.04 });
+  tone(out, { at: 0.35, len: 0.3, freqs: [[0, 500], [0.3, 140]], peak: 0.2 });
+}

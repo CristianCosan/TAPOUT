@@ -123,10 +123,15 @@ describe('the medics check before the death verdict', () => {
     night(run, { ...crash, day: 13 });
     expect(run.state.cause).toBe('med');
   });
-  it('TAP / OUT: a crash on any other night is still a death', () => {
-    const run = start(TAPOUT_RULES);
+  it('without the medics watching, a crash on any other night is still a death', () => {
+    const run = start({ ...TAPOUT_RULES, medicWatch: false });
     night(run, crash);
     expect(run.state.cause).toBe('dead');
+  });
+  it('rc.6 medicWatch: a crash on any night ends in a medical pull', () => {
+    const run = start(TAPOUT_RULES);
+    night(run, crash);
+    expect(run.state.cause).toBe('med');
   });
 });
 
@@ -452,5 +457,85 @@ describe('rc.5 stove', () => {
       return run.state.warmth as number;
     };
     expect(night(true)).toBeGreaterThan(night(false));
+  });
+});
+
+describe('rc.6 second tarp in every stage', () => {
+  it('helps more the bigger the shelter, only in TAP / OUT', () => {
+    const ins = (rules: Readonly<RuleSet>, structure: number) => {
+      const run = start(rules, ['axe', 'saw', 'ferro', 'pot', 'bag', 'tarp']);
+      Object.assign(run.state, { structure, wet: 0, fireH: 0, day: 10 });
+      return run.call<number>('effectiveInsulation', true);
+    };
+    expect(ins(V12_RULES, 2) - ins(V12_RULES, 0)).toBeCloseTo(2.6, 5);
+    expect(ins(TAPOUT_RULES, 2) - ins(TAPOUT_RULES, 0)).toBeCloseTo(2.6 + 0.7, 5);
+  });
+});
+
+describe('rc.6 late upgrades', () => {
+  it('an idea comes after day 20 in TAP / OUT only, and the reflector warms the fire', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      run.state.day = 22;
+      for (let i = 0; i < 40; i++) run.call('lateTick', []);
+      expect(run.call('lateKnown', 'reflector')).toBe(rules !== V12_RULES);
+    }
+    const run = start(TAPOUT_RULES);
+    Object.assign(run.state, { loc: 'camp', hour: 9, day: 22, fireH: 4, lateKnown: ['reflector'] });
+    Object.assign(run.state.stock, { wood: 10, rocks: 10 });
+    const before = run.call<number>('effectiveInsulation', true);
+    run.call('actReflector');
+    expect(run.call<number>('effectiveInsulation', true) - before).toBeCloseTo(0.8, 5);
+  });
+});
+
+describe('rc.6 more choices', () => {
+  it('ten more cards, offered only in TAP / OUT', () => {
+    expect(startRun && start(TAPOUT_RULES).call('moreCardCount')).toBe(10);
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'camp', day: 8, weather: 'clear', morale: 40, stress: 60 });
+      const offered = Object.values(run.call<Record<string, { trigger: () => boolean; id: string }>>('moreCardDeck')).filter((c) => c.trigger());
+      expect(offered.length > 0).toBe(rules !== V12_RULES);
+    }
+  });
+});
+
+describe('rc.6 winter ice and wet rocks', () => {
+  it('thin ice is slow and can give in TAP / OUT; v12 never', () => {
+    let fell = 0;
+    for (let i = 0; i < 40; i++) {
+      const run = start(TAPOUT_RULES, undefined, `ice${i}`);
+      Object.assign(run.state, { loc: 'shore', hour: 9, winter: true, iceFrom: run.state.day, energy: 120, maxEnergy: 120, warmth: 80 });
+      run.call('iceFishAt', run.state.shoreSpots[0].id);
+      if (run.state.fell) fell++;
+      if (!run.state.fell) expect(run.state.hour - 9).toBeCloseTo(3, 5);
+    }
+    expect(fell).toBeGreaterThan(3);
+    expect(fell).toBeLessThan(20);
+    const v12 = start(V12_RULES);
+    Object.assign(v12.state, { loc: 'shore', hour: 9, winter: true, energy: 120, maxEnergy: 120 });
+    v12.call('iceFishAt', v12.state.shoreSpots[0].id);
+    expect(v12.state.hour - 9).toBeCloseTo(2, 5);
+    expect(v12.state.fell).toBeUndefined();
+  });
+  it('the ice thickens day by day', () => {
+    const run = start(TAPOUT_RULES);
+    Object.assign(run.state, { winter: true, iceFrom: 10, day: 10 });
+    expect(run.call('thinIce')).toBe(true);
+    run.state.day = 14;
+    expect(run.call('thinIce')).toBe(false);
+  });
+  it('storm-day shore jobs put you in off the rocks now and then', () => {
+    let fell = 0;
+    for (let i = 0; i < 60; i++) {
+      const run = start(TAPOUT_RULES, undefined, `rock${i}`);
+      Object.assign(run.state, { loc: 'shore', hour: 9, weather: 'storm', energy: 120, maxEnergy: 120 });
+      run.state.carry.rocks = 0;
+      run.call('actRocks');
+      if (run.state.fell) fell++;
+    }
+    expect(fell).toBeGreaterThan(6);
+    expect(fell).toBeLessThan(30);
   });
 });

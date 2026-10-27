@@ -293,7 +293,34 @@ export const BUILD_HOURS: any = { shelter: {0: 2}, firepit: {1: 1.5}, rack: {1: 
 export const CLOTHES: any = { jacketWarmMul: 0.85, shellRainMul: 0.4, shellExposureMul: 0.5, sweatPerHour: { jacket: 2, shell: 1.5 }, changeHours: 1/60 };
 // rc.5 (stove): stones and clay inside the hut (Framed hut, or the finished dugout). At night the
 // fire in it burns slower, gives a little more, and the stones keep the cold off once it is out.
-export const STOVE: any = { e: 14, h: 3, rocks: 10, clay: 4, nightFireMul: 0.6, warmPerHour: 4, nightDrainMul: 0.7 };
+export const STOVE: any = { e: 14, h: 3, rocks: 10, clay: 4, nightFireMul: 0.6, warmPerHour: 4, nightDrainMul: 0.7, dryMul: 1.5 };
+// rc.6 (tarpStages): the second tarp's insulation, v12's flat 0.8 plus this much per shelter tier
+// (a finished dugout counts as two).
+export const TARP_STAGE: any = { perTier: 0.35 };
+// rc.6 (lateUpgrades): ideas that come late. Reflector: +0.8 insulation while the fire is lit at
+// camp. Shingles: the storm tears the roof half as often. Snow wall: +0.8 insulation at camp.
+export const LATE_UPGRADES: any = {
+  fromDay: 20, chance: 0.35, insulation: { reflector: 0.8, snowWall: 0.8 }, roofTearMul: 0.5,
+  cost: { reflector: { e: 10, h: 1.5, wood: 4, rocks: 3 }, shingles: { e: 10, h: 2, wood: 1 }, snowWall: { e: 12, h: 2 } },
+  ideas: {
+    reflector: '💭 Lying awake, you watch half the fire\'s heat go off into the trees. A wall of logs behind it would throw it back at you.',
+    shingles: '💭 Rain on the roof all night, and one drip finding you. Birch bark peels in sheets. Shingles. Why didn\'t you think of it before?',
+    snowWall: '💭 The snow is deep enough now to cut into blocks. Stacked round the shelter, it would stop the wind dead.',
+  },
+  done: {
+    reflector: 'A wall of stacked logs stands behind the fire now, chinked with stones. The heat comes back at you.',
+    shingles: 'Birch bark laid in overlapping sheets over the roof, pinned with sticks. Let it rain.',
+    snowWall: 'A wall of snow blocks rings the shelter, shoulder high. The wind goes over you now, not through.',
+  },
+};
+// rc.6 (thinIce, wetRocks): the ice starts at 4 cm when winter comes and gains 2.5 cm a day up to
+// 60; under 12 cm is thin: ice jobs take half as long again and one in four goes through.
+// Storm-day shore jobs put you in off the rocks 28% of the time.
+export const ICE: any = {
+  startCm: 4, cmPerDay: 2.5, maxCm: 60, safeCm: 12, slowMul: 1.5, fallChance: 0.25, checkHours: 10/60,
+  rockChance: 0.28, rescueWarmth: 15,
+  fall: { ice: { wet: 100, warmth: 35, health: 8, stress: 20 }, rocks: { wet: 85, warmth: 10, health: 2, stress: 8 } },
+};
 export const FIRE_LIGHT: any = { dryMin: [1, 8], wetMin: [5, 15], slowHours: 0.5, slowChance: 0.04, slowChanceWet: 0.12 };
 export function dugoutStep(prog: number){ return RULES.dugoutStages ? DUGOUT_STAGES[prog] : DUGOUT_COST; }
 // rc.3 (campHarvest): how much fallen timber and loose stone lies around camp before it is picked clean.
