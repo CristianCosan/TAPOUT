@@ -10,7 +10,7 @@ import { consumeKitStock, hasKit, log, maybeRenameSpot, registerEmptyCheck } fro
 import { RULES } from './rules.ts';
 import { S } from './state.ts';
 import { afterAction, spend } from './threads.ts';
-import { CARRY_CAP, MAX_LINES_TOTAL, TUNING, carryBlocked, rollFish } from './tuning.ts';
+import { CARRY_CAP, MAX_LINES_TOTAL, TUNING, carryBlocked, hoursFor, rollFish } from './tuning.ts';
 import { $, hideModal, showModal } from './ui.ts';
 import { pityMultiplier } from './woods.ts';
 // ============================== actions: shore ==============================
@@ -36,7 +36,7 @@ export function placeLineAt(id?){
   const sp = S.shoreSpots.find(s=>s.id===id);
   const countHere = S.lineList.filter(ln=>ln.spotId===id).length;
   if (!sp || countHere>=1 || S.lineList.length>=MAX_LINES_TOTAL || S.lineStock<=0){ hideModal(); return; }
-  const e = S.winter?6:4, h = S.winter?0.5:0.25;
+  const e = S.winter?6:4, h = S.winter?hoursFor('setIceLine'):hoursFor('setLine');
   if (!spend(e,h,true,'oh')){ hideModal(); return; }
   S.lineList.push(RULES.soakTime ? {spotId:id, day:S.day, lastCheck:S.day, setAbs:nowAbs()} : {spotId:id, day:S.day, lastCheck:S.day});
   consumeKitStock('line');
@@ -106,7 +106,7 @@ export function placeNetAt(id?){
   if (!sp) return;
   if (S.net.built){
     if (S.net.spot===id) return;
-    if (!spend(4,0.25,true,'oh')){ hideModal(); return; }
+    if (!spend(4,hoursFor('setNet'),true,'oh')){ hideModal(); return; }
     S.net.spot = id; S.net.lastCheck = S.day; S.net.noLuck = 0; if (RULES.soakTime) S.net.setAbs = nowAbs();
     hideModal();
     log(`You pull the net and reset it off the ${sp.name}.`, 'good');
@@ -159,7 +159,7 @@ export function checkOneLine(i?){
   const ln = S.lineList[i];
   if (!ln) return;
   const sp = S.shoreSpots.find(s=>s.id===ln.spotId);
-  if (!spend(1,0.0167,true,'o')) return;
+  if (!spend(1,hoursFor('checkLine'),true,'o')) return;
   const soaked = RULES.soakTime ? soakHours(ln) : null;
   if (soaked !== null && soaked < TUNING.catchRates.soakHours){
     const row = $('lineRow'+i);
@@ -188,7 +188,7 @@ export function checkOneLine(i?){
 }
 export function checkNet(){
   if (!S.net.built || S.net.damaged || S.winter) return;
-  if (!spend(2,0.033,true,'o')) return;
+  if (!spend(2,hoursFor('checkNet'),true,'o')) return;
   const sp = S.shoreSpots.find(s=>s.id===S.net.spot);
   const soaked = RULES.soakTime ? soakHours(S.net) : null;
   if (soaked !== null && soaked < TUNING.catchRates.soakHours){
@@ -235,29 +235,31 @@ export function iceFishAt(id?){
 export function actFetchWater(){
   if (S.rawWater >= 4) return;
   if (!hasKit('pot')){ actStream(); return; } // kit-draft §2: no pot means no boiling/storage - fetch just routes to the risk of drinking raw
-  if (!spend(TUNING.costs.fetchWaterE,TUNING.costs.fetchWaterMin/60,true,'o')) return;
+  if (!spend(TUNING.costs.fetchWaterE,hoursFor('fetchWater'),true,'o')) return;
   S.rawWater = 4;
   log('You haul the pot down to the water\'s edge and fill it. Raw water - needs boiling before it\'s safe.', 'good');
   afterAction('fetch');
 }
 export function actRocks(){
   if (campHarvesting()){
-    if (campLeft('rocks') <= 0 || !spend(6,TUNING.costs.rocksMin/60,true,'ohw')) return;
+    if (campLeft('rocks') <= 0 || !spend(6,hoursFor('rocks'),true,'ohw')) return;
     const n = Math.min(3, campLeft('rocks'));
     S.campRocksLeft = campLeft('rocks') - n; S.stock.rocks += n;
     log(`You pry loose stones out of the slope around camp. +${n} rocks${S.campRocksLeft<=0?'. That is the last of the loose ones; the shore has more.':''}`, 'good');
     afterAction('rocks'); return;
   }
   if (S.carry.rocks >= CARRY_CAP.rocks || carryBlocked('rocks')) return;
-  if (!spend(6,TUNING.costs.rocksMin/60,true,'ohw')) return;
+  if (!spend(6,hoursFor('rocks'),true,'ohw')) return;
   const n = Math.min(3, CARRY_CAP.rocks - S.carry.rocks);
   S.carry.rocks += n;
   log(`You haul flat stones up from the shoreline. +${n} rocks (carrying ${S.carry.rocks}/${CARRY_CAP.rocks})`, 'good');
   afterAction('rocks');
 }
+// rc.4 (realTimes): the shovel digs clay fastest, the axe next, bare hands slowest.
+export function clayHours(){ return hoursFor(hasKit('shovel') ? 'clayShovel' : hasKit('axe') ? 'clayAxe' : 'clay'); }
 export function actClay(){
   if (S.carry.clay >= CARRY_CAP.clay || carryBlocked('clay')) return;
-  if (!spend(5,TUNING.costs.clayMin/60,true,'oh')) return;
+  if (!spend(5,clayHours(),true,'oh')) return;
   let n = 2 + Math.floor(rand()*2);
   n = Math.min(n, CARRY_CAP.clay - S.carry.clay);
   S.carry.clay += n;

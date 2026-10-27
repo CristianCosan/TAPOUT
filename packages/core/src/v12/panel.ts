@@ -11,10 +11,11 @@ import { berryCount, cookedMealSpoiled, meatCount, oldestBerriesSpoiled, oldestM
 import { TRAVEL_HOURS, campHarvesting, campLeft, clamp, hh, nowAbs, roundDisplay } from './helpers.ts';
 import { checkSmokingDone } from './person.ts';
 import { curfewCapForLoc, hasKit, waterCap } from './setup.ts';
-import { NET_SESSIONS } from './shore.ts';
+import { NET_SESSIONS, clayHours } from './shore.ts';
+import { carveHours } from './woods.ts';
 import { S } from './state.ts';
 import { isNightNow } from './threads.ts';
-import { BUILD_NEED, CACHE_COST, CACHE_NEED, CARRY_CAP, DUGOUT_NEED, dugoutStep, FIREPIT_COST, FIREPIT_NEED, GAME, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, ICE_CACHE_NEED, MAX_LINES_TOTAL, MAX_SNARES_TOTAL, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER, carryBlocked, carryType } from './tuning.ts';
+import { hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, CARRY_CAP, DUGOUT_NEED, dugoutStep, FIREPIT_COST, FIREPIT_NEED, GAME, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, ICE_CACHE_NEED, MAX_LINES_TOTAL, MAX_SNARES_TOTAL, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER, carryBlocked, carryType } from './tuning.ts';
 import { enforceMoraleCeiling } from './worry.ts';
 // ---- The action panel: v12's render() run against a recording page instead of a real one.
 // What it records is exactly what v12 showed the player: which actions exist here, which are
@@ -682,14 +683,14 @@ function panelPass(){
     $('a-fire-name').textContent = '🔥 Light fire';
     const ok = S.stock.firewood >= lightWoodCost && S.tinder >= 1;
     const missing = S.tinder<1 ? 'need tinder' : `need ${lightWoodCost} firewood`;
-    r = S.over ? [false,'-'] : (!ok ? [false,missing] : [true, `free · ${lightWoodCost} firewood + 1 tinder · ${Math.round(Math.min(0.95, WEATHER[S.weather].fireChance + S.structure*0.05)*100)}%`]);
+    r = S.over ? [false,'-'] : (!ok ? [false,missing] : [true, `${RULES.realTimes ? '1-15 min · ' : 'free · '}${lightWoodCost} firewood + 1 tinder · ${Math.round(Math.min(0.95, WEATHER[S.weather].fireChance + S.structure*0.05)*100)}%`]);
   }
   setBtn('a-fire', r[0], r[1]);
   r = !hasKit('pot') ? [false,'no pot drafted - no boiling this run'] : S.fireH <= 0 ? [false,'fire needed'] : (S.rawWater<=0 ? [false,'need raw water - fetch some at the shore'] : (S.water >= waterCap() ? [false,'storage full'] : [true, S.energy<3 ? `${durTxt(0.25)} · up to +3 safe water · running on empty - borrows energy` : `−3⚡ · ${durTxt(0.25)} · up to +3 safe water`]));
   setBtn('a-boil', r[0], r[1]);
   r = !hasKit('pot') ? [false,'no pot drafted - no real meals this run'] : S.cookedMeal ? [false,'eat your meal first'] : (S.fireH<=0 ? [false,'fire needed'] : (meatCount()<2 ? [false,'need 2 raw meat'] : (S.water<2 ? [false,'need 2 safe water'] : [true, S.energy<4 ? `${durTxt(0.25)} · 2 meat + 2 water → 1 meal · running on empty - borrows energy` : `−4⚡ · ${durTxt(0.25)} · 2 meat + 2 water → 1 meal`])));
   setBtn('a-cook', r[0], r[1]);
-  r = S.smokingSession ? [false,`smoking - ready in ${roundDisplay(Math.max(0,S.smokingSession.doneAbs-nowAbs()))}h`] : (S.rackTier<=0 ? [false,'build a smoking rack'] : (S.fireH <= 0 ? [false,'fire needed'] : (meatCount() <= 0 ? [false,'no raw meat'] : (S.stock.firewood<1||S.tinder<1) ? [false,'need 1 firewood + 1 tinder'] : gate(5,0.25,true,'',`−{c}⚡ · ${durTxt(0.25)} · 1 firewood + 1 tinder · preserves up to ${RACK_CAP[S.rackTier]}, ready in 12h${S.hour>=22?' · night work: +stress':''}`,''))));
+  r = S.smokingSession ? [false,`smoking - ready in ${roundDisplay(Math.max(0,S.smokingSession.doneAbs-nowAbs()))}h`] : (S.rackTier<=0 ? [false,'build a smoking rack'] : (S.fireH <= 0 ? [false,'fire needed'] : (meatCount() <= 0 ? [false,'no raw meat'] : (S.stock.firewood<1||S.tinder<1) ? [false,'need 1 firewood + 1 tinder'] : gate(5,hoursFor('smoke')*(hasKit('knife')?0.75:1),true,'',`−{c}⚡ · ${durTxt(hoursFor('smoke')*(hasKit('knife')?0.75:1))} · 1 firewood + 1 tinder · preserves up to ${RACK_CAP[S.rackTier]}, ready in 12h${S.hour>=22?' · night work: +stress':''}`,''))));
   setBtn('a-smoke', r[0], r[1]);
   $('a-smokeHuge').classList.toggle('hidden', !S.hugeRack);
   if (S.hugeRack){
@@ -722,7 +723,7 @@ function panelPass(){
     r = routeClosed('dugout') ? [false,'you chose the shelter'] : builtToday('dugout') ? [false,'worked on today - it needs a night to settle'] : !ok ? [false, `need ${missing}`] : gate(c.e, c.h, true, '', `−{c}⚡ · ${durTxt(c.h)} · ${missing ? missing+' · ' : ''}${S.dugoutProg}/${dugoutTotal()} · top-tier warmth, near-immune to storms`, 'ohw');
     setBtn('a-dugout', r[0], r[1]);
   }
-  r = S.structure < 1 ? [false,'build a lean-to first'] : (S.insulation >= 3 ? [false,'fully insulated'] : builtToday('insulate') ? [false,'worked on today - it needs a night to settle'] : gate(6,1, S.stock.moss >= 4, 'need 4 moss', `−{c}⚡ · ${durTxt(1)} · 4 moss · ${S.insulation}/3`, 'oh'));
+  r = S.structure < 1 ? [false,'build a lean-to first'] : (S.insulation >= 3 ? [false,'fully insulated'] : builtToday('insulate') ? [false,'worked on today - it needs a night to settle'] : gate(6,hoursFor('insulate'), S.stock.moss >= 4, 'need 4 moss', `−{c}⚡ · ${durTxt(hoursFor('insulate'))} · 4 moss · ${S.insulation}/3`, 'oh'));
   setBtn('a-insulate', r[0], r[1]);
   if (S.firepitTier>=2){ $('a-firepit-name').textContent = '⛰ Clay-lined pit'; r = [false,'built - heat holds longer']; }
   else {
@@ -759,10 +760,10 @@ function panelPass(){
   }
   setBtn('a-cache', r[0], r[1]);
   if (hasKit('pot')){
-    r = S.jug ? [false,'built - water storage doubled'] : (S.fireH<=0 ? [false,'needs fire to bake'] : gate(8,1, S.stock.clay>=TUNING.costs.jugClayNeed, `need ${TUNING.costs.jugClayNeed} clay`, `−{c}⚡ · ${durTxt(1)} · ${TUNING.costs.jugClayNeed} clay`, 'h') /* LEG-006: the action takes 3; v12's button asked for 4 */);
+    r = S.jug ? [false,'built - water storage doubled'] : (S.fireH<=0 ? [false,'needs fire to bake'] : gate(8,hoursFor('jug'), S.stock.clay>=TUNING.costs.jugClayNeed, `need ${TUNING.costs.jugClayNeed} clay`, `−{c}⚡ · ${durTxt(hoursFor('jug'))} · ${TUNING.costs.jugClayNeed} clay`, 'h') /* LEG-006: the action takes 3; v12's button asked for 4 */);
     setBtn('a-jug', r[0], r[1]);
   }
-  r = S.berryPicker ? [false,'carved - foraging is faster'] : gate(4,1, S.stock.wood>=2, 'need 2 logs', `−{c}⚡ · ${durTxt(1)} · 2 logs`, 'h');
+  r = S.berryPicker ? [false,'carved - foraging is faster'] : gate(4,hoursFor('picker'), S.stock.wood>=2, 'need 2 logs', `−{c}⚡ · ${durTxt(hoursFor('picker'))} · 2 logs`, 'h');
   setBtn('a-picker', r[0], r[1]);
   r = !S.hadFirstRaid ? [false,'need to survive a raid first'] : (S.campSnares ? [false,'set - raiders think twice'] : gate(6,0.5, S.stock.wood>=2, 'need 2 logs', `−{c}⚡ · ${durTxt(0.5)} · 2 logs`, 'h'));
   setBtn('a-campSnares', r[0], r[1]);
@@ -772,7 +773,7 @@ function panelPass(){
   r = (!hasKit('ferro')) ? [false,'no ferro rod drafted'] : S.gear.ferro>=100 ? [false,'reliable already'] : gate(3,0.25,true,'',`−{c}⚡ · ${durTxt(0.25)} · ferro ${Math.round(S.gear.ferro)}%`,'h');
   setBtn('a-maintainFerro', r[0], r[1]);
   $('a-haftAxe').classList.toggle('hidden', !hasKit('axe') || !S.chains.axeHandle);
-  r = (hasKit('axe') && S.chains.axeHandle) ? gate(10,1.5, S.stock.wood>=2, 'need 2 logs', `−{c}⚡ · ${durTxt(1.5)} · 2 logs`,'h') : [false,'-'];
+  r = (hasKit('axe') && S.chains.axeHandle) ? gate(10,hoursFor('haftAxe'), S.stock.wood>=2, 'need 2 logs', `−{c}⚡ · ${durTxt(hoursFor('haftAxe'))} · 2 logs`,'h') : [false,'-'];
   setBtn('a-haftAxe', r[0], r[1]);
   $('a-repairBoots').classList.toggle('hidden', !S.chains.boot);
   r = S.chains.boot ? gate(10,1.5, S.hide>=2, `need 2 hide (have ${S.hide})`, `−{c}⚡ · ${durTxt(1.5)} · 2 hide`,'h') : [false,'-'];
@@ -791,13 +792,13 @@ function panelPass(){
   $('gearChips').innerHTML = gearBits.length ? `<span class="chip">${gearBits.join(' · ')}</span>` : '';
 
   if (S.instrument){ $('a-flute-name').textContent = '🪈 Willow flute'; r = [false,'carved - play it anywhere']; }
-  else { $('a-flute-name').textContent = '🪈 Carve a flute'; r = gate(6,1.5, S.stock.wood >= 1, 'need 1 log', `−{c}⚡ · ${durTxt(1.5)} · 1 log · +morale`, 'h'); }
+  else { $('a-flute-name').textContent = '🪈 Carve a flute'; r = gate(6,hoursFor('flute'), S.stock.wood >= 1, 'need 1 log', `−{c}⚡ · ${durTxt(hoursFor('flute'))} · 1 log · +morale`, 'h'); }
   setBtn('a-flute', r[0], r[1]);
-  r = S.chair ? [false,'built (+comfort)'] : gate(6,1, S.stock.wood >= 3, 'need 3 logs', `−{c}⚡ · ${durTxt(1)} · 3 logs · +comfort`, 'h');
+  r = S.chair ? [false,'built (+comfort)'] : gate(6,hoursFor('chair'), S.stock.wood >= 3, 'need 3 logs', `−{c}⚡ · ${durTxt(hoursFor('chair'))} · 3 logs · +comfort`, 'h');
   setBtn('a-chair', r[0], r[1]);
-  r = S.table ? [false,'built (+comfort)'] : gate(6,1, S.stock.wood >= 3, 'need 3 logs', `−{c}⚡ · ${durTxt(1)} · 3 logs · +comfort`, 'h');
+  r = S.table ? [false,'built (+comfort)'] : gate(6,hoursFor('table'), S.stock.wood >= 3, 'need 3 logs', `−{c}⚡ · ${durTxt(hoursFor('table'))} · 3 logs · +comfort`, 'h');
   setBtn('a-table', r[0], r[1]);
-  r = S.bed ? [false,'built (+comfort)'] : gate(5,1, S.stock.moss >= 4, 'need 4 moss', `−{c}⚡ · ${durTxt(1)} · 4 moss · +comfort`, 'h');
+  r = S.bed ? [false,'built (+comfort)'] : gate(5,hoursFor('bed'), S.stock.moss >= 4, 'need 4 moss', `−{c}⚡ · ${durTxt(hoursFor('bed'))} · 4 moss · +comfort`, 'h');
   setBtn('a-bed', r[0], r[1]);
   r = S.confessedToday ? [false,'said your piece today'] : gate(2,0.5,true,'',`−{c}⚡ · ${durTxt(0.5)} · get something off your chest`);
   setBtn('a-confess', r[0], r[1]);
@@ -850,28 +851,28 @@ function panelPass(){
   }
   r = (lineCount<=0 && !(S.net.built && !S.winter)) ? [false,'nothing set yet'] : gate(3,0.1667,true,'',`−{c}⚡ · ${durTxt(0.1667)}`,'o');
   setBtn('a-checkShore', r[0], r[1]);
-  r = !hasKit('pot') ? [false,'no pot - drink at the stream directly'] : S.rawWater>=4 ? [false,'pot is full'] : gate(TUNING.costs.fetchWaterE,TUNING.costs.fetchWaterMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.fetchWaterMin/60)} · fills the pot`,'o');
+  r = !hasKit('pot') ? [false,'no pot - drink at the stream directly'] : S.rawWater>=4 ? [false,'pot is full'] : gate(TUNING.costs.fetchWaterE,hoursFor('fetchWater'),true,'',`−{c}⚡ · ${durTxt(hoursFor('fetchWater'))} · fills the pot`,'o');
   setBtn('a-fetch', r[0], r[1]);
-  r = campHarvesting() ? (campLeft('rocks')<=0 ? [false,'no loose stone left at camp - try the shore'] : gate(6,TUNING.costs.rocksMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.rocksMin/60)} · +3 rocks to camp stock · ${campLeft('rocks')} left here`,'ohw')) : S.carry.rocks>=CARRY_CAP.rocks ? [false,'pack full - drop off at camp'] : carryBlocked('rocks') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(6,TUNING.costs.rocksMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.rocksMin/60)} · +3 rocks`,'ohw'); setBtn('a-rocks', r[0], r[1]);
+  r = campHarvesting() ? (campLeft('rocks')<=0 ? [false,'no loose stone left at camp - try the shore'] : gate(6,hoursFor('rocks'),true,'',`−{c}⚡ · ${durTxt(hoursFor('rocks'))} · +3 rocks to camp stock · ${campLeft('rocks')} left here`,'ohw')) : S.carry.rocks>=CARRY_CAP.rocks ? [false,'pack full - drop off at camp'] : carryBlocked('rocks') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(6,hoursFor('rocks'),true,'',`−{c}⚡ · ${durTxt(hoursFor('rocks'))} · +3 rocks`,'ohw'); setBtn('a-rocks', r[0], r[1]);
   $('a-clay').classList.toggle('hidden', !hasKit('pot') && !hasKit('shovel'));
-  r = S.carry.clay>=CARRY_CAP.clay ? [false,'pack full - drop off at camp'] : carryBlocked('clay') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(5,TUNING.costs.clayMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.clayMin/60)} · +2-3 clay`,'oh'); setBtn('a-clay', r[0], r[1]);
+  r = S.carry.clay>=CARRY_CAP.clay ? [false,'pack full - drop off at camp'] : carryBlocked('clay') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(5,clayHours(),true,'',`−{c}⚡ · ${durTxt(clayHours())}${RULES.realTimes && !hasKit('shovel') ? ' · a shovel digs it faster' : ''} · +2-3 clay`,'oh'); setBtn('a-clay', r[0], r[1]);
   r = gate(2,0.0833,true,'',`−{c}⚡ · ${durTxt(0.0833)} · risky (20% sick, slip chance in rain)`,'o'); setBtn('a-stream', r[0], r[1]);
 
   const snareTotal = S.snareList.length;
   const depNote = S.forageDep >= 4 ? ' · picked over' : '';
-  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(6,1,true,'',`−{c}⚡ · ${durTxt(1)} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : gate(TUNING.costs.forageE,(S.berryPicker?0.8:1)*TUNING.costs.forageMin/60,true,'', `−{c}⚡ · ${durTxt((S.berryPicker?0.8:1)*TUNING.costs.forageMin/60)}${depNote}`,'o'); setBtn('a-forage', r[0], r[1]);
+  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(6,hoursFor('wood'),true,'',`−{c}⚡ · ${durTxt(hoursFor('wood'))} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : gate(TUNING.costs.forageE,(S.berryPicker?0.8:1)*hoursFor('forage'),true,'', `−{c}⚡ · ${durTxt((S.berryPicker?0.8:1)*hoursFor('forage'))}${depNote}`,'o'); setBtn('a-forage', r[0], r[1]);
   if (hasKit('wire')){
-    r = S.wireStock<=0 ? [false,'out of wire'] : snareTotal>=MAX_SNARES_TOTAL ? [false,'trapline full (10/10)'] : gate(2,0.0833,true,'',`−{c}⚡ · ${durTxt(0.0833)} · pick a spot · ${S.wireStock} left`,'oh'); setBtn('a-snare', r[0], r[1]);
+    r = S.wireStock<=0 ? [false,'out of wire'] : snareTotal>=MAX_SNARES_TOTAL ? [false,'trapline full (10/10)'] : gate(2,hoursFor('setSnare'),true,'',`−{c}⚡ · ${durTxt(hoursFor('setSnare'))} · pick a spot · ${S.wireStock} left`,'oh'); setBtn('a-snare', r[0], r[1]);
     r = snareTotal<=0 ? [false,'no snares set'] : gate(2,0.0833,true,'',`−{c}⚡ · ${durTxt(0.0833)}`,'o'); setBtn('a-moveSnare', r[0], r[1]);
   }
   r = snareTotal<=0 ? [false,'no snares set'] : gate(2,0.1667,true,'', `−{c}⚡ · ${durTxt(0.1667)}`,'o');
   setBtn('a-checkTraps', r[0], r[1]);
   if (hasKit('bow')){
-    { const pm = 1 + S.huntPressure/150; r = gate(Math.round(TUNING.costs.scoutE*pm),0.5*pm,true,'',`−{c}⚡ · ${durTxt(0.5*pm)} · look for tracks${S.huntPressure>40?' (game pushed out)':''}`,'o'); setBtn('a-scout', r[0], r[1]); }
+    { const pm = 1 + S.huntPressure/150; r = gate(Math.round(TUNING.costs.scoutE*pm),hoursFor('scout')*pm,true,'',`−{c}⚡ · ${durTxt(hoursFor('scout')*pm)} · look for tracks${S.huntPressure>40?' (game pushed out)':''}`,'o'); setBtn('a-scout', r[0], r[1]); }
   }
   const hs = S.hunt.state;
   $('a-follow').classList.toggle('hidden', !(hs === 'tracks' || hs === 'hot'));
-  { const pm = 1 + S.huntPressure/150; r = gate(Math.round(TUNING.costs.followBaseE*pm),0.75*pm,true,'', (hs === 'hot' ? 'trail is HOT · ' : '') + `−{c}⚡ · ${durTxt(0.75*pm)}`,'o'); setBtn('a-follow', r[0], r[1]); }
+  { const pm = 1 + S.huntPressure/150; r = gate(Math.round(TUNING.costs.followBaseE*pm),hoursFor('follow')*pm,true,'', (hs === 'hot' ? 'trail is HOT · ' : '') + `−{c}⚡ · ${durTxt(hoursFor('follow')*pm)}`,'o'); setBtn('a-follow', r[0], r[1]); }
   $('a-shot').classList.toggle('hidden', hs !== 'spotted');
   r = S.arrows<=0 ? [false,'out of arrows'] : gate(5,0.1667,true,'', `${GAME[S.hunt.species]?GAME[S.hunt.species].label:'something'} in range · −{c}⚡ · ${durTxt(0.1667)}`,'o'); setBtn('a-shot', r[0], r[1]);
   $('a-trail').classList.toggle('hidden', hs !== 'trailing');
@@ -880,7 +881,7 @@ function panelPass(){
   if (S.killSite && !S.killSite.carved){
     const big = GAME[S.killSite.species].tier==='big';
     const knifeMul = hasKit('knife') ? 0.75 : 1;
-    r = S.loc!==S.killSite.loc ? [false,`go to the ${S.killSite.loc} first`] : gate(Math.round((big?18:12)*knifeMul), (big?2:1.2)*knifeMul, true, '', `−{c}⚡ · ${durTxt((big?2:1.2)*knifeMul)}`, 'h');
+    r = S.loc!==S.killSite.loc ? [false,`go to the ${S.killSite.loc} first`] : gate(Math.round((big?18:12)*knifeMul), carveHours()*knifeMul, true, '', `−{c}⚡ · ${durTxt(carveHours()*knifeMul)}`, 'h');
   } else r = [false,'-'];
   setBtn('a-carve', r[0], r[1]);
   $('a-haul').classList.toggle('hidden', !S.killSite || !S.killSite.carved);
@@ -897,10 +898,10 @@ function panelPass(){
   setBtn('a-haul', r[0], r[1]);
   $('a-invest').classList.toggle('hidden', !S.soundsWoods);
   r = gate(6,0.5,true,'',`−{c}⚡ · ${durTxt(0.5)} · could be anything`,'o'); setBtn('a-invest', r[0], r[1]);
-  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(6,1,true,'',`−{c}⚡ · ${durTxt(1)} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : carryBlocked('wood') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(6,1,true,'',`−{c}⚡ · ${durTxt(1)} · +3-5 logs`,'ohw wood'); setBtn('a-wood', r[0], r[1]);
+  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(6,hoursFor('wood'),true,'',`−{c}⚡ · ${durTxt(hoursFor('wood'))} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : carryBlocked('wood') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(6,hoursFor('wood'),true,'',`−{c}⚡ · ${durTxt(hoursFor('wood'))} · +3-5 logs`,'ohw wood'); setBtn('a-wood', r[0], r[1]);
   r = S.carry.moss>=CARRY_CAP.moss ? [false,'pack full - drop off at camp'] : carryBlocked('moss') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(TUNING.costs.mossE,TUNING.costs.mossMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.mossMin/60)} · +3-4 moss`,'oh'); setBtn('a-moss', r[0], r[1]);
 
-  r = gate(2,TUNING.costs.tinderMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.tinderMin/60)} · +${TUNING.costs.tinderYieldLo}-${TUNING.costs.tinderYieldHi} tinder`,'o'); setBtn('a-tinder', r[0], r[1]);
+  r = gate(2,hoursFor('tinder'),true,'',`−{c}⚡ · ${durTxt(hoursFor('tinder'))} · +${TUNING.costs.tinderYieldLo}-${TUNING.costs.tinderYieldHi} tinder`,'o'); setBtn('a-tinder', r[0], r[1]);
   r = !S.instrument ? [false,'carve a flute first'] : (S.playedToday ? [false,'played today - the quiet holds'] : gate(4,0.5,true,'',`−{c}⚡ · ${durTxt(0.5)} · +morale, −stress`));
   setBtn('a-music', r[0], r[1]);
   r = gate(0,1,true,'', S.restsToday>=2 ? `${durTxt(1)} · +3⚡ - running on fumes` : (S.fireH > 0 && S.loc === 'camp' ? `${durTxt(1)} · +${10 + comfortLvl()*2}⚡ by the fire` : `${durTxt(1)} · +${6 + comfortLvl()*2}⚡`), '');

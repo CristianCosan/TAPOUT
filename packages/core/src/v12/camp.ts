@@ -15,7 +15,7 @@ import { RULES, say } from './rules.ts';
 import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { S } from './state.ts';
 import { afterAction, spend, spendOrDebt, tickShiverClear } from './threads.ts';
-import { BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
+import { FIRE_LIGHT, hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
 import { render, sfxBuild, sfxCooking, sfxDrink, sfxEat, sfxFireLight, showModal } from './ui.ts';
 import { triggerBearDread } from './worry.ts';
 // ============================== actions: camp ==============================
@@ -23,6 +23,17 @@ export function fireCap(){ return [8,12,16][S.firepitTier]; }
 // v12 kit-draft §2/§3.2: fire runs on FIREWOOD (hand-gatherable, never structurally gated); without a
 // ferro rod, lighting one is a friction-fire attempt instead - slower, weather-dependent, a morale
 // sting per failed try, never impossible (the safety-valve rule from kit-draft §5.1).
+// rc.4 (realTimes): how long getting a fire going takes this time.
+function lightFireHours(){
+  if (!RULES.realTimes) return 0;
+  const wet = !!WEATHER[S.weather]?.wetGain;
+  if (rand() < (wet ? FIRE_LIGHT.slowChanceWet : FIRE_LIGHT.slowChance)){
+    log(pick(['Half an hour on your knees blowing on a coal that will not take. Then it takes.', 'Everything is damp. Shave after shave of birch until it finally catches. Half an hour gone.', 'Sparks, smoke, nothing. Sparks, smoke, nothing. Thirty minutes, and then a flame.', 'Your hands are shaking too much to aim the sparks. It takes half an hour.']), 'bad');
+    return FIRE_LIGHT.slowHours;
+  }
+  const [lo, hi] = wet ? FIRE_LIGHT.wetMin : FIRE_LIGHT.dryMin;
+  return (lo + Math.floor(rand() * (hi - lo + 1))) / 60;
+}
 export function actFire(){
   if (S.over) return;
   const lightWoodCost = S.firepitTier>=2 ? 1 : 2;
@@ -39,7 +50,7 @@ export function actFire(){
   }
   if (!hasKit('ferro')){ actFrictionFire(); return; }
   if (S.stock.firewood < lightWoodCost || S.tinder < 1) return;
-  if (!spend(0,0,false,'')) return;
+  if (!spend(0,lightFireHours(),false,'')) return;
   S.tinder--;
   const ferroMul = S.gear.ferro <= 0 ? 0.55 : S.gear.ferro < 30 ? 0.8 : 1;
   S.gear.ferro = Math.max(0, S.gear.ferro - 2);
@@ -140,7 +151,7 @@ export function doSmoke(contaminated?, which?){
   const woodCost = isHuge ? 2 : 1;
   if (S.stock.firewood < woodCost || S.tinder < 1) return;
   const knifeMul = hasKit('knife') ? 0.75 : 1;
-  if (!spend(5, 0.25*knifeMul, false, '')) return;
+  if (!spend(5, hoursFor('smoke')*knifeMul, false, '')) return;
   S.stock.firewood -= woodCost; S.tinder -= 1;
   const cap = isHuge ? HUGE_RACK_CAP : RACK_CAP[S.rackTier];
   const n = takeMeat(Math.min(cap, meatCount()));
@@ -247,7 +258,7 @@ export function actAxeHandleBreak(){
 }
 export function actHaftAxe(){
   if (!hasKit('axe') || !S.chains.axeHandle || S.stock.wood<2) return;
-  if (!spend(10,1.5,false,'hw')) return;
+  if (!spend(10,hoursFor('haftAxe'),false,'hw')) return;
   S.stock.wood -= 2;
   S.gear.axe = 100;
   S.chains.axeHandle = null;
@@ -264,7 +275,7 @@ export function actBootFailure(){
 }
 export function actRepairBoots(){
   if (!S.chains.boot || S.hide<2) return;
-  if (!spend(10,1.5,false,'hw')) return;
+  if (!spend(10,hoursFor('haftAxe'),false,'hw')) return;
   S.hide -= 2;
   S.gear.boots = 100;
   S.chains.boot = null;
@@ -353,7 +364,7 @@ export function actDugout(){
 }
 export function actInsulate(){
   if (S.structure < 1 || S.insulation >= 3 || S.stock.moss < 4 || builtToday('insulate')) return;
-  if (!spend(6,1,true,'oh')) return;
+  if (!spend(6,hoursFor('insulate'),true,'oh')) return;
   S.stock.moss -= 4; S.insulation++;
   markBuilt('insulate');
   sfxBuild();
@@ -435,7 +446,7 @@ export function actIceCache(){
 export function actJug(){
   if (!hasKit('pot')) return; // no reason to fire a water vessel if there's nothing to fill it for
   if (S.jug || S.stock.clay < TUNING.costs.jugClayNeed || S.fireH <= 0) return;
-  if (!spend(8,1,false,'h')) return;
+  if (!spend(8,hoursFor('jug'),false,'h')) return;
   S.stock.clay -= TUNING.costs.jugClayNeed; S.jug = true;
   sfxBuild();
   log('You shape a jug from wet clay and fire it hard in the coals. Your water storage just doubled.', 'good');
@@ -443,7 +454,7 @@ export function actJug(){
 }
 export function actBerryPicker(){
   if (S.berryPicker || S.stock.wood < 2) return;
-  if (!spend(4,1,false,'h')) return;
+  if (!spend(4,hoursFor('picker'),false,'h')) return;
   S.stock.wood -= 2; S.berryPicker = true;
   sfxBuild();
   log('You lash a long-handled picker from a forked branch. Foraging will go faster now.', 'good');
@@ -451,7 +462,7 @@ export function actBerryPicker(){
 }
 export function actFlute(){
   if (S.instrument || S.stock.wood < 1) return;
-  if (!spend(6,1.5,false,'h')) return;
+  if (!spend(6,hoursFor('flute'),false,'h')) return;
   S.stock.wood--; S.instrument = true;
   S.morale = clamp(S.morale + 5);
   sfxBuild();
@@ -514,7 +525,7 @@ export function actTreeMark(){
 }
 export function actChair(){
   if (S.chair || S.stock.wood < 3) return;
-  if (!spend(6,1,false,'h')) return;
+  if (!spend(6,hoursFor('chair'),false,'h')) return;
   S.stock.wood -= 3; S.chair = true;
   sfxBuild();
   log('A real chair, lashed and solid. Sitting like a human being again is worth every splinter. (+comfort)', 'good');
@@ -522,7 +533,7 @@ export function actChair(){
 }
 export function actTable(){
   if (S.table || S.stock.wood < 3) return;
-  if (!spend(6,1,false,'h')) return;
+  if (!spend(6,hoursFor('table'),false,'h')) return;
   S.stock.wood -= 3; S.table = true;
   sfxBuild();
   log('A slab table by the fire. Somewhere to gut fish that isn\'t your knee. (+comfort)', 'good');
@@ -530,7 +541,7 @@ export function actTable(){
 }
 export function actBed(){
   if (S.bed || S.stock.moss < 4) return;
-  if (!spend(5,1,false,'h')) return;
+  if (!spend(5,hoursFor('bed'),false,'h')) return;
   S.stock.moss -= 4; S.bed = true;
   sfxBuild();
   log('A deep bough-and-moss bed off the cold ground. Tonight might actually be sleep. (+comfort)', 'good');

@@ -433,7 +433,7 @@ function BuildPanel({ station, view, onBuild, onCost }: { station: string; view:
             </div>
             {entry?.visible && (
               <button className="build-btn" disabled={!entry.enabled} onClick={() => onBuild({ key: `${id}.${next.step}`, name: stepNames[next.step - 1] ?? '', entry, hours: next.hours })} {...hover(entry)}>
-                <Glyph id="build" /> <span>{UPGRADE_TEXT.go(stepNames[next.step - 1] ?? '')}</span>
+                <Glyph id="build" /> <span>{jobsDone()[`${id}.${next.step}`] ? UPGRADE_TEXT.resume(stepNames[next.step - 1] ?? '') : UPGRADE_TEXT.go(stepNames[next.step - 1] ?? '')}</span>
                 {!entry.enabled && entry.detail && !path.settling && <em>{noEmoji(entry.detail)}</em>}
               </button>
             )}
@@ -488,13 +488,34 @@ interface BuildStart {
   hours?: number;
 }
 
+/** Jobs done on build steps you stopped partway through (per player, this computer). */
+function jobsDone(): Record<string, number> {
+  try {
+    return JSON.parse(localStorage.getItem('tapout.buildJobs') ?? '{}') as Record<string, number>;
+  } catch {
+    return {};
+  }
+}
+function saveJobs(jobs: Record<string, number>): void {
+  try {
+    localStorage.setItem('tapout.buildJobs', JSON.stringify(jobs));
+  } catch {
+    // Without storage a stopped step simply starts over.
+  }
+}
+
 /**
  * rc.4: the small jobs of one build step, one click each with a hands motion. Dan says one of his
  * lines for the step partway through. Nothing is spent until the last job runs the v12 action.
  */
 function BuildTaskCard({ task, onStop, onDone }: { task: BuildStart; onStop: () => void; onDone: () => void }) {
   const spec = BUILD_TASKS[task.key]!;
-  const [done, setDone] = useState(0);
+  // You can stop anywhere and pick up from the same job later.
+  const [done, setDoneState] = useState(() => jobsDone()[task.key] ?? 0);
+  const setDone = (n: number) => {
+    setDoneState(n);
+    saveJobs({ ...jobsDone(), [task.key]: n });
+  };
   // Which line, and on which job he says it.
   const [pick] = useState(() => ({ line: Math.floor(Math.random() * spec.say.length), at: Math.max(1, Math.floor(spec.jobs.length / 2)) }));
   const said = done >= pick.at;
@@ -502,6 +523,8 @@ function BuildTaskCard({ task, onStop, onDone }: { task: BuildStart; onStop: () 
   const click = () => {
     const next = done + 1;
     if (next >= spec.jobs.length) {
+      const { [task.key]: _finished, ...rest } = jobsDone();
+      saveJobs(rest);
       onDone();
       return;
     }

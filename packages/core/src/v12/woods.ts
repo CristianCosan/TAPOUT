@@ -13,11 +13,11 @@ import { resolveDelta } from './resolve.ts';
 import { consumeKitStock, hasKit, log, maybeRenameSpot, registerEmptyCheck } from './setup.ts';
 import { S } from './state.ts';
 import { afterAction, isNightNow, spend } from './threads.ts';
-import { CARRY_CAP, GAME, HUGE_RACK_CAP, MAX_SNARES_PER_SPOT, MAX_SNARES_TOTAL, MEAT_HAUL_CAP, RACK_CAP, SHOT_HIT_RECOVERED, SHOT_MISS_LOST, SHOT_MISS_RECOVERED, TUNING, carryBlocked, rollHuntSpecies, rollSmallGame } from './tuning.ts';
+import { CARRY_CAP, GAME, hoursFor, HUGE_RACK_CAP, MAX_SNARES_PER_SPOT, MAX_SNARES_TOTAL, MEAT_HAUL_CAP, RACK_CAP, SHOT_HIT_RECOVERED, SHOT_MISS_LOST, SHOT_MISS_RECOVERED, TUNING, carryBlocked, rollHuntSpecies, rollSmallGame } from './tuning.ts';
 import { $, hideModal, sfxMooseCall, showModal, typewriterInto } from './ui.ts';
 // ============================== actions: woods ==============================
 export function actForage(){
-  const hrs = (S.berryPicker ? 0.8 : 1) * TUNING.costs.forageMin/60;
+  const hrs = (S.berryPicker ? 0.8 : 1) * hoursFor('forage');
   const cost = TUNING.costs.forageE;
   if (!spend(cost,hrs,true,'o')) return;
   const winterPenalty = S.winter ? 0.22 : 0;
@@ -34,7 +34,7 @@ export function actForage(){
   afterAction('forage');
 }
 export function actTinder(){
-  if (!spend(2,TUNING.costs.tinderMin/60,true,'o')) return;
+  if (!spend(2,hoursFor('tinder'),true,'o')) return;
   const n = TUNING.costs.tinderYieldLo + (rand()<0.5 ? TUNING.costs.tinderYieldHi-TUNING.costs.tinderYieldLo : 0);
   S.tinder += n;
   log(`Got some. You strip dry inner bark and dead grass into a tinder bundle. +${n} tinder`, 'good');
@@ -73,7 +73,7 @@ export function placeSnareAt(id?){
   const sp = S.woodsSpots.find(s=>s.id===id);
   const countHere = S.snareList.filter(sn=>sn.spotId===id).length;
   if (!sp || countHere>=MAX_SNARES_PER_SPOT || S.snareList.length>=MAX_SNARES_TOTAL || S.wireStock<=0){ hideModal(); return; }
-  if (!spend(2,0.0833,true,'oh')){ hideModal(); return; }
+  if (!spend(2,hoursFor('setSnare'),true,'oh')){ hideModal(); return; }
   S.snareList.push(RULES.soakTime ? {spotId:id, day:S.day, lastCheck:S.day, setAbs:nowAbs()} : {spotId:id, day:S.day, lastCheck:S.day});
   consumeKitStock('wire');
   hideModal();
@@ -139,7 +139,7 @@ export function checkOneSnare(i?){
   const sn = S.snareList[i];
   if (!sn) return;
   const sp = S.woodsSpots.find(s=>s.id===sn.spotId);
-  if (!spend(1,0.0167,true,'o')) return;
+  if (!spend(1,hoursFor('checkSnare'),true,'o')) return;
   const soaked = RULES.soakTime ? soakHours(sn) : null;
   if (soaked !== null && soaked < TUNING.catchRates.soakHours){
     const row = $('snareRow'+i);
@@ -188,7 +188,7 @@ export function maybeWarnNightSight(){
 }
 export function actScout(){
   const pressureMul = 1 + S.huntPressure/150;
-  if (!spend(Math.round(TUNING.costs.scoutE*pressureMul), 0.5*pressureMul, true, 'ow')) return;
+  if (!spend(Math.round(TUNING.costs.scoutE*pressureMul), hoursFor('scout')*pressureMul, true, 'ow')) return;
   const night = isNightNow();
   if (night) maybeWarnNightSight();
   const pressureDrag = S.huntPressure/100 * 0.12;
@@ -205,7 +205,7 @@ export function actFollow(){
   if (S.hunt.state !== 'tracks' && S.hunt.state !== 'hot') return;
   const pressureMul = 1 + S.huntPressure/150;
   // v12 §10.3: tracking energy halved.
-  if (!spend(Math.round(TUNING.costs.followBaseE*pressureMul), 0.75*pressureMul, true, 'ow')) return;
+  if (!spend(Math.round(TUNING.costs.followBaseE*pressureMul), hoursFor('follow')*pressureMul, true, 'ow')) return;
   const p = (S.hunt.state === 'hot' ? 0.52 : 0.32) - S.huntPressure/100*0.10;
   if (rand() < p){
     const species = rollHuntSpecies();
@@ -344,11 +344,16 @@ export function killAnimal(species?){
     <button class="mbtn" onclick="hideModal()">Continue</button>`);
   typewriterInto('twKill', killText, 14);
 }
+// rc.4 (realTimes): a moose is twice the work of a deer.
+export function carveHours(){
+  const g = GAME[S.killSite.species];
+  return g.tier !== 'big' ? 1.2 : hoursFor(S.killSite.species === 'moose' ? 'carveMoose' : 'carveBig');
+}
 export function actCarve(){
   if (!S.killSite || S.killSite.carved || S.loc !== S.killSite.loc) return;
   const big = GAME[S.killSite.species].tier === 'big';
   const knifeMul = hasKit('knife') ? 0.75 : 1;
-  if (!spend(Math.round((big?18:12)*knifeMul), (big?2:1.2)*knifeMul, false, 'hw')) return;
+  if (!spend(Math.round((big?18:12)*knifeMul), carveHours()*knifeMul, false, 'hw')) return;
   S.killSite.carved = true;
   const hideGain = big ? 2 : 1;
   S.hide += hideGain;
@@ -421,7 +426,7 @@ export function actWood(){
   if (hasKit('axe') && S.gear.axe <= 0){ actAxeHandleBreak(); return; }
   const sawBonus = (hasKit('axe') && hasKit('saw')) ? 0.8 : (hasKit('shovel') && !hasKit('axe') && !hasKit('saw')) ? 1.3 : 1;
   const axeWeak = hasKit('axe') && S.gear.axe < 30;
-  if (!spend(Math.round((axeWeak?9:6)*sawBonus), (axeWeak?1.3:1)*sawBonus, true, 'ohw wood')) return;
+  if (!spend(Math.round((axeWeak?9:6)*sawBonus), (axeWeak?1.3:1)*hoursFor('wood')*sawBonus, true, 'ohw wood')) return;
   let n = 3 + Math.floor(rand()*3);
   if (S.weather === 'storm') n = Math.max(1, n-1);
   if (axeWeak) n = Math.max(1, n-1);

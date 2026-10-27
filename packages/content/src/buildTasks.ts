@@ -240,5 +240,5 @@ export const BUILD_TASK_TEXT = {
   title: (name: string) => `Building · ${name}`,
   next: (job: string, time: string) => `${job} · ${time}`,
   stop: 'Stop for now',
-  note: 'Nothing is used until the last job. Stopping costs nothing.',
+  note: 'Nothing is used until the last job. Stop any time and pick up here later.',
 } as const;

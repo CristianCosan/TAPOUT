@@ -5,7 +5,7 @@
 
 import { RULES } from './rules.ts';
 import { S } from './state.ts';
-import { BUILD_NEED, BUILD_STEPS, CACHE_COST, CACHE_NEED, DUGOUT_COST, DUGOUT_NEED, DUGOUT_STAGES, FIREPIT_COST, FIREPIT_NEED, RACK_COST, SHELTER_COST } from './tuning.ts';
+import { BUILD_HOURS, BUILD_NEED, BUILD_STEPS, CACHE_COST, CACHE_NEED, DUGOUT_COST, DUGOUT_NEED, DUGOUT_STAGES, FIREPIT_COST, FIREPIT_NEED, RACK_COST, SHELTER_COST } from './tuning.ts';
 
 export type BuildId = 'shelter' | 'dugout' | 'firepit' | 'rack' | 'cache';
 export interface StepCost { e: number; h: number; wood?: number; moss?: number; clay?: number; rocks?: number; stage?: string }
@@ -21,8 +21,13 @@ export function buildTiers(id: BuildId): number[] {
   }
 }
 
-/** v12's sessions for one tier, each with its own cost. */
+/** v12's sessions for one tier, each with its own cost (rc.4 realTimes: with realistic hours). */
 function tierSessions(id: BuildId, t: number): StepCost[] {
+  const h = RULES.realTimes ? BUILD_HOURS[id]?.[t] : undefined;
+  const v12 = v12Sessions(id, t);
+  return h === undefined ? v12 : v12.map((c) => ({ ...c, h }));
+}
+function v12Sessions(id: BuildId, t: number): StepCost[] {
   const many = (n: number, c: StepCost) => Array.from({ length: n }, () => c);
   switch (id) {
     case 'shelter': return many(BUILD_NEED[t], SHELTER_COST[t]);

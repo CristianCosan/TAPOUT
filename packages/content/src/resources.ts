@@ -63,6 +63,7 @@ export const UPGRADE_TEXT = {
   start: { shelter: 'Start the shelter', dugout: 'Start digging' },
   stepOf: (n: number, of: number, name: string) => `Next · step ${n} of ${of} · ${name}`,
   becomes: (n: number, name: string) => `After step ${n} it becomes: ${name}.`,
+  resume: (name: string) => `Carry on: ${name.charAt(0).toLowerCase()}${name.slice(1)}`,
   go: (name: string) => `Start: ${name.charAt(0).toLowerCase()}${name.slice(1)}`,
   noun: { shelter: 'shelter', dugout: 'dugout', firepit: 'firepit', rack: 'rack', cache: 'cache' },
   names: {

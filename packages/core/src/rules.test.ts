@@ -374,3 +374,25 @@ describe('rc.4 one route and build pace', () => {
     }
   });
 });
+
+describe('rc.4 real times', () => {
+  it('foraging takes 15 minutes in v12 and 30 in TAP / OUT, for the same energy', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'woods', hour: 9, energy: 120, maxEnergy: 120 });
+      run.call('actForage');
+      expect(run.state.hour - 9).toBeCloseTo(rules === V12_RULES ? 0.25 : 0.5, 5);
+    }
+  });
+  it('lighting a fire with the ferro rod is free of time in v12 and takes 1 to 30 minutes in TAP / OUT', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'camp', hour: 9, fireH: 0, tinder: 3, weather: 'clear' });
+      run.state.stock.firewood = 5;
+      run.call('actFire');
+      const took = run.state.hour - 9;
+      if (rules === V12_RULES) expect(took).toBe(0);
+      else { expect(took).toBeGreaterThanOrEqual(1 / 60 - 1e-9); expect(took).toBeLessThanOrEqual(0.5 + 1e-9); }
+    }
+  });
+});

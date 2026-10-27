@@ -54,6 +54,8 @@ function line(row: Row): string {
 }
 
 const rows: Row[] = [sweep('v12', V12_RULES), sweep('TAP / OUT (all changes)', TAPOUT_RULES)];
+// --without a,b: TAP / OUT with one change left out at a time, to see what moves the numbers.
+for (const key of arg('without', '').split(',').filter(Boolean) as Array<keyof RuleSet>) rows.push(sweep(`without ${key}`, { ...TAPOUT_RULES, [key]: false }));
 if (singles) {
   for (const key of Object.keys(V12_RULES) as Array<keyof RuleSet>) {
     if (key === 'content') continue;

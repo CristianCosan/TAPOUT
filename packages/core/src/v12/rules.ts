@@ -48,6 +48,8 @@ export interface RuleSet {
   buildPace: boolean;
   /** rc.4 (Sir): every camp build climbs in named steps (at least five a path), sharing v12's costs. */
   stepBuilds: boolean;
+  /** rc.4 (Sir): realistic game time per action; energy and materials stay v12's. */
+  realTimes: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -71,6 +73,7 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   oneRoute: false,
   buildPace: false,
   stepBuilds: false,
+  realTimes: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(
