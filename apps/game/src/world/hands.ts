@@ -109,7 +109,19 @@ function tools() {
   const flute = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.32, 6).rotateZ(Math.PI / 2), wood);
   const paper = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.004, 0.14), mat(0xe8e0cc));
   const wire = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.004, 4, 16), steel);
-  return { axe, stick, stone, rock, clay, bundle, ferro, sparks, pot, cup, rod, bow, knife, food, flute, paper, wire };
+  const saw = new THREE.Group();
+  const frame = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.01, 4, 14, Math.PI), mat(0xa04030));
+  const teeth = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.02, 0.003), steel);
+  teeth.position.y = 0.005;
+  saw.add(frame, teeth);
+  saw.rotation.z = Math.PI / 2;
+  const shovel = new THREE.Group();
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.6, 6), wood);
+  shaft.position.y = 0.22;
+  const spade = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.15, 0.012), steel);
+  spade.position.y = 0.58;
+  shovel.add(shaft, spade);
+  return { axe, stick, stone, rock, clay, bundle, ferro, sparks, pot, cup, rod, bow, knife, food, flute, paper, wire, saw, shovel };
 }
 
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
@@ -121,6 +133,9 @@ function mix(away: Pose, pose: Pose, k: number): Pose {
   return away.map((v, i) => lerp(v, pose[i]!, k)) as Pose;
 }
 
+/** A tool you can carry in hand between jobs (rc.5, keys 1-5). */
+export type Held = 'bow' | 'axe' | 'saw' | 'shovel' | 'knife';
+
 export class Hands {
   readonly root = new THREE.Group();
   private right = hand();
@@ -131,6 +146,9 @@ export class Hands {
   private length = 1.6;
   private inRight: THREE.Object3D | null = null;
   private inLeft: THREE.Object3D | null = null;
+  private held: Held | null = null;
+  private heldTool: THREE.Object3D | null = null;
+  private clock = 0;
 
   constructor() {
     this.root.add(this.right, this.left);
@@ -142,7 +160,34 @@ export class Hands {
     return this.motion;
   }
 
+  /** Carries a tool low in the view between jobs, or empties the hands (null). */
+  hold(tool: Held | null): void {
+    if (tool === this.held) return;
+    this.held = tool;
+    this.heldTool?.removeFromParent();
+    this.heldTool = tool ? this.kit[tool] : null;
+    if (!this.motion) this.showHeld();
+  }
+
+  get holding(): Held | null {
+    return this.held;
+  }
+
+  private showHeld(): void {
+    for (const tool of [this.inRight, this.inLeft]) tool?.removeFromParent();
+    this.inRight = this.inLeft = null;
+    const tool = this.heldTool;
+    this.root.visible = !!tool;
+    if (!tool) return;
+    tool.position.set(0, 0, -0.03);
+    // The bow stands upright in the left hand; everything else sits in the right.
+    tool.rotation.set(0, 0, this.held === 'bow' ? Math.PI * 0.15 - Math.PI / 2 + Math.PI : 0);
+    if (this.held === 'bow') this.left.add(tool);
+    else this.right.add(tool);
+  }
+
   play(motion: Motion): void {
+    this.heldTool?.removeFromParent();
     this.motion = motion;
     this.t = 0;
     this.length = SECONDS[motion] ?? 1.6;
@@ -169,13 +214,18 @@ export class Hands {
   }
 
   /** Moves the hands; returns how far the view dips (pitch) and drops (metres) right now. */
-  update(dt: number): { pitch: number; drop: number; yaw: number } {
-    if (!this.motion) return { pitch: 0, drop: 0, yaw: 0 };
+  update(dt: number, walking = false): { pitch: number; drop: number; yaw: number } {
+    this.clock += dt;
+    if (!this.motion) {
+      if (this.heldTool) this.idle(walking);
+      return { pitch: 0, drop: 0, yaw: 0 };
+    }
     this.t += dt / this.length;
     if (this.t >= 1) {
       this.motion = null;
       this.root.visible = false;
       this.kit.sparks.removeFromParent();
+      this.showHeld();
       return { pitch: 0, drop: 0, yaw: 0 };
     }
     const t = this.t;
@@ -323,6 +373,22 @@ export class Hands {
     this.place(this.right, mix(AWAY_R, lift(R), e));
     this.place(this.left, mix(AWAY_L, lift(L), e));
     return { pitch, drop, yaw };
+  }
+
+  /** The held tool resting low at the side of the view, swaying a little as you walk. */
+  private idle(walking: boolean): void {
+    const bob = walking ? Math.sin(this.clock * 9) * 0.012 : Math.sin(this.clock * 1.4) * 0.004;
+    const bow = this.held === 'bow';
+    const right: Record<Held, Pose> = {
+      bow: AWAY_R,
+      axe: [0.36, -0.42, -0.62, -1.05, 0.2, 0.35],
+      shovel: [0.36, -0.42, -0.62, -1.05, 0.2, 0.35],
+      saw: [0.3, -0.3, -0.6, -0.3, 0, 0.2],
+      knife: [0.24, -0.28, -0.5, -0.5, 0, 0.2],
+    };
+    const r = right[this.held!];
+    this.place(this.right, bow ? AWAY_R : [r[0], r[1] + bob, r[2], r[3], r[4], r[5]]);
+    this.place(this.left, bow ? [-0.66, -0.14 + bob, -1.05, 0, 0.25, 0.1] : AWAY_L);
   }
 
   private place(g: THREE.Group, p: Pose): void {

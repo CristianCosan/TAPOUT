@@ -14,6 +14,7 @@ import { homeTapCause } from './home.ts';
 import { RULES } from './rules.ts';
 import { S } from './state.ts';
 import { testTopUp } from './testMode.ts';
+import { clothesEffect } from './gear.ts';
 import { TUNING, WEATHER } from './tuning.ts';
 import { render, showModal, toastRefusal, typewriterInto } from './ui.ts';
 // ============================== v6.2: personal threads ==============================
@@ -47,7 +48,7 @@ export function accrueExposure(h?, outdoor?){
   if (!outdoor || S.loc === 'camp') return;
   const w = WEATHER[S.weather];
   const rainy = w.wetGain > 0;
-  const gain = (rainy ? TUNING.exposure.perRainHour : TUNING.exposure.perColdHour) * h;
+  const gain = (rainy ? TUNING.exposure.perRainHour * clothesEffect().exposureMul : TUNING.exposure.perColdHour) * h;
   S.exposureToday = (S.exposureToday||0) + gain;
   if (!S.soakedThrough && S.exposureToday >= TUNING.exposure.soakedThreshold){
     S.soakedThrough = true;
@@ -89,7 +90,9 @@ export function tickHours(h?, outdoor?, tags=''){
   const burn = kcalBurnRate(tags) * h;
   S.kcal -= burn;
   S.kcalBurn += burn;
-  if (outdoor) S.wet = clamp(S.wet + w.wetGain*h);
+  const cl = clothesEffect(tags);
+  if (outdoor) S.wet = clamp(S.wet + w.wetGain*h*cl.rainMul);
+  if (cl.sweat) S.wet = clamp(S.wet + cl.sweat*h);
   accrueExposure(h, outdoor);
   if (S.loc === 'camp'){
     if (S.fireH > 0){
@@ -102,14 +105,14 @@ export function tickHours(h?, outdoor?, tags=''){
       if (h > used){
         const rem = h - used;
         S.wet = clamp(S.wet - 2*rem);
-        const dr = warmthDrainRate(outdoor) * 0.7;
+        const dr = warmthDrainRate(outdoor) * 0.7 * cl.warmMul;
         S.warmth = clamp(S.warmth - dr*rem);
       }
     } else {
       if (S.fireH > 0) S.fireH = Math.max(0, S.fireH - h);
       S.wet = clamp(S.wet - 2*h);
       const work = outdoor ? 0.85 : 1;
-      const dr = warmthDrainRate(outdoor) * work;
+      const dr = warmthDrainRate(outdoor) * work * cl.warmMul;
       S.warmth = clamp(S.warmth - dr*h);
     }
     S.hoursOutsideStreak = 0;
@@ -128,7 +131,7 @@ export function tickHours(h?, outdoor?, tags=''){
       drained += r * step;
       elapsed += step; remaining -= step;
     }
-    S.warmth = clamp(S.warmth - drained);
+    S.warmth = clamp(S.warmth - drained*cl.warmMul);
     S.hoursOutsideStreak = elapsed;
     if (S.warmth < 40){
       S.morale = clamp(S.morale - 1*h*sensitivityMul());

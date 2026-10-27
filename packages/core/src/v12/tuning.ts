@@ -288,6 +288,12 @@ export function hoursFor(key: string): number { const [v12, ours] = ACTION_HOURS
 export const BUILD_HOURS: any = { shelter: {0: 2}, firepit: {1: 1.5}, rack: {1: 2}, dugout: {0: 5.25, 1: 3.5, 2: 3.5} };
 // Lighting a fire with the ferro rod (realTimes): a few minutes when dry, longer after rain, and
 // now and then half an hour of fighting it.
+// rc.5 (clothing): the jacket keeps warmth in and the shell keeps rain out; either one worn
+// through heavy work soaks you in sweat. A minute to put on or take off.
+export const CLOTHES: any = { jacketWarmMul: 0.85, shellRainMul: 0.4, shellExposureMul: 0.5, sweatPerHour: { jacket: 2, shell: 1.5 }, changeHours: 1/60 };
+// rc.5 (stove): stones and clay inside the hut (Framed hut, or the finished dugout). At night the
+// fire in it burns slower, gives a little more, and the stones keep the cold off once it is out.
+export const STOVE: any = { e: 14, h: 3, rocks: 10, clay: 4, nightFireMul: 0.6, warmPerHour: 4, nightDrainMul: 0.7 };
 export const FIRE_LIGHT: any = { dryMin: [1, 8], wetMin: [5, 15], slowHours: 0.5, slowChance: 0.04, slowChanceWet: 0.12 };
 export function dugoutStep(prog: number){ return RULES.dugoutStages ? DUGOUT_STAGES[prog] : DUGOUT_COST; }
 // rc.3 (campHarvest): how much fallen timber and loose stone lies around camp before it is picked clean.

@@ -96,6 +96,8 @@ export const GLYPHS = {
   mace: `<rect x="8" y="8" width="8" height="13" rx="2" fill="${C.blood}"/><rect x="9.5" y="4" width="5" height="4" rx="1" fill="${C.stoneDark}"/><path d="M14.5 5h3" stroke="${C.stoneDark}" stroke-width="1.6"/><rect x="9" y="12" width="6" height="4" fill="${C.flame}"/>`,
   salt: `<path d="M7 9h10l-1 11H8z" fill="${C.bone}"/><path d="M7 9c0-3 2-5 5-5s5 2 5 5z" fill="${C.steel}"/><circle cx="10" cy="6.5" r="0.6" fill="${C.stoneDark}"/><circle cx="12" cy="5.5" r="0.6" fill="${C.stoneDark}"/><circle cx="14" cy="6.5" r="0.6" fill="${C.stoneDark}"/>`,
   tarp: `<path d="M2 18 12 6l10 12z" fill="#3a6a8a"/><path d="M12 6v12M2 18h20" stroke="#2a4a62" stroke-width="1.2"/><path d="M2 18l-1 3M22 18l1 3" stroke="${C.wood}" stroke-width="1.2"/>`,
+  jacket: `<path d="M8 3l4 2 4-2 5 4-2 4-2-1v11H7V10l-2 1-2-4z" fill="#7a4a2a"/><path d="M12 5v15" stroke="#4a2a14" stroke-width="1.2"/><path d="M9 13h2M13 13h2" stroke="#c08a54" stroke-width="1.2"/>`,
+  shell: `<path d="M8 3l4 2 4-2 5 4-2 4-2-1v11H7V10l-2 1-2-4z" fill="#3a6a8a"/><path d="M9 3c1 3 5 3 6 0" fill="#2a4a62"/><path d="M12 6v14" stroke="#bfe0f0" stroke-width="1"/>${drop(19, 18, 0.6, C.water)}`,
   tooth: `<path d="M6 4c2-1 4 0 6 0s4-1 6 0c2 2 1 6 0 8l-1 8c-1 1-2 0-2-1l-1-5h-4l-1 5c0 1-1 2-2 1l-1-8c-1-2-2-6 0-8z" fill="${C.bone}"/>`,
 } as const;
 

@@ -11,7 +11,7 @@ export const CAMP: LocationLayout = {
     station('raven', 'Dead snag', 'Roger sits up there most mornings.', 1590, 520, 70, 300, [], { stand: { x: 1590, y: 540 } }),
     station('jay', 'Spruce perch', 'Where the gray jay waits for scraps.', 1450, 560, 90, 130, ['a-feedjay'], { when: 'jay' }),
     station('shelter', 'Shelter', 'Your bed for the night, whatever state it is in.', 560, 650, 440, 300,
-      ['a-shelter', 'a-dugout', 'a-insulate', 'a-patchRoof', 'a-bed', 'a-rest'], { special: ['sleep', 'turnInEarly'], stand: { x: 820, y: 670 } }),
+      ['a-shelter', 'a-dugout', 'a-insulate', 'a-patchRoof', 'a-bed', 'a-stove', 'a-rest'], { special: ['sleep', 'turnInEarly'], stand: { x: 820, y: 670 } }),
     station('cache', 'Food cache', 'Keeps stored food from the things that come at night.', 1300, 610, 200, 280, ['a-cache'], { built: 'cache' }),
     station('rack', 'Smoking rack', 'Meat in, smoke for twelve hours, food that keeps.', 1060, 620, 240, 230, ['a-rack', 'a-smoke', 'a-hugeRack', 'a-smokeHuge'], { built: 'rack' }),
     station('post', 'Tally post', 'One notch for every day out here.', 360, 720, 50, 210, ['a-treemark'], { stand: { x: 420, y: 730 } }),

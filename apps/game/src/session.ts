@@ -546,6 +546,8 @@ function safeStorage(): Storage | null {
 }
 
 export const session = new Session(safeStorage());
+// Lets the screenshot scripts set up a moment in the dev server. Never in a build.
+if (import.meta.env.DEV) (globalThis as { __tapoutSession?: Session }).__tapoutSession = session;
 
 export interface PlaytestNote {
   at: string;

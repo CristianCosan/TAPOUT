@@ -50,6 +50,10 @@ export interface RuleSet {
   stepBuilds: boolean;
   /** rc.4 (Sir): realistic game time per action; energy and materials stay v12's. */
   realTimes: boolean;
+  /** rc.5 (Sir): a thick jacket and a rain shell you put on and take off, a minute each. */
+  clothing: boolean;
+  /** rc.5 (Sir): a stone stove inside the hut or dugout keeps a banked fire going longer at night. */
+  stove: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -74,6 +78,8 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   buildPace: false,
   stepBuilds: false,
   realTimes: false,
+  clothing: false,
+  stove: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

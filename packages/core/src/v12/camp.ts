@@ -15,7 +15,7 @@ import { RULES, say } from './rules.ts';
 import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { S } from './state.ts';
 import { afterAction, spend, spendOrDebt, tickShiverClear } from './threads.ts';
-import { FIRE_LIGHT, hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
+import { FIRE_LIGHT, STOVE, hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
 import { render, sfxBuild, sfxCooking, sfxDrink, sfxEat, sfxFireLight, showModal } from './ui.ts';
 import { triggerBearDread } from './worry.ts';
 // ============================== actions: camp ==============================
@@ -227,6 +227,18 @@ export function actCampSnares(){
   S.campSnares = true;
   log('You ring the cache with small snares and noisemakers. Should make raiders think twice.', 'good');
   afterAction('campSnares');
+}
+// rc.5 (stove, Sir): a stone stove inside the hut, once the hut is framed or the dugout roofed.
+export function stoveReady(){ return S.structure >= 2 || !!S.dugout; }
+export function actStove(){
+  if (!RULES.stove || S.stove || !stoveReady()) return;
+  if (S.stock.rocks < STOVE.rocks || S.stock.clay < STOVE.clay) return;
+  if (!spend(STOVE.e, STOVE.h, false, 'h')) return;
+  S.stock.rocks -= STOVE.rocks; S.stock.clay -= STOVE.clay;
+  S.stove = true;
+  sfxBuild();
+  log('The stove is done: a box of flat stones, clay-sealed, a flue out through the roof. A fire in it will last the night.', 'good');
+  afterAction('stove');
 }
 // kit-draft §3.7: soap - a small daily morale trickle when used, unrelated to infection-chance reduction
 // (that's applied passively wherever infection rolls happen).

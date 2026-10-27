@@ -4,7 +4,7 @@
 
 import { letterPanel } from './letters.ts';
 import { RULES } from './rules.ts';
-import { builtToday, fireCap, routeClosed } from './camp.ts';
+import { builtToday, fireCap, routeClosed, stoveReady } from './camp.ts';
 import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { ambientTempC, eCost, eTime, shiveringActive } from './cost.ts';
 import { berryCount, cookedMealSpoiled, meatCount, oldestBerriesSpoiled, oldestMeatSpoiled } from './food.ts';
@@ -15,7 +15,7 @@ import { NET_SESSIONS, clayHours } from './shore.ts';
 import { carveHours } from './woods.ts';
 import { S } from './state.ts';
 import { isNightNow } from './threads.ts';
-import { hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, CARRY_CAP, DUGOUT_NEED, dugoutStep, FIREPIT_COST, FIREPIT_NEED, GAME, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, ICE_CACHE_NEED, MAX_LINES_TOTAL, MAX_SNARES_TOTAL, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER, carryBlocked, carryType } from './tuning.ts';
+import { STOVE, hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, CARRY_CAP, DUGOUT_NEED, dugoutStep, FIREPIT_COST, FIREPIT_NEED, GAME, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, ICE_CACHE_NEED, MAX_LINES_TOTAL, MAX_SNARES_TOTAL, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER, carryBlocked, carryType } from './tuning.ts';
 import { enforceMoraleCeiling } from './worry.ts';
 // ---- The action panel: v12's render() run against a recording page instead of a real one.
 // What it records is exactly what v12 showed the player: which actions exist here, which are
@@ -225,6 +225,13 @@ export const BUTTONS: readonly PanelButton[] = [
     "onclick": "actBed()",
     "label": "🛌 Bough bed",
     "hidden": false
+  },
+  {
+    "id": "a-stove",
+    "loc": "camp",
+    "onclick": "actStove()",
+    "label": "🔥 Stone stove",
+    "hidden": true
   },
   {
     "id": "a-confess",
@@ -800,6 +807,11 @@ function panelPass(){
   setBtn('a-table', r[0], r[1]);
   r = S.bed ? [false,'built (+comfort)'] : gate(5,hoursFor('bed'), S.stock.moss >= 4, 'need 4 moss', `−{c}⚡ · ${durTxt(hoursFor('bed'))} · 4 moss · +comfort`, 'h');
   setBtn('a-bed', r[0], r[1]);
+  $('a-stove').classList.toggle('hidden', !RULES.stove);
+  if (RULES.stove){
+    r = S.stove ? [false,'built (a fire lasts the night)'] : !stoveReady() ? [false,'once the shelter is a Framed hut, or the dugout is roofed'] : gate(STOVE.e, STOVE.h, S.stock.rocks >= STOVE.rocks && S.stock.clay >= STOVE.clay, `need ${STOVE.rocks} rocks + ${STOVE.clay} clay`, `−{c}⚡ · ${durTxt(STOVE.h)} · ${STOVE.rocks} rocks + ${STOVE.clay} clay · a fire lasts the night`, 'h');
+    setBtn('a-stove', r[0], r[1]);
+  }
   r = S.confessedToday ? [false,'said your piece today'] : gate(2,0.5,true,'',`−{c}⚡ · ${durTxt(0.5)} · get something off your chest`);
   setBtn('a-confess', r[0], r[1]);
   $('a-confess').classList.toggle('glow', !!S.confessPrompt && !S.confessedToday);

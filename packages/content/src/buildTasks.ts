@@ -189,6 +189,11 @@ export const BUILD_TASKS: Readonly<Record<string, BuildTask>> = {
     jobs: ['Cut armloads of fir boughs', 'Lay a log frame on the ground', 'Stack the boughs, butts down', 'Pack moss on top'],
     say: ['Off the cold ground. The ground steals heat all night.', 'Butts down, tips up, like feathers.', 'A bed. A real one. Almost.', 'Mara would say this is the best thing I have built.'],
   },
+  'a-stove': {
+    motion: 'rocks',
+    jobs: ['Lay a hearth of flat stones', 'Stack the side walls', 'Mix clay with water and grass', 'Seal every joint with clay', 'Build the flue up through the roof'],
+    say: ['A fire inside. Indoors. Like a person.', 'Flat ones for the bottom, round ones for the walls.', 'The clay is the glue. Press it in.', 'If the flue draws, I sleep warm. If it does not, I sleep in smoke.'],
+  },
   'a-insulate.1': {
     motion: 'gather',
     jobs: ['Pull moss off the rocks', 'Pack it into the wall gaps', 'Push it in tight with a stick'],
