@@ -11,6 +11,9 @@ export interface PropState {
   dugout: boolean;
   /** rc.4: dugout sessions done (1-2 the pit, 3 the walls), so each stage shows. */
   dugoutProg?: number;
+  /** rc.4: sessions done towards the next shelter tier, and how many it needs. */
+  buildProg?: number;
+  buildNeed?: number;
   insulation: number;
   bed: boolean;
   firepitTier: number;
@@ -285,11 +288,36 @@ function shelter(s: PropState): THREE.Group {
       break;
     }
   }
+  if ((s.buildProg ?? 0) > 0 && s.structure < 3) workSite(g, s);
   if (s.insulation > 0 && s.structure > 0 && !s.winter) {
     const rnd = seeded(8);
     for (let i = 0; i < s.insulation * 4; i++) g.add(mesh(rough(new THREE.SphereGeometry(0.22, 5, 3), 0.08, i), mat(C.moss), -1.2 + rnd() * 2.4, 0.15, -1.3 + rnd() * 0.3));
   }
   return g;
+}
+
+// rc.4: the next tier going up beside the old one, a piece at a time, so the camp shows how far
+// along it is. Each session adds its share of the frame.
+function workSite(g: THREE.Group, s: PropState) {
+  const pieces: [THREE.Vector3, THREE.Vector3, number][] = [];
+  const ox = 3.4;
+  if (s.structure === 0) {
+    pieces.push([v(ox - 1.2, 0, 0.6), v(ox - 1.2, 1.7, 0.6), 0.06], [v(ox + 1.2, 0, 0.6), v(ox + 1.2, 1.7, 0.6), 0.06], [v(ox - 1.5, 1.65, 0.6), v(ox + 1.5, 1.65, 0.6), 0.06]);
+    for (let i = 0; i < 6; i++) pieces.push([v(ox - 1.1 + i * 0.44, 1.7, 0.6), v(ox - 1.1 + i * 0.44, 0, -1.4), 0.04]);
+  } else if (s.structure === 1) {
+    for (const z of [1.2, 0, -1.4]) pieces.push([v(ox - 1.4, 0, z), v(ox, 2.1, z), 0.07], [v(ox + 1.4, 0, z), v(ox, 2.1, z), 0.07]);
+    pieces.push([v(ox, 2.1, 1.5), v(ox, 2.1, -1.7), 0.07]);
+  } else {
+    for (let i = 0; i < 6; i++) {
+      const y = 0.12 + i * 0.24;
+      pieces.push([v(ox - 1.6, y, -1.4), v(ox + 1.6, y, -1.4), 0.12], [v(ox - 1.6, y + 0.12, -1.55), v(ox - 1.6, y + 0.12, 1.55), 0.12], [v(ox + 1.6, y + 0.12, -1.55), v(ox + 1.6, y + 0.12, 1.55), 0.12]);
+    }
+  }
+  const k = Math.min(1, (s.buildProg ?? 0) / Math.max(1, s.buildNeed ?? 1));
+  const n = Math.max(1, Math.round(pieces.length * k));
+  for (const [a, b, r] of pieces.slice(0, n)) log(g, a, b, r);
+  // The cut logs still waiting to go up.
+  for (let i = 0; i < Math.max(0, 4 - Math.round(k * 4)); i++) log(g, v(ox - 0.9, 0.1 + (i % 2) * 0.18, 2.2 + Math.floor(i / 2) * 0.2), v(ox + 0.9, 0.1 + (i % 2) * 0.18, 2.2 + Math.floor(i / 2) * 0.2), 0.09);
 }
 
 function pack(): THREE.Group {
@@ -843,7 +871,7 @@ export function buildProp(id: string, s: PropState): THREE.Group {
 export function propKey(id: string, s: PropState): string {
   switch (id) {
     case 'fire': return `${s.firepitTier}-${s.fireLit}`;
-    case 'shelter': return `${s.structure}-${s.dugout}-${s.dugoutProg ?? 0}-${s.insulation}-${s.bed}-${s.winter}`;
+    case 'shelter': return `${s.structure}-${s.buildProg ?? 0}-${s.dugout}-${s.dugoutProg ?? 0}-${s.insulation}-${s.bed}-${s.winter}`;
     case 'rack': return `${s.rackTier}-${s.hugeRack}-${Math.min(10, s.smoking)}-${Math.min(10, s.smoked)}`;
     case 'cache': return `${s.cacheTier}`;
     case 'post': return `${Math.min(s.day, 40)}`;

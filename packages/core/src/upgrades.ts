@@ -5,6 +5,7 @@ import { S } from './v12/state.ts';
 import { eCost, eTime } from './v12/cost.ts';
 import { BUILD_NEED, CACHE_COST, CACHE_NEED, DUGOUT_NEED, DUGOUT_STAGES, FIREPIT_COST, FIREPIT_NEED, RACK_COST, SHELTER_COST, dugoutStep } from './v12/tuning.ts';
 import { RULES } from './v12/rules.ts';
+import { builtToday, routeClosed } from './v12/camp.ts';
 
 export type UpgradeId = 'shelter' | 'dugout' | 'firepit' | 'rack' | 'cache';
 export type Material = 'wood' | 'moss' | 'clay' | 'rocks';
@@ -27,6 +28,10 @@ export interface UpgradePath {
   /** The tier you have now, 0 = nothing built. */
   current: number;
   steps: UpgradeStep[];
+  /** rc.4 (oneRoute): the other way to a bed was chosen, so this one is shut for the run. */
+  closed?: boolean;
+  /** rc.4 (buildPace): worked on today already; it can go on tomorrow. */
+  settling?: boolean;
 }
 
 interface Cost { e: number; h: number; wood?: number; moss?: number; clay?: number; rocks?: number }
@@ -54,6 +59,14 @@ function steps(costs: Array<Cost | null>, need: Array<number | null>, current: n
 }
 
 export function upgradePath(id: UpgradeId): UpgradePath {
+  const path = basePath(id);
+  if (id === 'shelter' || id === 'dugout') path.closed = routeClosed(id);
+  // The lean-to goes up in one go; every later session needs a night between.
+  path.settling = builtToday(id) && !(id === 'shelter' && S.structure === 0);
+  return path;
+}
+
+function basePath(id: UpgradeId): UpgradePath {
   switch (id) {
     case 'shelter':
       return { id, current: S.structure, steps: steps(SHELTER_COST, BUILD_NEED, S.structure, S.buildProg, 1) };

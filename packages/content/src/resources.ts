@@ -53,8 +53,8 @@ export const UPGRADE_TEXT = {
   next: (name: string) => `Build: ${name}`,
   sessions: (done: number, of: number) => (of > 1 ? `${done}/${of} sessions` : '1 session'),
   perSession: 'each session',
-  closed: (other: string) => `${other} stands instead`,
   needsShovel: 'Needs the shovel, which you did not pack.',
+  settling: 'Worked on today. It can go on tomorrow.',
   done: 'Finished',
   names: {
     shelter: ['Tarp on the ground', 'Lean-to', 'Framed hut', 'Timber shelter'],

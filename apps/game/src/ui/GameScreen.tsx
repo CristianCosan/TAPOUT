@@ -329,6 +329,8 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
   const extras = spec.extras.map((id) => panel.get(id)).filter((e): e is NonNullable<typeof e> => !!e && e.visible);
   if (spec.paths.length === 0 && extras.length === 0) return null;
   const S = view.state;
+  // rc.4: once one way to a bed is started, the other drops out of the panel.
+  const routes = spec.paths.filter((p) => !upgradePath(p.id).closed);
   const buildButton = (entry: { id: string; label: string; detail: string; enabled: boolean; onclick: string }, label: string) => (
     <button
       className="build-btn"
@@ -346,18 +348,18 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
       <h4>
         <Glyph id="build" /> {UPGRADE_TEXT.build}
       </h4>
-      {spec.paths.map(({ id, action }, i) => {
+      {routes.map(({ id, action }, i) => {
         const path = upgradePath(id);
         const names = UPGRADE_TEXT.names[id];
         const route = UPGRADE_TEXT.routes[id];
         const entry = panel.get(action);
         const next = path.steps.find((st) => st.state === 'next');
         const finished = !next;
-        const closed = id === 'shelter' && S.dugout ? UPGRADE_TEXT.closed(names[names.length - 1]!) : id === 'dugout' && !S.dugout && !entry?.visible ? UPGRADE_TEXT.needsShovel : '';
+        const closed = id === 'dugout' && !S.dugout && !entry?.visible ? UPGRADE_TEXT.needsShovel : '';
         return (
           <div key={id} className={`build-route${closed ? ' closed' : ''}`}>
             {i > 0 && <div className="build-or">{UPGRADE_TEXT.or}</div>}
-            {spec.paths.length > 1 && <b className="route-title">{route.title}</b>}
+            {routes.length > 1 && <b className="route-title">{route.title}</b>}
             <p className="route-hint">{route.hint}</p>
             <ol className="stages">
               {path.steps.map((step) => (
@@ -393,6 +395,7 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
                     })}
                     {next.sessions > 1 && <i>{UPGRADE_TEXT.perSession}</i>}
                   </div>
+                  {path.settling && <p className="route-closed">{UPGRADE_TEXT.settling}</p>}
                   {entry?.visible && buildButton(entry, UPGRADE_TEXT.next(names[next.tier]!))}
                 </div>
               )
@@ -743,6 +746,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       structure: S.structure,
       dugout: !!S.dugout,
       dugoutProg: S.dugoutProg ?? 0,
+      buildProg: S.buildProg ?? 0,
+      buildNeed: upgradePath('shelter').steps.find((st) => st.state === 'next')?.sessions ?? 1,
       insulation: S.insulation,
       bed: !!S.bed,
       firepitTier: S.firepitTier,
