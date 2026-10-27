@@ -1,7 +1,8 @@
 // rc.4 (Sir: "study all the exact steps it takes irl... it makes each build more personal"). Every
 // build step is a few small jobs, each one click with a hands motion. Somewhere in each step Dan
 // says something about it, picked from three or four versions so a second run sounds different.
-// Presentation only: the step costs what it costs, all at once, when the last job is done.
+// rc.8 (jobBuilds): each job pays its own time, energy and materials when you do it (the core's
+// JOB_SPLIT has one entry per job here), and you can stop after any of them.
 
 export interface BuildTask {
   /** The small jobs, in order. The last one finishes the step. */
@@ -26,42 +27,42 @@ export const BUILD_TASKS: Readonly<Record<string, BuildTask>> = {
   },
   'shelter.3': {
     motion: 'build',
-    jobs: ['Cut two pairs of heavy poles', 'Notch them where they cross', 'Raise both A-frames', 'Set the ridge across'],
+    jobs: ['Cut two pairs of heavy poles', 'Notch them where they cross', 'Raise both A-frames', 'Set the ridge across and pad the joints with moss'],
     say: ['An A-frame. Now it is a building.', 'Heavier than it looks. My back says so.', 'If this falls on me in the night, that is the show.', 'Notch, fit, lash. Notch, fit, lash.'],
   },
   'shelter.4': {
     motion: 'build',
-    jobs: ['Cut five straight spruce poles', 'Notch them to sit against the ridge', 'Lash each pole at the top', 'Weave thin branches through, low to high'],
+    jobs: ['Cut five straight spruce poles', 'Notch them to sit against the ridge', 'Lash each pole at the top', 'Weave thin branches through and stuff the gaps with moss'],
     say: ['Tight. Tighter than the last one. Dad would check this knot twice.', 'Walls. Actual walls.', 'Every gap I leave now is wind I feel later.', 'One more pole. Then one more.'],
   },
   'shelter.5': {
     motion: 'gather',
-    jobs: ['Cut boughs, thick ones', 'Lay the first row along the bottom', 'Overlap each row above it', 'Weigh the top down with poles'],
+    jobs: ['Cut boughs, thick ones', 'Lay the first row on a bed of moss', 'Overlap each row above it', 'Weigh the top down with poles'],
     say: ['Thick enough that I cannot see daylight through it.', 'The first night it rains and stays dry in here, I will cry a bit.', 'Boughs smell like Christmas. I should not think about Christmas.', 'Overlap. The water has to go somewhere that is not me.'],
   },
   'shelter.6': {
     motion: 'chop',
-    jobs: ['Level the ground for the base', 'Lay the two longest logs', 'Notch the corners', 'Drop the cross logs in'],
+    jobs: ['Level the ground and set corner stones', 'Lay the two longest logs', 'Notch the corners', 'Drop the cross logs in and chink them'],
     say: ['If the base is not square, nothing above it will be.', 'Saddle notches. Slow. Do them right.', 'This is where a cabin starts. With the dull part.', 'Level. Not perfect. Level.'],
   },
   'shelter.7': {
     motion: 'chop',
-    jobs: ['Roll a log up onto the wall', 'Mark where it sits', 'Cut the notch', 'Settle it and check the fit'],
+    jobs: ['Roll a log up onto the wall', 'Mark where it sits', 'Cut the notch', 'Settle it, wedge it with stones, chink the seam'],
     say: ['Waist high. I can lean on it.', 'Roll, mark, cut, drop. All day.', 'My hands have stopped hurting. That is probably bad.', 'Dad built a shed like this. I held the tape.'],
   },
   'shelter.8': {
     motion: 'chop',
-    jobs: ['Skid the logs over on rollers', 'Lever each one up the wall', 'Notch and drop it in', 'Chink the gaps with moss and clay'],
+    jobs: ['Skid the logs over on rollers', 'Lever each one up the wall over a stone', 'Notch and drop it in', 'Chink the gaps with moss and clay'],
     say: ['Head height. I can stand up inside my own house.', 'Moss and clay in every seam. Wind will not find a way.', 'Lifting these alone is stupid. There is nobody else.', 'Look at that. I made a wall.'],
   },
   'shelter.9': {
     motion: 'build',
-    jobs: ['Cut the roof beams', 'Raise the ridge beam', 'Set the rafters across', 'Pin them with wooden pegs'],
+    jobs: ['Cut the roof beams', 'Prop the ridge beam on stacked stones', 'Set the rafters on a bed of clay and moss', 'Pin them with wooden pegs'],
     say: ['Rafters. The skeleton of a roof.', 'Up the ladder, down the ladder. There is no ladder.', 'Pegs, not nails. Like it was done for a thousand years.', 'One more day and it has a lid.'],
   },
   'shelter.10': {
     motion: 'dig',
-    jobs: ['Lay bark over the rafters', 'Cut sod and stack it on', 'Hang a door of lashed poles', 'Stand back and look at it'],
+    jobs: ['Lay bark and moss over the rafters', 'Cut sod, stack it on, weigh the edge with stones and clay', 'Hang a door of lashed poles', 'Stand back and look at it'],
     say: ['That is a house. I built a house.', 'Sod on top. Grass will grow on my roof in spring. If I am here in spring.', 'A door. I can close a door on the dark.', 'Mara would say it is crooked. It is a little crooked.'],
   },
 
@@ -88,14 +89,14 @@ export const BUILD_TASKS: Readonly<Record<string, BuildTask>> = {
   },
   'dugout.5': {
     motion: 'dig',
-    jobs: ['Lay the roof logs across', 'Cover them with boughs and bark', 'Shovel the earth back over', 'Lay the sod on top'],
+    jobs: ['Lay the roof logs across', 'Cover them with boughs, bark and moss', 'Shovel the earth back over', 'Lay the sod on top'],
     say: ['Roofed and buried. Storms can do what they like up there.', 'The sod goes back where it came from. It looks like a hill.', 'Warmest bed on this lake. I would bet the prize on it.', 'You cannot even see it from the shore. Good.'],
   },
 
   // Firepit, five steps.
   'firepit.1': {
     motion: 'dig',
-    jobs: ['Clear the ground to bare dirt', 'Dig a shallow bowl', 'Pile the dirt as a lip'],
+    jobs: ['Clear the ground to bare dirt', 'Dig a shallow bowl', 'Ring the lip with the first stones'],
     say: ['Bare dirt. No roots to smoulder under me.', 'A bowl keeps the coals together.', 'Every fire I have had here was on the ground. Not any more.'],
   },
   'firepit.2': {
@@ -105,17 +106,17 @@ export const BUILD_TASKS: Readonly<Record<string, BuildTask>> = {
   },
   'firepit.3': {
     motion: 'dig',
-    jobs: ['Dig clay from the bank', 'Pick out the grit', 'Work it wet in your hands'],
+    jobs: ['Dig clay from the bank', 'Pick out the grit and gather hearth stones', 'Work it wet in your hands'],
     say: ['Clay like cold butter. Good clay.', 'Grit out, or it cracks.', 'My hands are grey to the wrist.'],
   },
   'firepit.4': {
     motion: 'stir',
-    jobs: ['Press clay into the gaps', 'Smooth a lining over the stones', 'Let it dry by the coals'],
+    jobs: ['Press clay into the gaps', 'Set the hearth stones and smooth a lining over them', 'Let it dry by the coals'],
     say: ['Smooth it like icing. Mum would approve.', 'A clay skin over the stone. It will hold heat for hours.', 'Do not rush it. Wet clay in a hot fire breaks.'],
   },
   'firepit.5': {
     motion: 'fire',
-    jobs: ['Build a small fire inside', 'Feed it slowly hotter', 'Let it burn down and cool'],
+    jobs: ['Patch the lining with the last clay and stones', 'Build a small fire inside and feed it slowly hotter', 'Let it burn down and cool'],
     say: ['Fire the clay hard. Then it is pottery, not mud.', 'Slow. Slow. Then hot.', 'A real firepit. It is the middle of the house now.'],
   },
 
@@ -127,7 +128,7 @@ export const BUILD_TASKS: Readonly<Record<string, BuildTask>> = {
   },
   'rack.2': {
     motion: 'build',
-    jobs: ['Lash the tops together', 'Spread the legs over the fire', 'Kick the feet into the ground'],
+    jobs: ['Cut a lashing pole and lash the tops together', 'Spread the legs over the fire', 'Kick the feet into the ground'],
     say: ['Tripod lashing. Wrap, frap, done.', 'It stands. It wobbles a little. It stands.', 'Over the fire, not in it. High enough for smoke, not flame.'],
   },
   'rack.3': {
@@ -137,19 +138,19 @@ export const BUILD_TASKS: Readonly<Record<string, BuildTask>> = {
   },
   'rack.4': {
     motion: 'rocks',
-    jobs: ['Carry flat stones up', 'Set a ring round the legs', 'Pack the gaps'],
+    jobs: ['Carry flat stones up', 'Set a ring round the legs', 'Brace the legs with a pole'],
     say: ['Stone at the feet. Harder to knock over, harder to raid.', 'Animals push. Stones push back.', 'Heavy work for a small thing. Worth it.'],
   },
   'rack.5': {
     motion: 'build',
-    jobs: ['Peel sheets of bark', 'Lay them over the top', 'Weigh them down'],
+    jobs: ['Peel sheets of bark', 'Lay them over a frame of poles', 'Weigh them down with stones'],
     say: ['A roof keeps the rain off the meat and the smoke in.', 'Bark sheds water like a shingle.', 'Done. A smokehouse, sort of.'],
   },
 
   // Food cache, seven steps.
   'cache.1': {
     motion: 'rocks',
-    jobs: ['Find flat stones', 'Carry them up from the slope', 'Stack them by the spot'],
+    jobs: ['Find flat stones', 'Carry them up from the slope', 'Cut the base logs and stack them by the spot'],
     say: ['Food is the one thing out here that brings visitors.', 'Flat stones. A lid nothing can lift.', 'Every animal on this lake can smell my supper.'],
   },
   'cache.2': {
@@ -159,27 +160,27 @@ export const BUILD_TASKS: Readonly<Record<string, BuildTask>> = {
   },
   'cache.3': {
     motion: 'dig',
-    jobs: ['Dig clay', 'Pick it clean', 'Knead it soft'],
+    jobs: ['Dig clay', 'Pick it clean', 'Knead it soft', 'Carry up stones for the seams'],
     say: ['More clay. My hands will never be clean again.', 'Seal the smell in. That is the trick.', 'Clay, again. It is the duct tape out here.'],
   },
   'cache.4': {
     motion: 'stir',
-    jobs: ['Press clay into every seam', 'Smooth the corners', 'Let it dry'],
+    jobs: ['Press clay into every seam', 'Wedge stones into the corners', 'Let it dry'],
     say: ['Every seam sealed. Nothing smells its way in now.', 'Corners first. That is where they dig.', 'It looks like a kiln. It is a fridge.'],
   },
   'cache.5': {
     motion: 'chop',
-    jobs: ['Fell four poles', 'Trim them straight', 'Char the bottoms in the fire'],
+    jobs: ['Fell four poles', 'Trim them straight', 'Char the bottoms in the fire', 'Carry up stones to pack the holes'],
     say: ['Charred ends do not rot in the ground.', 'Four legs to lift it out of reach.', 'Higher is safer. Nothing climbs a smooth pole well.'],
   },
   'cache.6': {
     motion: 'dig',
-    jobs: ['Dig four post holes', 'Set the posts and tamp them', 'Lash a platform across the top'],
+    jobs: ['Dig four post holes', 'Set the posts and tamp them with stones', 'Lash a platform across the top'],
     say: ['Tamp it hard. A leaning cache is a fallen cache.', 'A platform head high. Out of reach of anything on four legs.', 'This is the most careful I have been with anything out here.'],
   },
   'cache.7': {
     motion: 'build',
-    jobs: ['Empty the cache', 'Lift it up onto the platform', 'Load the food back in'],
+    jobs: ['Empty the cache', 'Lash a ladder of rungs', 'Lift it up and wedge it level with stones', 'Load the food back in'],
     say: ['Up it goes. Let them sniff.', 'Raised. As safe as anything can be out here.', 'If something still gets in, it earned it.'],
   },
 
@@ -191,7 +192,7 @@ export const BUILD_TASKS: Readonly<Record<string, BuildTask>> = {
   },
   'a-stove': {
     motion: 'rocks',
-    jobs: ['Lay a hearth of flat stones', 'Stack the side walls', 'Mix clay with water and grass', 'Seal every joint with clay', 'Build the flue up through the roof'],
+    jobs: ['Lay a hearth of flat stones', 'Stack the side walls', 'Mix clay with water and grass', 'Seal every joint with clay', 'Build the flue of stones up through the roof'],
     say: ['A fire inside. Indoors. Like a person.', 'Flat ones for the bottom, round ones for the walls.', 'The clay is the glue. Press it in.', 'If the flue draws, I sleep warm. If it does not, I sleep in smoke.'],
   },
   'a-insulate.1': {
@@ -234,9 +235,25 @@ export const BUILD_TASKS: Readonly<Record<string, BuildTask>> = {
     jobs: ['Cut a straight willow shoot', 'Slip the bark', 'Carve the notch', 'Burn the finger holes'],
     say: ['Grandpa made these in spring. I never learned. Learning now.', 'One note. Then another one.', 'Something for the long nights.', 'Music out here. Why not.'],
   },
+  // rc.8: the late ideas, as jobs too.
+  'a-reflector': {
+    motion: 'chop',
+    jobs: ['Drive two pairs of stakes behind the fire', 'Stack logs between them', 'Chink the base with stones'],
+    say: ['Half the heat was going into the trees. Not any more.', 'A wall for the fire to talk to.', 'Feel that. It comes right back at you.'],
+  },
+  'a-shingles': {
+    motion: 'knife',
+    jobs: ['Peel birch bark in sheets', 'Lay them from the eaves up, overlapping', 'Pin them with split sticks'],
+    say: ['Overlap, like scales on a fish.', 'Let it rain. Go on.', 'Birch bark. The tree that keeps giving.'],
+  },
+  'a-snowWall': {
+    motion: 'dig',
+    jobs: ['Stamp the snow down hard', 'Cut blocks with the shovel', 'Stack them in a ring, shoulder high', 'Fill the cracks with loose snow'],
+    say: ['Snow keeps you warm. Funny, that.', 'The wind will go over me now.', 'Like a kid building a fort. A serious fort.'],
+  },
   'a-hugeRack': {
     motion: 'build',
-    jobs: ['Cut long poles', 'Set two tripods', 'Lash a long rail between them', 'Add three levels of rails'],
+    jobs: ['Cut long poles', 'Set two tripods in stone footings', 'Lash a long rail between them', 'Add three levels of rails'],
     say: ['Room for a whole moose. If I ever get one.', 'Big rack, big hopes.', 'Two racks. I am running a smokehouse now.', 'Plan for the good day.'],
   },
 };
@@ -245,5 +262,10 @@ export const BUILD_TASK_TEXT = {
   title: (name: string) => `Building · ${name}`,
   next: (job: string, time: string) => `${job} · ${time}`,
   stop: 'Stop for now',
-  note: 'Nothing is used until the last job. Stop any time and pick up here later.',
+  note: 'Each job uses its own time, energy and materials when you do it. Stop after any job and pick up here later.',
+  part: (n: number, of: number) => `part ${n} of ${of}`,
+  trail: (parts: readonly string[]) => parts.join(' > '),
+  short: 'Not enough for this job yet',
+  closed: 'This cannot go on right now',
+  doneAll: 'Done',
 } as const;

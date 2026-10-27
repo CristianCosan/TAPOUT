@@ -66,6 +66,10 @@ export interface RuleSet {
   thinIce: boolean;
   /** rc.6 (Sir): on storm days the shore rocks are slick and you can go in off them. */
   wetRocks: boolean;
+  /** rc.8 (Sir): every build step is a few small jobs, each with its own time, energy and materials. */
+  jobBuilds: boolean;
+  /** rc.8 (Sir): his own times for fire, foraging, tinder, snares, tracks, carving, logs and travel. */
+  sirTimes: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -98,6 +102,8 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   moreCards: false,
   thinIce: false,
   wetRocks: false,
+  jobBuilds: false,
+  sirTimes: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

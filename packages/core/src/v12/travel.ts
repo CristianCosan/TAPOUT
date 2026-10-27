@@ -14,7 +14,7 @@ import { applyRaid } from './night.ts';
 import { curfewCapForLoc, hasKit, log } from './setup.ts';
 import { S } from './state.ts';
 import { afterAction, spend } from './threads.ts';
-import { SIGNS_SHORE, SIGNS_WOODS, TUNING, sensoryLine } from './tuning.ts';
+import { SIGNS_SHORE, SIGNS_WOODS, SIR_TIMES, TUNING, sensoryLine } from './tuning.ts';
 import { showModal } from './ui.ts';
 // ============================== travel & signs ==============================
 export function ambientFlavor(loc?){
@@ -97,12 +97,15 @@ export function travelPopup(loc?){
   S.signs[loc] = lines[0];
   if (firstVisitToday) showModal(`<h3>${loc==='camp'?'Back at camp':'At the '+loc}</h3><ul>${lines.map(l=>`<li>${l}</li>`).join('')}</ul><button class="mbtn" onclick="hideModal()">Continue</button>`);
 }
+// rc.8 (sirTimes): 10 minutes between places, 20 once the snow has come (spend() adds the ankle).
+export function travelHours(){ return S.winter ? SIR_TIMES.travelSnowHours : SIR_TIMES.travelHours; }
 export function goTo(loc?){
   if (S.over || loc === S.loc) return;
   const cap = curfewCapForLoc(loc);
   let trvH = S.winter ? TRAVEL_HOURS : TRAVEL_HOURS/2;
   if (S.winter) trvH *= TUNING.postSnow.travelTimeMultiplier;
   if (S.injury && S.injury.type === 'ankle') trvH *= TUNING.ankle.travelMul / (S.winter?1.5:1); // ankle multiplier owns this now (§6.1), replacing the old flat x4
+  if (RULES.sirTimes) trvH = travelHours();
   if (!spend(S.winter?5:3, trvH, true, 'ot', cap)) return;
   if (loc === 'shore' && !S.medicalArc && (S.weather==='rain'||S.weather==='storm') && rand() < 0.03){
     triggerMedicalArc('brokenAnkle');

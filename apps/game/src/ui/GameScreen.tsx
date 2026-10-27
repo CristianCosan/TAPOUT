@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { CAMP_HARVEST, GAME, iceCm, lateBuilt, thinIce, ambientTempC, campLeft, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
+import { CAMP_HARVEST, GAME, iceCm, jobPlan, lateBuilt, thinIce, ambientTempC, campLeft, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
 import { BUILD_MENU, BUILD_STATIONS, FALL_SCENE, BUILD_TASKS, BUILD_TASK_TEXT, ENERGY_HUD, HUNT_TEXT, HUNT_VOICE, INVENTORY_TEXT, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
@@ -374,14 +374,14 @@ function BuildPanel({ station, view, onBuild, onCost }: { station: string; view:
             const first = path.steps[0]!;
             const open = !!entry?.visible;
             return (
-              <button key={id} className="route-card" disabled={!open || !entry?.enabled} onClick={() => entry && onBuild({ key: `${id}.1`, name: UPGRADE_TEXT.steps[id][0]!, entry, hours: first.hours })} {...hover(entry)}>
+              <button key={id} className="route-card" disabled={!open || !entry || !canStart(`${id}.1`, entry)} onClick={() => entry && onBuild({ key: `${id}.1`, name: UPGRADE_TEXT.steps[id][0]!, entry, hours: first.hours, trail: [UPGRADE_TEXT.routes[id].title, UPGRADE_TEXT.names[id][1]!, UPGRADE_TEXT.steps[id][0]!] })} {...hover(entry)}>
                 <span className="bpic small" dangerouslySetInnerHTML={{ __html: BUILD_PICS[id]![id === 'dugout' ? 3 : 1] ?? '' }} />
                 <b>{UPGRADE_TEXT.routes[id].title}</b>
                 <small>{UPGRADE_TEXT.routes[id].hint}</small>
                 {open ? (
                   <span className="route-start">
                     {Object.keys(first.needs).length ? needs(first.needs, true) : null}
-                    <em>{entry?.enabled ? UPGRADE_TEXT.start[id as 'shelter' | 'dugout'] : noEmoji(entry?.detail ?? '')}</em>
+                    <em>{entry && canStart(`${id}.1`, entry) ? UPGRADE_TEXT.start[id as 'shelter' | 'dugout'] : noEmoji(entry?.detail ?? '')}</em>
                   </span>
                 ) : (
                   <span className="route-start">
@@ -434,9 +434,9 @@ function BuildPanel({ station, view, onBuild, onCost }: { station: string; view:
               </span>
             </div>
             {entry?.visible && (
-              <button className="build-btn" disabled={!entry.enabled} onClick={() => onBuild({ key: `${id}.${next.step}`, name: stepNames[next.step - 1] ?? '', entry, hours: next.hours })} {...hover(entry)}>
-                <Glyph id="build" /> <span>{jobsDone()[`${id}.${next.step}`] ? UPGRADE_TEXT.resume(stepNames[next.step - 1] ?? '') : UPGRADE_TEXT.go(stepNames[next.step - 1] ?? '')}</span>
-                {!entry.enabled && entry.detail && !path.settling && <em>{noEmoji(entry.detail)}</em>}
+              <button className="build-btn" disabled={!canStart(`${id}.${next.step}`, entry)} onClick={() => onBuild({ key: `${id}.${next.step}`, name: stepNames[next.step - 1] ?? '', entry, hours: next.hours, trail: [UPGRADE_TEXT.routes[id].title, tiers[next.tier]!, stepNames[next.step - 1] ?? ''] })} {...hover(entry)}>
+                <Glyph id="build" /> <span>{(jobPlan(`${id}.${next.step}`)?.done ?? 0) > 0 ? UPGRADE_TEXT.resume(stepNames[next.step - 1] ?? '') : UPGRADE_TEXT.go(stepNames[next.step - 1] ?? '')}</span>
+                {!canStart(`${id}.${next.step}`, entry) && entry.detail && !path.settling && <em>{noEmoji(entry.detail)}</em>}
               </button>
             )}
             {path.settling ? <p className="mb-note">{UPGRADE_TEXT.settling}</p> : lastOfTier && <p className="mb-note">{UPGRADE_TEXT.becomes(lastOfTier.step, tiers[next.tier]!)}</p>}
@@ -454,12 +454,12 @@ function BuildPanel({ station, view, onBuild, onCost }: { station: string; view:
         <div className="build-extras">
           {main && <div className="mb-label quiet">{UPGRADE_TEXT.also}</div>}
           {extras.map((entry) => (
-            <div key={entry.id} className={`bsub${entry.enabled ? '' : ' off'}`}>
+            <div key={entry.id} className={`bsub${canStart(thingKey(entry.id, view), entry) ? '' : ' off'}`}>
               <span className="bsub-name">
                 <Txt text={entry.label} />
               </span>
-              {entry.enabled && (
-                <button className="bsub-go" onClick={() => onBuild({ key: entry.id === 'a-insulate' ? `a-insulate.${(view.state.insulation ?? 0) + 1}` : entry.id, name: noEmoji(entry.label), entry })} {...hover(entry)}>
+              {canStart(thingKey(entry.id, view), entry) && (
+                <button className="bsub-go" onClick={() => onBuild({ key: thingKey(entry.id, view), name: noEmoji(entry.label), entry })} {...hover(entry)}>
                   <Glyph id="build" size={15} /> {UPGRADE_TEXT.build}
                 </button>
               )}
@@ -488,65 +488,85 @@ interface BuildStart {
   name: string;
   entry: { id: string; label: string; detail: string; enabled: boolean; onclick: string };
   hours?: number;
+  /** rc.8: where this step sits, e.g. Shelter > Lean-to > Ridge pole. */
+  trail?: string[];
 }
 
-/** Jobs done on build steps you stopped partway through (per player, this computer). */
-function jobsDone(): Record<string, number> {
-  try {
-    return JSON.parse(localStorage.getItem('tapout.buildJobs') ?? '{}') as Record<string, number>;
-  } catch {
-    return {};
-  }
+/** rc.8 (jobBuilds): a step can be started when its action could run; each job checks its own materials. */
+function canStart(key: string, entry: { enabled: boolean }): boolean {
+  const plan = jobPlan(key);
+  return plan ? plan.open : entry.enabled;
 }
-function saveJobs(jobs: Record<string, number>): void {
-  try {
-    localStorage.setItem('tapout.buildJobs', JSON.stringify(jobs));
-  } catch {
-    // Without storage a stopped step simply starts over.
-  }
+/** The build-task key of a thing made at a spot; insulation goes in three rounds. */
+function thingKey(id: string, view: View): string {
+  return id === 'a-insulate' ? `a-insulate.${(view.state.insulation ?? 0) + 1}` : id;
 }
 
 /**
  * rc.4: the small jobs of one build step, one click each with a hands motion. Dan says one of his
- * lines for the step partway through. Nothing is spent until the last job runs the v12 action.
+ * lines for the step partway through. rc.8 (jobBuilds): each job spends its own time, energy and
+ * materials in the core, which keeps the count, so a stopped step picks up where it was.
  */
-function BuildTaskCard({ task, onStop, onDone }: { task: BuildStart; onStop: () => void; onDone: () => void }) {
+function BuildTaskCard({ task, view, onStop, onDone }: { task: BuildStart; view: View; onStop: () => void; onDone: () => void }) {
   const spec = BUILD_TASKS[task.key]!;
-  // You can stop anywhere and pick up from the same job later.
-  const [done, setDoneState] = useState(() => jobsDone()[task.key] ?? 0);
-  const setDone = (n: number) => {
-    setDoneState(n);
-    saveJobs({ ...jobsDone(), [task.key]: n });
-  };
+  const plan = jobPlan(task.key);
+  const done = plan?.done ?? 0;
+  const job = plan?.jobs[done];
   // Which line, and on which job he says it.
   const [pick] = useState(() => ({ line: Math.floor(Math.random() * spec.say.length), at: Math.max(1, Math.floor(spec.jobs.length / 2)) }));
   const said = done >= pick.at;
-  const per = task.hours ? duration(Math.max(5, Math.round((task.hours * 60) / spec.jobs.length / 5) * 5)) : '';
+  const have = (m: string) => Number(view.state.stock?.[m] ?? 0);
+  const short = !!job && Object.entries(job.needs).some(([m, n]) => have(m) < (n ?? 0));
+  const tired = !!job && view.state.energy < job.energy;
   const click = () => {
-    const next = done + 1;
-    if (next >= spec.jobs.length) {
-      const { [task.key]: _finished, ...rest } = jobsDone();
-      saveJobs(rest);
+    if (!plan) {
       onDone();
+      session.click(task.entry.onclick);
       return;
     }
+    const last = done === plan.of - 1;
+    const before = JSON.stringify(view.state.acts);
     session.gesture(spec.motion);
-    if (next === pick.at) speakPieces([`b-${task.key}-${pick.line}`], spec.say[pick.line]!, 0);
-    setDone(next);
+    session.click(`actJob('${task.key}')`);
+    if (JSON.stringify(view.state.acts) === before) return;
+    if (done + 1 === pick.at) speakPieces([`b-${task.key}-${pick.line}`], spec.say[pick.line]!, 0);
+    if (last) onDone();
   };
+  const trail = BUILD_TASK_TEXT.trail([...(task.trail ?? [task.name]), BUILD_TASK_TEXT.part(done + 1, spec.jobs.length)]);
   return (
     <div className="build-task">
       <h3>{BUILD_TASK_TEXT.title(task.name)}</h3>
+      <div className="build-trail">{trail}</div>
+      <div className="build-bar">
+        <i style={{ width: `${(done / spec.jobs.length) * 100}%` }} />
+      </div>
       <ol>
-        {spec.jobs.map((job, i) => (
-          <li key={job} className={i < done ? 'ok' : i === done ? 'now' : ''}>
-            {i < done ? <Glyph id="star" size={15} /> : <Glyph id="build" size={15} />} {job}
+        {spec.jobs.map((name, i) => (
+          <li key={name} className={i < done ? 'ok' : i === done ? 'now' : ''}>
+            {i < done ? <Glyph id="star" size={15} /> : <Glyph id="build" size={15} />} {name}
+            {plan?.jobs[i] && (
+              <span className="job-cost">
+                {Object.entries(plan.jobs[i]!.needs).map(([m, n]) => (
+                  <span key={m} className={`build-need${i === done && have(m) < (n ?? 0) ? ' short' : ''}`}>
+                    <ResIcon id={m as ResourceId} size={14} />
+                    {n}
+                  </span>
+                ))}
+                <span>
+                  <Glyph id="energy" size={13} /> {plan.jobs[i]!.energy}
+                </span>
+                <span>
+                  <Glyph id="time" size={13} /> {duration(Math.max(1, Math.round(plan.jobs[i]!.hours * 60)))}
+                </span>
+              </span>
+            )}
           </li>
         ))}
       </ol>
       {said && <p className="build-say">{spec.say[pick.line]}</p>}
-      <button className="build-btn" onClick={click}>
-        <Glyph id="build" /> <span>{per ? BUILD_TASK_TEXT.next(spec.jobs[done]!, per) : spec.jobs[done]}</span>
+      <button className="build-btn" disabled={!!plan && (!plan.open || short || tired)} onClick={click}>
+        <Glyph id="build" /> <span>{spec.jobs[done]}</span>
+        {plan && !plan.open ? <em>{BUILD_TASK_TEXT.closed}</em> : short || tired ? <em>{BUILD_TASK_TEXT.short}</em> : null}
       </button>
       <div className="build-task-foot">
         <button className="hud-btn" onClick={onStop}>
@@ -608,7 +628,7 @@ function BuildMenu({ view, onClose, onOpen, onBuild }: { view: View; onClose: ()
             b.name,
             line,
             first && entry
-              ? go(BUILD_MENU.start, () => onBuild({ key: `${b.id}.1`, name: UPGRADE_TEXT.steps[b.id][0]!, entry, hours: next?.hours }), entry.enabled)
+              ? go(BUILD_MENU.start, () => onBuild({ key: `${b.id}.1`, name: UPGRADE_TEXT.steps[b.id][0]!, entry, hours: next?.hours, trail: [UPGRADE_TEXT.routes[b.id].title, UPGRADE_TEXT.names[b.id][1]!, UPGRADE_TEXT.steps[b.id][0]!] }), canStart(`${b.id}.1`, entry))
               : go(BUILD_MENU.open, () => onOpen(b.station)),
           );
         })}
@@ -617,11 +637,11 @@ function BuildMenu({ view, onClose, onOpen, onBuild }: { view: View; onClose: ()
           const entry = panel.get(id);
           if (!entry?.visible) return null;
           return (
-            <div key={id} className={`bsub${entry.enabled ? '' : ' off'}`}>
+            <div key={id} className={`bsub${canStart(thingKey(id, view), entry) ? '' : ' off'}`}>
               <span className="bsub-name">
                 <Txt text={entry.label} />
               </span>
-              {entry.enabled && go(BUILD_MENU.start, () => onBuild({ key: id, name: noEmoji(entry.label), entry }))}
+              {canStart(thingKey(id, view), entry) && go(BUILD_MENU.start, () => onBuild({ key: thingKey(id, view), name: noEmoji(entry.label), entry }))}
               {entry.detail && (
                 <small>
                   <WithIcons text={entry.detail} />
@@ -1230,11 +1250,9 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
             <BuildTaskCard
               key={task.key}
               task={task}
+              view={view}
               onStop={() => setTask(null)}
-              onDone={() => {
-                setTask(null);
-                session.click(task.entry.onclick);
-              }}
+              onDone={() => setTask(null)}
             />
           )}
           <Modal view={view} />

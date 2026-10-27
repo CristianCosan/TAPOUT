@@ -13,7 +13,7 @@ import { resolveDelta } from './resolve.ts';
 import { consumeKitStock, hasKit, log, maybeRenameSpot, registerEmptyCheck } from './setup.ts';
 import { S } from './state.ts';
 import { afterAction, isNightNow, spend } from './threads.ts';
-import { CARRY_CAP, GAME, hoursFor, HUGE_RACK_CAP, MAX_SNARES_PER_SPOT, MAX_SNARES_TOTAL, MEAT_HAUL_CAP, RACK_CAP, SHOT_HIT_RECOVERED, SHOT_MISS_LOST, SHOT_MISS_RECOVERED, TUNING, carryBlocked, rollHuntSpecies, rollSmallGame } from './tuning.ts';
+import { CARRY_CAP, GAME, SIR_TIMES, hoursFor, HUGE_RACK_CAP, MAX_SNARES_PER_SPOT, MAX_SNARES_TOTAL, MEAT_HAUL_CAP, RACK_CAP, SHOT_HIT_RECOVERED, SHOT_MISS_LOST, SHOT_MISS_RECOVERED, TUNING, carryBlocked, rollHuntSpecies, rollSmallGame } from './tuning.ts';
 import { $, hideModal, sfxMooseCall, showModal, typewriterInto } from './ui.ts';
 // ============================== actions: woods ==============================
 export function actForage(){
@@ -353,7 +353,8 @@ export function actCarve(){
   if (!S.killSite || S.killSite.carved || S.loc !== S.killSite.loc) return;
   const big = GAME[S.killSite.species].tier === 'big';
   const knifeMul = hasKit('knife') ? 0.75 : 1;
-  if (!spend(Math.round((big?18:12)*knifeMul), carveHours()*knifeMul, false, 'hw')) return;
+  const knifeTime = RULES.sirTimes && hasKit('knife') ? SIR_TIMES.knifeCarveMul : knifeMul;
+  if (!spend(Math.round((big?18:12)*knifeMul), carveHours()*knifeTime, false, 'hw')) return;
   S.killSite.carved = true;
   const hideGain = big ? 2 : 1;
   S.hide += hideGain;

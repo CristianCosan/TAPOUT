@@ -16,7 +16,7 @@ import { iceGamble, iceSlow } from './ice.ts';
 import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { S } from './state.ts';
 import { afterAction, spend, spendOrDebt, tickShiverClear } from './threads.ts';
-import { FIRE_LIGHT, STOVE, hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
+import { FIRE_LIGHT, SIR_TIMES, STOVE, hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
 import { render, sfxBuild, sfxCooking, sfxDrink, sfxEat, sfxFireLight, showModal } from './ui.ts';
 import { triggerBearDread } from './worry.ts';
 // ============================== actions: camp ==============================
@@ -24,10 +24,20 @@ export function fireCap(){ return [8,12,16][S.firepitTier]; }
 // v12 kit-draft §2/§3.2: fire runs on FIREWOOD (hand-gatherable, never structurally gated); without a
 // ferro rod, lighting one is a friction-fire attempt instead - slower, weather-dependent, a morale
 // sting per failed try, never impossible (the safety-valve rule from kit-draft §5.1).
+/** rc.8 (sirTimes): the range lighting will take now, for the button. */
+export function fireMinutes(){
+  const wet = !!WEATHER[S.weather]?.wetGain;
+  const [lo, hi] = (S.wetDays || 0) >= SIR_TIMES.wetSpellDays ? SIR_TIMES.fireSpellMin : wet ? SIR_TIMES.fireWetMin : SIR_TIMES.fireDryMin;
+  return `${lo}-${hi} min`;
+}
 // rc.4 (realTimes): how long getting a fire going takes this time.
 function lightFireHours(){
   if (!RULES.realTimes) return 0;
   const wet = !!WEATHER[S.weather]?.wetGain;
+  if (RULES.sirTimes){
+    const [lo, hi] = (S.wetDays || 0) >= SIR_TIMES.wetSpellDays ? SIR_TIMES.fireSpellMin : wet ? SIR_TIMES.fireWetMin : SIR_TIMES.fireDryMin;
+    return (lo + Math.floor(rand() * (hi - lo + 1))) / 60;
+  }
   if (rand() < (wet ? FIRE_LIGHT.slowChanceWet : FIRE_LIGHT.slowChance)){
     log(pick(['Half an hour on your knees blowing on a coal that will not take. Then it takes.', 'Everything is damp. Shave after shave of birch until it finally catches. Half an hour gone.', 'Sparks, smoke, nothing. Sparks, smoke, nothing. Thirty minutes, and then a flame.', 'Your hands are shaking too much to aim the sparks. It takes half an hour.']), 'bad');
     return FIRE_LIGHT.slowHours;
@@ -64,11 +74,13 @@ export function actFire(){
 }
 export function actFireNoFerro(){ actFire(); }
 // kit-draft §2 friction-fire fallback: ~1-2h attempt, weather-dependent fail chance, morale sting per fail.
+// rc.8 (sirTimes): anywhere from one hour to three.
+function frictionHours(){ const [lo, hi] = SIR_TIMES.frictionHours; return lo + Math.round(rand() * (hi - lo) * 4) / 4; }
 export function actFrictionFire(){
   if (S.over || S.fireH > 0) return;
   const lightWoodCost = S.firepitTier>=2 ? 1 : 2;
   if (S.stock.firewood < lightWoodCost || S.tinder < 1) return;
-  if (!spend(6, 1.5, false, 'h')) return;
+  if (!spend(6, RULES.sirTimes ? frictionHours() : 1.5, false, 'h')) return;
   S.tinder--;
   const chance = Math.min(0.7, (WEATHER[S.weather].fireChance - 0.15) + S.structure*0.03);
   if (rand() < chance){
@@ -77,7 +89,7 @@ export function actFrictionFire(){
     log('Caught, finally. Bow-drill friction fire - your arms are shaking, but it caught. Fire is going.', 'good');
   } else {
     S.morale = clamp(S.morale - 4);
-    log('No catch. An hour and a half of bow-drill work and the ember never takes. −morale, −1 tinder', 'bad');
+    log(RULES.sirTimes ? 'No catch. Hours of bow-drill work and the ember never takes. −morale, −1 tinder' : 'No catch. An hour and a half of bow-drill work and the ember never takes. −morale, −1 tinder', 'bad');
   }
   afterAction('friction');
 }
@@ -326,7 +338,9 @@ export function actPoultice(){
 // rc.4 (oneRoute): the shelter and the dugout are one or the other for the run.
 export function routeClosed(kind?){
   if (!RULES.oneRoute) return false;
-  return kind === 'shelter' ? (S.dugout || S.dugoutProg > 0) : (S.structure > 0 || S.buildProg > 0);
+  // rc.8 (jobBuilds): a first job done on one way closes the other too.
+  const begun = (id) => RULES.jobBuilds && Object.keys(S.jobs ?? {}).some((k) => k.startsWith(id + '.') && S.jobs[k] > 0);
+  return kind === 'shelter' ? (S.dugout || S.dugoutProg > 0 || begun('dugout')) : (S.structure > 0 || S.buildProg > 0 || begun('shelter'));
 }
 // rc.4 (buildPace): one building session per build per day (the lean-to is the exception).
 // Only the shelter, the dugout and its insulation are paced; the smaller builds go by their hours.

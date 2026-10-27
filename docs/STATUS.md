@@ -321,3 +321,5 @@ M14 onwards: the painted locations, art, audio, narrative pass, Steam.
 ## Open questions for Sir
 
 - The invented details in `docs/DECISIONS.md` (D-006 to D-011) are open to veto.
+
+**1.0.0-rc.8** (D-108 to D-112): every build job has its own time, energy and materials, spent when you click it, with a progress line and stop-and-carry-on kept in the save; Sir's times for fire, friction fire, foraging, tinder, snares, tracks, carving, logs and travel; daytime collapse ends in the medics; the earth dugout rebuilt as a pit house and the other shelters given proper thatch, boards, gables, door and chimney. A table of every action time and build job, read from the game, is made by `npm run table`. Essentials are buildable by about day 18 (shelter route) or day 9 (dugout route).

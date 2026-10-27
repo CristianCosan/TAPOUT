@@ -25,7 +25,7 @@ import { lateBuilt, lateTick } from './late.ts';
 import { S, SETTINGS } from './state.ts';
 import { checkThreads, showForcedTapoutCinematic, tickDryingAtFire, tickShiverClear } from './threads.ts';
 import { queueLocNews } from './travel.ts';
-import { GAME, LONELY_LINES, TUNING, computeMaxEnergy, contextualTapReason, LATE_UPGRADES, STOVE } from './tuning.ts';
+import { GAME, WEATHER, LONELY_LINES, TUNING, computeMaxEnergy, contextualTapReason, LATE_UPGRADES, STOVE } from './tuning.ts';
 import { render, sfxFinalTwo, showModal } from './ui.ts';
 import { enforceMoraleCeiling, smokedShelfHours, triggerBearDread, worryLedgerDailyTick } from './worry.ts';
 // ============================== night / new day ==============================
@@ -520,6 +520,8 @@ export function finishNight(notes?){
     if (RULES.directorFront && S.weatherFront){ S.weatherFront = false; S.weather = worseWeather(S.weather, rollWeather()); }
   }
   if (S.weather === 'storm') S.tot.storms++;
+  // rc.8 (sirTimes): days of rain in a row soak everything, and a fire is slow to take after them.
+  if (RULES.sirTimes) S.wetDays = WEATHER[S.weather]?.wetGain ? (S.wetDays || 0) + 1 : 0;
   // v12 §3.2: winter onset triggers off the first settled snowfall after the zero-cross day - snow
   // structurally cannot roll before the cross (rollWeather derives precip identity from temp).
   if (!S.winter && S.day >= S.zeroCrossDay && S.weather === 'snow'){

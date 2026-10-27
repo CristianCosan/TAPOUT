@@ -133,6 +133,14 @@ describe('the medics check before the death verdict', () => {
     night(run, crash);
     expect(run.state.cause).toBe('med');
   });
+  it('rc.7 medicWatch: collapsing during the day ends in a medical pull too', () => {
+    for (const [rules, cause] of [[{ ...TAPOUT_RULES, medicWatch: false }, 'dead'], [TAPOUT_RULES, 'med']] as const) {
+      const run = start(rules);
+      run.state.health = 0;
+      run.call('afterAction', 'rest');
+      expect(run.state.cause).toBe(cause);
+    }
+  });
 });
 
 describe('legacy defects', () => {
@@ -381,12 +389,12 @@ describe('rc.4 one route and build pace', () => {
 });
 
 describe('rc.4 real times', () => {
-  it('foraging takes 15 minutes in v12 and 30 in TAP / OUT, for the same energy', () => {
-    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+  it('foraging takes 15 minutes in v12, 30 with rc.4 times and 20 with Sir\'s rc.8 times, for the same energy', () => {
+    for (const [rules, h] of [[V12_RULES, 0.25], [{ ...TAPOUT_RULES, sirTimes: false }, 0.5], [TAPOUT_RULES, 1 / 3]] as const) {
       const run = start(rules);
       Object.assign(run.state, { loc: 'woods', hour: 9, energy: 120, maxEnergy: 120 });
       run.call('actForage');
-      expect(run.state.hour - 9).toBeCloseTo(rules === V12_RULES ? 0.25 : 0.5, 5);
+      expect(run.state.hour - 9).toBeCloseTo(h, 5);
     }
   });
   it('lighting a fire with the ferro rod is free of time in v12 and takes 1 to 30 minutes in TAP / OUT', () => {

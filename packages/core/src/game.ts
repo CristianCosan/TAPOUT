@@ -40,13 +40,14 @@ import * as panel from './v12/panel.ts';
 import * as home from './v12/home.ts';
 import * as letters from './v12/letters.ts';
 import * as testMode from './v12/testMode.ts';
+import * as jobs from './v12/jobs.ts';
 
 export type { HomeThread } from './v12/home.ts';
 
 const MODULES = [
   breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, gear, ice, late, moreCards, helpers,
   interior, medical, modifiers, night, person, recorder, resolve, rules, setup, shore, tags, threads,
-  travel, tuning, woods, worry, panel, home, letters, testMode,
+  travel, tuning, woods, worry, panel, home, letters, testMode, jobs,
 ];
 
 /** Every function v12 defines, by its v12 name. */
@@ -178,11 +179,12 @@ export { KIT_POOL, WEATHER, SHELTERS, BUILD_NEED, CARRY_CAP, GAME, MAX_SNARES_PE
 export { wearing, type Garment } from './v12/gear.ts';
 export { iceCm, thinIce } from './v12/ice.ts';
 export { lateBuilt, type LateId } from './v12/late.ts';
+export { jobPlan, type JobPlan, type Job, type JobMaterial } from './v12/jobs.ts';
 export { CLOTHES } from './v12/tuning.ts';
 export { ambientTempC } from './v12/cost.ts';
 export { fireCap } from './v12/camp.ts';
 export { campLeft } from './v12/helpers.ts';
-export { CAMP_HARVEST } from './v12/tuning.ts';
+export { CAMP_HARVEST, JOB_SPLIT, SIR_HOURS, SIR_TIMES } from './v12/tuning.ts';
 export { waterCap, computeBMI } from './v12/setup.ts';
 export { meatCount, berryCount } from './v12/food.ts';
 export { roundDisplay, hh, duskHour, dawnHour } from './v12/helpers.ts';
