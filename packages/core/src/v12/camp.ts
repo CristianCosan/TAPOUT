@@ -12,6 +12,7 @@ import { takeSmoked } from './person.ts';
 import { resolveDelta } from './resolve.ts';
 import { hasKit, log, registerWasteDiscard, waterCap } from './setup.ts';
 import { RULES, say } from './rules.ts';
+import { iceGamble, iceSlow } from './ice.ts';
 import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { S } from './state.ts';
 import { afterAction, spend, spendOrDebt, tickShiverClear } from './threads.ts';
@@ -446,7 +447,8 @@ export function actCache(){
 }
 export function actIceCache(){
   if (S.iceCache || !S.winter || S.loc !== 'shore') return;
-  if (!spend(ICE_CACHE_COST.e, ICE_CACHE_COST.h, true, 'ohw')) return;
+  if (!spend(ICE_CACHE_COST.e, ICE_CACHE_COST.h*iceSlow(), true, 'ohw')) return;
+  if (iceGamble()){ afterAction('fell'); return; }
   S.iceCacheProg++;
   sfxBuild();
   if (S.iceCacheProg >= ICE_CACHE_NEED){

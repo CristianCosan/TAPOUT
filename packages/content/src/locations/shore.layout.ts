@@ -17,7 +17,7 @@ export const SHORE: LocationLayout = {
     { ...station('duck', 'Open water', 'Where waterfowl sit when they come in.', 1000, 470, 160, 70, HUNT_ACTIONS), hotspot: patch(1000, 450, 220, 80), when: 'hunt' },
     { ...station('icecache', 'Ice cache', 'A hole in the ice that keeps food frozen and safe.', 640, 720, 160, 80, ['a-iceCache']), hotspot: patch(640, 700, 200, 80), when: 'winter' },
     station('net', 'Net frame', 'Where the gill net is woven and mended.', 430, 860, 200, 150, ['a-net', 'a-deploynet']),
-    { ...station('edge', 'Water\'s edge', 'Fill the pot, or drink straight from the stream.', 960, 780, 300, 100, ['a-fetch', 'a-stream']), hotspot: patch(960, 760, 320, 100) },
+    { ...station('edge', 'Water\'s edge', 'Fill the pot, or drink straight from the stream.', 960, 780, 300, 100, ['a-fetch', 'a-stream', 'a-checkIce']), hotspot: patch(960, 760, 320, 100) },
     station('rocks', 'Rock bar', 'Flat stones for a firepit.', 1410, 850, 260, 120, ['a-rocks']),
     station('clay', 'Clay bank', 'Grey clay under the bank.', 700, 900, 240, 110, ['a-clay']),
     { ...station('killsite', 'Kill site', 'What is left of the animal.', 1180, 960, 260, 90, KILL_ACTIONS), hotspot: patch(1180, 940, 280, 90), when: 'killSite' },

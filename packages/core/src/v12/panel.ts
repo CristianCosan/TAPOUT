@@ -4,6 +4,8 @@
 
 import { letterPanel } from './letters.ts';
 import { RULES } from './rules.ts';
+import { lateBuilt, lateKnown } from './late.ts';
+import { iceCm, thinIce } from './ice.ts';
 import { builtToday, fireCap, routeClosed, stoveReady } from './camp.ts';
 import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { ambientTempC, eCost, eTime, shiveringActive } from './cost.ts';
@@ -15,7 +17,7 @@ import { NET_SESSIONS, clayHours } from './shore.ts';
 import { carveHours } from './woods.ts';
 import { S } from './state.ts';
 import { isNightNow } from './threads.ts';
-import { STOVE, hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, CARRY_CAP, DUGOUT_NEED, dugoutStep, FIREPIT_COST, FIREPIT_NEED, GAME, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, ICE_CACHE_NEED, MAX_LINES_TOTAL, MAX_SNARES_TOTAL, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER, carryBlocked, carryType } from './tuning.ts';
+import { ICE, LATE_UPGRADES, STOVE, hoursFor, BUILD_NEED, CACHE_COST, CACHE_NEED, CARRY_CAP, DUGOUT_NEED, dugoutStep, FIREPIT_COST, FIREPIT_NEED, GAME, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, ICE_CACHE_NEED, MAX_LINES_TOTAL, MAX_SNARES_TOTAL, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER, carryBlocked, carryType } from './tuning.ts';
 import { enforceMoraleCeiling } from './worry.ts';
 // ---- The action panel: v12's render() run against a recording page instead of a real one.
 // What it records is exactly what v12 showed the player: which actions exist here, which are
@@ -234,6 +236,27 @@ export const BUTTONS: readonly PanelButton[] = [
     "hidden": true
   },
   {
+    "id": "a-reflector",
+    "loc": "camp",
+    "onclick": "actReflector()",
+    "label": "🪵 Reflector wall",
+    "hidden": true
+  },
+  {
+    "id": "a-shingles",
+    "loc": "camp",
+    "onclick": "actShingles()",
+    "label": "🏕 Birch-bark shingles",
+    "hidden": true
+  },
+  {
+    "id": "a-snowWall",
+    "loc": "camp",
+    "onclick": "actSnowWall()",
+    "label": "❄️ Snow wall",
+    "hidden": true
+  },
+  {
     "id": "a-confess",
     "loc": "camp",
     "onclick": "actConfess()",
@@ -281,6 +304,13 @@ export const BUTTONS: readonly PanelButton[] = [
     "onclick": "actIceFish()",
     "label": "🎏 Fish the hole actively",
     "hidden": false
+  },
+  {
+    "id": "a-checkIce",
+    "loc": "shore",
+    "onclick": "actCheckIce()",
+    "label": "🧊 Check the ice",
+    "hidden": true
   },
   {
     "id": "a-iceCache",
@@ -807,6 +837,15 @@ function panelPass(){
   setBtn('a-table', r[0], r[1]);
   r = S.bed ? [false,'built (+comfort)'] : gate(5,hoursFor('bed'), S.stock.moss >= 4, 'need 4 moss', `−{c}⚡ · ${durTxt(hoursFor('bed'))} · 4 moss · +comfort`, 'h');
   setBtn('a-bed', r[0], r[1]);
+  for (const [id, key] of [['a-reflector','reflector'],['a-shingles','shingles'],['a-snowWall','snowWall']] as const){
+    $(id).classList.toggle('hidden', !lateKnown(key));
+    if (!lateKnown(key)) continue;
+    const c = LATE_UPGRADES.cost[key];
+    const parts = [c.wood ? `${c.wood} log${c.wood>1?'s':''}` : '', c.rocks ? `${c.rocks} rocks` : ''].filter(Boolean).join(' + ');
+    const have = (!c.wood || S.stock.wood >= c.wood) && (!c.rocks || S.stock.rocks >= c.rocks);
+    r = lateBuilt(key) ? [false,'built'] : key === 'shingles' && S.structure < 1 ? [false,'once there is a roof'] : gate(c.e, c.h, have, `need ${parts}`, `−{c}⚡ · ${durTxt(c.h)}${parts ? ' · ' + parts : ''}`, 'h');
+    setBtn(id, r[0], r[1]);
+  }
   $('a-stove').classList.toggle('hidden', !RULES.stove);
   if (RULES.stove){
     r = S.stove ? [false,'built (a fire lasts the night)'] : !stoveReady() ? [false,'once the shelter is a Framed hut, or the dugout is roofed'] : gate(STOVE.e, STOVE.h, S.stock.rocks >= STOVE.rocks && S.stock.clay >= STOVE.clay, `need ${STOVE.rocks} rocks + ${STOVE.clay} clay`, `−{c}⚡ · ${durTxt(STOVE.h)} · ${STOVE.rocks} rocks + ${STOVE.clay} clay · a fire lasts the night`, 'h');
@@ -860,6 +899,12 @@ function panelPass(){
   if (S.winter && !S.iceCache){
     r = gate(ICE_CACHE_COST.e, ICE_CACHE_COST.h, true, '', `−{c}⚡ · ${durTxt(ICE_CACHE_COST.h)} · ${S.iceCacheProg}/${ICE_CACHE_NEED} · absolutely critter-proof when done`, 'ohw');
     setBtn('a-iceCache', r[0], r[1]);
+  }
+  $('a-checkIce').classList.toggle('hidden', !(RULES.thinIce && S.winter));
+  if (RULES.thinIce && S.winter){
+    const known = S.iceCheckedDay === S.day ? ` · today ${iceCm()} cm${thinIce() ? ', thin: slow going, and it can give' : ', it holds'}` : '';
+    r = gate(1, ICE.checkHours, true, '', `−{c}⚡ · ${durTxt(ICE.checkHours)} · chop a test hole${known}`);
+    setBtn('a-checkIce', r[0], r[1]);
   }
   r = (lineCount<=0 && !(S.net.built && !S.winter)) ? [false,'nothing set yet'] : gate(3,0.1667,true,'',`−{c}⚡ · ${durTxt(0.1667)}`,'o');
   setBtn('a-checkShore', r[0], r[1]);

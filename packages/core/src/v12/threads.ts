@@ -15,7 +15,7 @@ import { RULES } from './rules.ts';
 import { S } from './state.ts';
 import { testTopUp } from './testMode.ts';
 import { clothesEffect } from './gear.ts';
-import { TUNING, WEATHER } from './tuning.ts';
+import { STOVE, TUNING, WEATHER } from './tuning.ts';
 import { render, showModal, toastRefusal, typewriterInto } from './ui.ts';
 // ============================== v6.2: personal threads ==============================
 export function checkThreads(notes?){
@@ -61,7 +61,7 @@ export function accrueExposure(h?, outdoor?){
 export function tickDryingAtFire(h?){
   if (!S.soakedThrough) return;
   if (S.loc === 'camp' && S.fireH > 0){
-    S.dryHoursAccum = (S.dryHoursAccum||0) + h;
+    S.dryHoursAccum = (S.dryHoursAccum||0) + h*(RULES.stove && S.stove ? STOVE.dryMul : 1);
     if (S.dryHoursAccum >= TUNING.exposure.dryHoursNeeded){
       S.soakedThrough = false;
       S.conditions.soakedThrough.active = false;

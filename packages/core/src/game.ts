@@ -16,6 +16,9 @@ import * as endingSequences from './v12/endingSequences.ts';
 import * as endings from './v12/endings.ts';
 import * as food from './v12/food.ts';
 import * as gear from './v12/gear.ts';
+import * as late from './v12/late.ts';
+import * as ice from './v12/ice.ts';
+import * as moreCards from './v12/moreCards.ts';
 import * as helpers from './v12/helpers.ts';
 import * as interior from './v12/interior.ts';
 import * as medical from './v12/medical.ts';
@@ -41,7 +44,7 @@ import * as testMode from './v12/testMode.ts';
 export type { HomeThread } from './v12/home.ts';
 
 const MODULES = [
-  breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, gear, helpers,
+  breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, gear, ice, late, moreCards, helpers,
   interior, medical, modifiers, night, person, recorder, resolve, rules, setup, shore, tags, threads,
   travel, tuning, woods, worry, panel, home, letters, testMode,
 ];

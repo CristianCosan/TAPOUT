@@ -21,10 +21,11 @@ import { recordDailySnapshot } from './recorder.ts';
 import { checkBreakingPoint, checkPromise, maybeGeneratePromise, resolveDelta } from './resolve.ts';
 import { computeBMI, hasKit, log, rollPredatorNext, rollWeather, sensitivityMul, tempFor } from './setup.ts';
 import { RULES, say } from './rules.ts';
+import { lateBuilt, lateTick } from './late.ts';
 import { S, SETTINGS } from './state.ts';
 import { checkThreads, showForcedTapoutCinematic, tickDryingAtFire, tickShiverClear } from './threads.ts';
 import { queueLocNews } from './travel.ts';
-import { GAME, LONELY_LINES, TUNING, computeMaxEnergy, contextualTapReason, STOVE } from './tuning.ts';
+import { GAME, LONELY_LINES, TUNING, computeMaxEnergy, contextualTapReason, LATE_UPGRADES, STOVE } from './tuning.ts';
 import { render, sfxFinalTwo, showModal } from './ui.ts';
 import { enforceMoraleCeiling, smokedShelfHours, triggerBearDread, worryLedgerDailyTick } from './worry.ts';
 // ============================== night / new day ==============================
@@ -128,6 +129,12 @@ export function actSleep(early?){
       S.health = 1; S.minHealth = Math.min(S.minHealth, S.health);
       notes.forEach(n=>log(n,'event'));
       log('🩺 The med team comes in for the check at first light and finds you barely responsive by the cold fire. They don\'t ask how you\'re holding up. This is the end of the run.', 'bad');
+      endGame('med'); return;
+    }
+    if (RULES.medicWatch){
+      S.health = 1; S.minHealth = Math.min(S.minHealth, S.health);
+      notes.forEach(n=>log(n,'event'));
+      log('🩺 Somebody was watching the feed. The boat comes in before first light and the medics find you curled by a dead fire, barely answering. They don\'t ask. This is the end of the run.', 'bad');
       endGame('med'); return;
     }
     S.deathSource = 'collapse'; endGame('dead'); return;
@@ -517,6 +524,7 @@ export function finishNight(notes?){
   // structurally cannot roll before the cross (rollWeather derives precip identity from temp).
   if (!S.winter && S.day >= S.zeroCrossDay && S.weather === 'snow'){
     S.winter = true;
+    if (RULES.thinIce) S.iceFrom = S.day;
     S.lineList = [];
     S._firstSnowCeremony = true;
     notes.push('❄️ Something has changed overnight - the cold isn\'t letting go again.');
@@ -567,7 +575,7 @@ export function finishNight(notes?){
       queueLocNews('shore', '🕸 Gone entirely. A once-in-a-run super-storm blew through and took the gill net completely - not torn, just gone.');
     } else if (S.net.built && !S.net.damaged && !S.winter && rand() < 0.30){ S.net.damaged = true; queueLocNews('shore', '🕸 Torn. The storm tore your gill net loose - it needs repairing.'); }
 
-    if (!S.chains.roof && S.structure >= 1 && !S.dugout && activeChainCount() < (S.day>10?2:1) && rand() < (hasKit('tarp')?0.08:0.16)){
+    if (!S.chains.roof && S.structure >= 1 && !S.dugout && activeChainCount() < (S.day>10?2:1) && rand() < (hasKit('tarp')?0.08:0.16)*(lateBuilt('shingles') ? LATE_UPGRADES.roofTearMul : 1)){
       S.chains.roof = {day:S.day};
       notes.push('🌧 The storm rips a seam open in the roof. Wet gear, wet bedding - you\'ll need to patch it before the cold really sets in.');
     }
@@ -739,6 +747,7 @@ export function finishNight(notes?){
   }
 
   directorTick(notes);
+  lateTick(notes);
   checkThreads(notes);
   if (RULES.homeThread) homeThreadTick(notes);
   checkAnkleSalvage(notes);

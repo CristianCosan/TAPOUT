@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { CAMP_HARVEST, GAME, ambientTempC, campLeft, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
-import { BUILD_MENU, BUILD_STATIONS, BUILD_TASKS, BUILD_TASK_TEXT, ENERGY_HUD, HUNT_TEXT, HUNT_VOICE, INVENTORY_TEXT, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { BUILD_MENU, BUILD_STATIONS, FALL_SCENE, BUILD_TASKS, BUILD_TASK_TEXT, ENERGY_HUD, HUNT_TEXT, HUNT_VOICE, INVENTORY_TEXT, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -13,7 +13,7 @@ import type { PropState } from '../world/props.ts';
 import { useSoundCues } from '../audio/cues.ts';
 import { useThoughts } from '../audio/useThoughts.ts';
 import { ThoughtSubtitle } from './ThoughtSubtitle.tsx';
-import { playUi } from '../audio/effects.ts';
+import { playFall, playUi } from '../audio/effects.ts';
 import { speakPieces } from '../audio/thoughts.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
@@ -923,6 +923,17 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     if (S.day > lastDay.current) setCurtain(S.day);
     lastDay.current = S.day;
   }, [S.day]);
+  // rc.6: going through the ice or off a wet rock gets a short scene of its own.
+  const [fall, setFall] = useState<{ kind: 'ice' | 'rocks'; n: number } | null>(null);
+  const fellSeen = useRef<number>((S.fell?.n as number) ?? 0);
+  useEffect(() => {
+    const fell = S.fell as { kind: 'ice' | 'rocks'; n: number } | undefined;
+    if (!fell || fell.n <= fellSeen.current) return;
+    fellSeen.current = fell.n;
+    setSelected(null);
+    setFall({ kind: fell.kind, n: fell.n });
+    playFall(fell.kind);
+  }, [view.version]);
 
   // Quiet interface sounds: a panel opening or closing, a card arriving, the journal.
   const wasOpen = useRef(false);
@@ -1037,6 +1048,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       insulation: S.insulation,
       bed: !!S.bed,
       stove: !!S.stove,
+      secondTarp: !!(S.kit as Set<string> | undefined)?.has('tarp'),
       firepitTier: S.firepitTier,
       fireLit: S.fireH > 0,
       rackTier: S.rackTier,
@@ -1067,7 +1079,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     };
     // v12 mutates its state in place; the view version marks a change.
   }, [S, view.version]);
-  const frozen = !!(view.modal || journal || map || night || keepsake || sound || inventory || aim || curtain !== null);
+  const frozen = !!(view.modal || journal || map || night || keepsake || sound || inventory || aim || fall || curtain !== null);
   useSoundCues(view, curtain !== null);
   useThoughts(view, !frozen && !view.endScreen && !guide);
   const worldInput: WorldInput = useMemo(
@@ -1185,6 +1197,13 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           )}
           {curtain !== null && (
             <div className="night-curtain" key={curtain} onAnimationEnd={() => setCurtain(null)} />
+          )}
+          {fall && (
+            <div className="fall-scene" key={fall.n} onAnimationEnd={() => setFall(null)}>
+              <h2>{FALL_SCENE[fall.kind].title}</h2>
+              <p>{FALL_SCENE[fall.kind].line}</p>
+              <p className="after">{FALL_SCENE[fall.kind].after}</p>
+            </div>
           )}
           <Tips view={view} hidden={frozen || !!station} />
           <ThoughtSubtitle />

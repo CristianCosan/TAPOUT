@@ -54,6 +54,18 @@ export interface RuleSet {
   clothing: boolean;
   /** rc.5 (Sir): a stone stove inside the hut or dugout keeps a banked fire going longer at night. */
   stove: boolean;
+  /** rc.6 (Sir): the medics watch the camera feed; a night that would kill you ends in their pull instead. */
+  medicWatch: boolean;
+  /** rc.6 (Sir): the heavy second tarp is rigged into every shelter stage, and helps more the bigger the shelter. */
+  tarpStages: boolean;
+  /** rc.6 (Sir): after day 20, now and then, an idea for a new upgrade comes to you. */
+  lateUpgrades: boolean;
+  /** rc.6 (Sir): ten more choices at dawn, each once a run. */
+  moreCards: boolean;
+  /** rc.6 (Sir): lake ice thickens day by day; thin ice is slow and you can go through it. */
+  thinIce: boolean;
+  /** rc.6 (Sir): on storm days the shore rocks are slick and you can go in off them. */
+  wetRocks: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -80,6 +92,12 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   realTimes: false,
   clothing: false,
   stove: false,
+  medicWatch: false,
+  tarpStages: false,
+  lateUpgrades: false,
+  moreCards: false,
+  thinIce: false,
+  wetRocks: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(
