@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay, upgradePath } from '@tapout/core';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
 import { BUILD_STATIONS, ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
@@ -19,6 +19,7 @@ import { Tips } from './Tips.tsx';
 import { NoteBox } from './NoteBox.tsx';
 import { Glyph, ResIcon, Tooltip, Txt, WithIcons, resourceTip } from './icons.tsx';
 import { glyphHtml, noEmoji } from './glyphs.ts';
+import { BUILD_PICS } from './buildPics.ts';
 
 const BARS = [
   ['health', 'Health'],
@@ -319,101 +320,155 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
 }
 
 /**
- * What can be built here (rc.3): each path as a row of stages, the next stage with what it takes
- * and its own build button, set apart from the things you use. Facts only, no advice.
+ * What can be built here (rc.4, Sir's layout). The main build sits on top in its own frame: what
+ * it is now, as a picture with what it does for you, then its steps and the next one. At the
+ * shelter you first pick the shelter or the dugout, and the other goes away. Everything else built
+ * here goes below. Facts only, no advice.
  */
 function BuildPanel({ station, view, onAct, onCost }: { station: string; view: View; onAct: (offer: Offer) => void; onCost: (cost: number) => void }) {
   const spec = BUILD_STATIONS[station];
   if (!spec) return null;
   const panel = new Map(view.panel.map((e) => [e.id, e]));
   const extras = spec.extras.map((id) => panel.get(id)).filter((e): e is NonNullable<typeof e> => !!e && e.visible);
+  const locked = spec.extras.filter((id) => !panel.get(id)?.visible && UPGRADE_TEXT.locked[id]);
   if (spec.paths.length === 0 && extras.length === 0) return null;
-  const S = view.state;
-  // rc.4: once one way to a bed is started, the other drops out of the panel.
-  const routes = spec.paths.filter((p) => !upgradePath(p.id).closed);
-  const buildButton = (entry: { id: string; label: string; detail: string; enabled: boolean; onclick: string }, label: string) => (
-    <button
-      className="build-btn"
-      disabled={!entry.enabled}
-      onClick={() => onAct({ key: entry.id, label: entry.label, detail: entry.detail, enabled: entry.enabled, handler: entry.onclick })}
-      onMouseEnter={() => onCost(entry.enabled ? energyCost(entry.detail) : 0)}
-      onMouseLeave={() => onCost(0)}
-    >
-      <Glyph id="build" /> <span>{label}</span>
-      {!entry.enabled && entry.detail && <em>{noEmoji(entry.detail)}</em>}
-    </button>
+  const routes = spec.paths.map((p) => ({ ...p, path: upgradePath(p.id) })).filter((r) => !r.path.closed);
+  const have = (m: string) => Number(hudText(view.hud, STOCK_OF[m]!)) || 0;
+  const act = (entry: { id: string; label: string; detail: string; enabled: boolean; onclick: string }) =>
+    onAct({ key: entry.id, label: entry.label, detail: entry.detail, enabled: entry.enabled, handler: entry.onclick });
+  const hover = (entry?: { enabled: boolean; detail: string }) => ({
+    onMouseEnter: () => onCost(entry?.enabled ? energyCost(entry.detail) : 0),
+    onMouseLeave: () => onCost(0),
+  });
+  const needs = (n: Partial<Record<string, number>>, showHave: boolean) =>
+    Object.entries(n).map(([m, k]) => (
+      <span key={m} className={`build-need${showHave && have(m) < (k ?? 0) ? ' short' : ''}`}>
+        <ResIcon id={m as ResourceId} size={17} />
+        {showHave ? `${have(m)}/${k}` : k}
+      </span>
+    ));
+  const state = (id: UpgradeId, tier: number) => (
+    <div className="bstate">
+      <div className="bpic" dangerouslySetInnerHTML={{ __html: BUILD_PICS[id]![tier] ?? '' }} />
+      <b>{UPGRADE_TEXT.names[id][tier]}</b>
+      <p>{UPGRADE_TEXT.about[id][tier]}</p>
+    </div>
   );
+  // The shelter spot before either way is started: the tarp, and the choice.
+  const choosing = routes.length > 1 && routes.every((r) => r.path.done === 0);
+
+  let main: ReactNode = null;
+  if (choosing) {
+    main = (
+      <div className="main-build">
+        <div className="mb-label">{UPGRADE_TEXT.mainChoose}</div>
+        {state('shelter', 0)}
+        <div className="route-choice">
+          {routes.map(({ id, action, path }) => {
+            const entry = panel.get(action);
+            const first = path.steps[0]!;
+            const open = !!entry?.visible;
+            return (
+              <button key={id} className="route-card" disabled={!open || !entry?.enabled} onClick={() => entry && act(entry)} {...hover(entry)}>
+                <span className="bpic small" dangerouslySetInnerHTML={{ __html: BUILD_PICS[id]![id === 'dugout' ? 3 : 1] ?? '' }} />
+                <b>{UPGRADE_TEXT.routes[id].title}</b>
+                <small>{UPGRADE_TEXT.routes[id].hint}</small>
+                {open ? (
+                  <span className="route-start">
+                    {Object.keys(first.needs).length ? needs(first.needs, true) : null}
+                    <em>{entry?.enabled ? UPGRADE_TEXT.start[id as 'shelter' | 'dugout'] : noEmoji(entry?.detail ?? '')}</em>
+                  </span>
+                ) : (
+                  <span className="route-start">
+                    <Glyph id="shovel" size={16} /> <em>{UPGRADE_TEXT.needsShovel}</em>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mb-note">{UPGRADE_TEXT.chooseNote}</p>
+      </div>
+    );
+  } else if (routes[0]) {
+    const { id, action, path } = routes[0];
+    const entry = panel.get(action);
+    const next = path.steps.find((st) => st.state === 'next');
+    const tiers = UPGRADE_TEXT.names[id];
+    const stepNames = UPGRADE_TEXT.steps[id];
+    const milestones = tiers.slice(1).map((name, i) => ({ name, n: path.steps.filter((st) => st.tier === i + 1).length, have: path.current >= i + 1 }));
+    const lastOfTier = next ? path.steps.filter((st) => st.tier === next.tier).pop()! : null;
+    main = (
+      <div className="main-build">
+        <div className="mb-label">{UPGRADE_TEXT.mainNow(UPGRADE_TEXT.noun[id])}</div>
+        {state(id, path.current)}
+        <div className="bstrip">
+          {path.steps.map((st) => (
+            <i key={st.step} className={`${st.state}${st.within === st.of ? ' mile' : ''}`} title={stepNames[st.step - 1]}>
+              {st.step}
+            </i>
+          ))}
+        </div>
+        <div className="bmiles">
+          {milestones.map((m) => (
+            <span key={m.name} style={{ flex: m.n }} className={m.have ? 'have' : ''}>
+              {m.name}
+            </span>
+          ))}
+        </div>
+        {next ? (
+          <div className="bnext">
+            <big>{UPGRADE_TEXT.stepOf(next.step, path.steps.length, stepNames[next.step - 1] ?? '')}</big>
+            <div className="stage-cost">
+              {needs(next.needs, true)}
+              <span>
+                <Glyph id="energy" size={16} /> {next.energy}
+              </span>
+              <span>
+                <Glyph id="time" size={16} /> {duration(Math.round(next.hours * 60))}
+              </span>
+            </div>
+            {entry?.visible && (
+              <button className="build-btn" disabled={!entry.enabled} onClick={() => act(entry)} {...hover(entry)}>
+                <Glyph id="build" /> <span>{UPGRADE_TEXT.go(stepNames[next.step - 1] ?? '')}</span>
+                {!entry.enabled && entry.detail && !path.settling && <em>{noEmoji(entry.detail)}</em>}
+              </button>
+            )}
+            {path.settling ? <p className="mb-note">{UPGRADE_TEXT.settling}</p> : lastOfTier && <p className="mb-note">{UPGRADE_TEXT.becomes(lastOfTier.step, tiers[next.tier]!)}</p>}
+          </div>
+        ) : (
+          <p className="mb-note">{UPGRADE_TEXT.done}</p>
+        )}
+      </div>
+    );
+  }
   return (
     <section className="build-panel">
-      <h4>
-        <Glyph id="build" /> {UPGRADE_TEXT.build}
-      </h4>
-      {routes.map(({ id, action }, i) => {
-        const path = upgradePath(id);
-        const names = UPGRADE_TEXT.names[id];
-        const route = UPGRADE_TEXT.routes[id];
-        const entry = panel.get(action);
-        const next = path.steps.find((st) => st.state === 'next');
-        const finished = !next;
-        const closed = id === 'dugout' && !S.dugout && !entry?.visible ? UPGRADE_TEXT.needsShovel : '';
-        return (
-          <div key={id} className={`build-route${closed ? ' closed' : ''}`}>
-            {i > 0 && <div className="build-or">{UPGRADE_TEXT.or}</div>}
-            {routes.length > 1 && <b className="route-title">{route.title}</b>}
-            <p className="route-hint">{route.hint}</p>
-            <ol className="stages">
-              {path.steps.map((step) => (
-                <li key={step.tier} className={`bstage ${step.state}`}>
-                  {step.state === 'built' ? <Glyph id="star" size={14} /> : <i className="dot" />}
-                  <span>{names[step.tier]}</span>
-                  {step.sessions > 1 && step.state === 'next' && <small>{UPGRADE_TEXT.sessions(step.done, step.sessions)}</small>}
-                </li>
-              ))}
-            </ol>
-            {closed ? (
-              <p className="route-closed">{closed}</p>
-            ) : finished ? (
-              <p className="route-closed">{UPGRADE_TEXT.done}</p>
-            ) : (
-              next && (
-                <div className="stage-next">
-                  <div className="stage-cost">
-                    <span>
-                      <Glyph id="energy" size={16} /> {next.energy}
-                    </span>
-                    <span>
-                      <Glyph id="time" size={16} /> {duration(Math.round(next.hours * 60))}
-                    </span>
-                    {Object.entries(next.needs).map(([m, n]) => {
-                      const have = Number(hudText(view.hud, STOCK_OF[m]!)) || 0;
-                      return (
-                        <span key={m} className={`build-need${have < n ? ' short' : ''}`}>
-                          <ResIcon id={m as ResourceId} size={18} />
-                          {have}/{n}
-                        </span>
-                      );
-                    })}
-                    {next.sessions > 1 && <i>{UPGRADE_TEXT.perSession}</i>}
-                  </div>
-                  {path.settling && <p className="route-closed">{UPGRADE_TEXT.settling}</p>}
-                  {entry?.visible && buildButton(entry, UPGRADE_TEXT.next(names[next.tier]!))}
-                </div>
-              )
-            )}
-          </div>
-        );
-      })}
-      {extras.length > 0 && (
+      {main}
+      {(extras.length > 0 || locked.length > 0) && (
         <div className="build-extras">
-          {spec.paths.length > 0 && <b className="route-title">{UPGRADE_TEXT.also}</b>}
+          {main && <div className="mb-label quiet">{UPGRADE_TEXT.also}</div>}
           {extras.map((entry) => (
-            <div key={entry.id} className="build-extra">
-              {buildButton(entry, noEmoji(entry.label))}
-              {entry.enabled && entry.detail && (
-                <span className="act-detail">
-                  <WithIcons text={entry.detail} />
-                </span>
+            <div key={entry.id} className={`bsub${entry.enabled ? '' : ' off'}`}>
+              <span className="bsub-name">
+                <Txt text={entry.label} />
+              </span>
+              {entry.enabled && (
+                <button className="bsub-go" onClick={() => act(entry)} {...hover(entry)}>
+                  <Glyph id="build" size={15} /> {UPGRADE_TEXT.build}
+                </button>
               )}
+              {entry.detail && (
+                <small>
+                  <WithIcons text={entry.detail} />
+                </small>
+              )}
+            </div>
+          ))}
+          {locked.map((id) => (
+            <div key={id} className="bsub off">
+              <span className="bsub-name">{UPGRADE_TEXT.locked[id]!.name}</span>
+              <small>{UPGRADE_TEXT.locked[id]!.why}</small>
             </div>
           ))}
         </div>
@@ -745,9 +800,10 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     return {
       structure: S.structure,
       dugout: !!S.dugout,
-      dugoutProg: S.dugoutProg ?? 0,
+      // The picture reads 1-2 as digging and 3 as walled, whatever the number of steps.
+      dugoutProg: ((d) => (d.current >= 2 ? 3 : Math.min(2, d.done)))(upgradePath('dugout')),
       buildProg: S.buildProg ?? 0,
-      buildNeed: upgradePath('shelter').steps.find((st) => st.state === 'next')?.sessions ?? 1,
+      buildNeed: upgradePath('shelter').steps.find((st) => st.state === 'next')?.of ?? 1,
       insulation: S.insulation,
       bed: !!S.bed,
       firepitTier: S.firepitTier,

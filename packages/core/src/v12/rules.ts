@@ -46,6 +46,8 @@ export interface RuleSet {
   oneRoute: boolean;
   /** rc.4 (Sir): past the lean-to, each build takes at most one session a day, so camp grows across the run. */
   buildPace: boolean;
+  /** rc.4 (Sir): every camp build climbs in named steps (at least five a path), sharing v12's costs. */
+  stepBuilds: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -68,6 +70,7 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   dugoutStages: false,
   oneRoute: false,
   buildPace: false,
+  stepBuilds: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

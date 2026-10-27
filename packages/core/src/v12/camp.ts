@@ -12,6 +12,7 @@ import { takeSmoked } from './person.ts';
 import { resolveDelta } from './resolve.ts';
 import { hasKit, log, registerWasteDiscard, waterCap } from './setup.ts';
 import { RULES, say } from './rules.ts';
+import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { S } from './state.ts';
 import { afterAction, spend, spendOrDebt, tickShiverClear } from './threads.ts';
 import { BUILD_NEED, CACHE_COST, CACHE_NEED, DRINK_LINES, DUGOUT_NEED, dugoutStep, EAT_BERRIES, EAT_COOKED, EAT_SMOKED, FIREPIT_COST, FIREPIT_NEED, HUGE_RACK_CAP, HUGE_RACK_COST, ICE_CACHE_COST, RATIONS, ICE_CACHE_NEED, RACK_CAP, RACK_COST, SHELTERS, SHELTER_COST, TUNING, WEATHER } from './tuning.ts';
@@ -304,22 +305,24 @@ export function routeClosed(kind?){
   return kind === 'shelter' ? (S.dugout || S.dugoutProg > 0) : (S.structure > 0 || S.buildProg > 0);
 }
 // rc.4 (buildPace): one building session per build per day (the lean-to is the exception).
+// Only the shelter, the dugout and its insulation are paced; the smaller builds go by their hours.
+const PACED = ['shelter', 'dugout', 'insulate'];
 export function builtToday(id?){
-  return RULES.buildPace && !!S.buildDay && S.buildDay[id] === S.day;
+  return RULES.buildPace && PACED.includes(id) && !!S.buildDay && S.buildDay[id] === S.day;
 }
 function markBuilt(id?){
-  if (RULES.buildPace) (S.buildDay ||= {})[id] = S.day;
+  if (RULES.buildPace && PACED.includes(id)) (S.buildDay ||= {})[id] = S.day;
 }
 export function actShelter(){
   if (S.structure >= 3 || routeClosed('shelter') || (S.structure >= 1 && builtToday('shelter'))) return;
-  const c = SHELTER_COST[S.structure];
+  const c = stepCost('shelter', S.structure, S.buildProg);
   if (S.stock.wood < c.wood || (c.moss && S.stock.moss < c.moss) || (c.clay && S.stock.clay < c.clay)) return;
   if (!spend(c.e, c.h, true, 'ohw wood')) return;
   S.stock.wood -= c.wood; if (c.moss) S.stock.moss -= c.moss; if (c.clay) S.stock.clay -= c.clay;
   S.buildProg++;
   if (S.structure >= 1) markBuilt('shelter');
   sfxBuild();
-  const need = BUILD_NEED[S.structure];
+  const need = tierSteps('shelter', S.structure);
   if (S.buildProg >= need){
     S.structure++; S.buildProg = 0;
     S.morale = clamp(S.morale + 8);
@@ -330,19 +333,21 @@ export function actShelter(){
 // kit-draft §3.3: earth dugout - shovel-only shelter path, high labor, near-immune to storm damage,
 // top-tier warmth retention. Independent of the tarp/lean-to/hut/timber ladder.
 export function actDugout(){
-  if (!hasKit('shovel') || S.dugout || S.dugoutProg >= DUGOUT_NEED || routeClosed('dugout') || builtToday('dugout')) return;
-  const c = dugoutStep(S.dugoutProg);
+  if (!hasKit('shovel') || S.dugout || S.dugoutProg >= dugoutTotal() || routeClosed('dugout') || builtToday('dugout')) return;
+  const at = dugoutAt(S.dugoutProg);
+  const c = RULES.stepBuilds ? stepCost('dugout', at.t, at.k) : dugoutStep(S.dugoutProg);
   if (S.stock.wood < c.wood || (c.moss && S.stock.moss < c.moss)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   S.stock.wood -= c.wood; if (c.moss) S.stock.moss -= c.moss;
   S.dugoutProg++;
   markBuilt('dugout');
   sfxBuild();
-  if (S.dugoutProg >= DUGOUT_NEED){
+  if (S.dugoutProg >= dugoutTotal()){
     S.dugout = true;
     S.morale = clamp(S.morale + 10);
     log('The earth dugout is finished - dug deep, roofed over, banked with soil. The cold-country gambit pays off: this holds heat like nothing built above ground. +morale', 'good');
-  } else if (RULES.dugoutStages) log(c.stage === 'dig' ? (S.dugoutProg === 1 ? 'You break the ground and dig. Half a pit by dusk.' : 'The pit is deep enough to stand in. It needs walls next.') : 'Logs set along the sides and chinked with moss. The walls hold back the soil. It needs a roof.', 'good');
+  } else if (RULES.stepBuilds) log(c.stage === 'dig' ? (dugoutAt(S.dugoutProg).t === 0 ? 'You dig until your hands shake. The pit is deeper.' : 'The pit is deep enough to stand in. It needs walls next.') : 'Logs set along the sides and chinked with moss. The walls hold back the soil. It needs a roof.', 'good');
+  else if (RULES.dugoutStages) log(c.stage === 'dig' ? (S.dugoutProg === 1 ? 'You break the ground and dig. Half a pit by dusk.' : 'The pit is deep enough to stand in. It needs walls next.') : 'Logs set along the sides and chinked with moss. The walls hold back the soil. It needs a roof.', 'good');
   else log(`Another long session digging. ${S.dugoutProg}/${DUGOUT_NEED} done.`, 'good');
   afterAction('dugout');
 }
@@ -357,14 +362,14 @@ export function actInsulate(){
 }
 export function actFirepit(){
   if (S.firepitTier >= 2 || builtToday('firepit')) return;
-  const c = FIREPIT_COST[S.firepitTier+1];
+  const c = stepCost('firepit', S.firepitTier+1, S.firepitProg);
   if (S.stock.rocks < c.rocks || (c.clay && S.stock.clay < c.clay)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   S.stock.rocks -= c.rocks; if (c.clay) S.stock.clay -= c.clay;
   S.firepitProg++;
   markBuilt('firepit');
   sfxBuild();
-  const need = FIREPIT_NEED[S.firepitTier+1];
+  const need = tierSteps('firepit', S.firepitTier+1);
   if (S.firepitProg >= need){
     S.firepitTier++; S.firepitProg = 0;
     log(S.firepitTier===1 ? 'You set the stones in a tight ring. The rock holds heat - fires burn longer and hotter now.' : 'You line the pit with wet clay, fired hard by the coals. Heat holds even longer, and every stoke goes further.', 'good');
@@ -373,13 +378,18 @@ export function actFirepit(){
 }
 export function actRack(){
   if (S.rackTier >= 2 || builtToday('rack')) return;
-  const c = RACK_COST[S.rackTier+1];
-  if (S.stock.wood < c.wood || (c.rocks && S.stock.rocks < c.rocks)) return;
+  const c = stepCost('rack', S.rackTier+1, buildState('rack').k);
+  if ((c.wood && S.stock.wood < c.wood) || (c.rocks && S.stock.rocks < c.rocks)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
-  S.stock.wood -= c.wood; if (c.rocks) S.stock.rocks -= c.rocks;
-  S.rackTier++;
+  if (c.wood) S.stock.wood -= c.wood; if (c.rocks) S.stock.rocks -= c.rocks;
   markBuilt('rack');
   sfxBuild();
+  if (RULES.stepBuilds){
+    S.rackProg = (S.rackProg || 0) + 1;
+    if (S.rackProg < tierSteps('rack', S.rackTier+1)){ log(`Another piece of the rack lashed in place. ${S.rackProg}/${tierSteps('rack', S.rackTier+1)} done.`, 'good'); afterAction('rack'); return; }
+    S.rackProg = 0;
+  }
+  S.rackTier++;
   log(S.rackTier===1 ? 'A tripod rack stands over the fire pit. Meat can be smoked and kept.' : 'You weave a bark roof over the rack and stack stone at its base. It sheds rain, and it\'s a lot more work to get into now.', 'good');
   afterAction('rack');
 }
@@ -396,14 +406,14 @@ export function actHugeRack(){
 }
 export function actCache(){
   if (S.cacheTier >= 3 || builtToday('cache')) return;
-  const c = CACHE_COST[S.cacheTier+1];
+  const c = stepCost('cache', S.cacheTier+1, S.cacheProg);
   if ((c.wood && S.stock.wood < c.wood) || (c.rocks && S.stock.rocks < c.rocks) || (c.clay && S.stock.clay < c.clay)) return;
   if (!spend(c.e, c.h, true, 'ohw')) return;
   if (c.wood) S.stock.wood -= c.wood; if (c.rocks) S.stock.rocks -= c.rocks; if (c.clay) S.stock.clay -= c.clay;
   S.cacheProg++;
   markBuilt('cache');
   sfxBuild();
-  const need = CACHE_NEED[S.cacheTier+1];
+  const need = tierSteps('cache', S.cacheTier+1);
   if (S.cacheProg >= need){
     S.cacheTier++; S.cacheProg = 0;
     const msg = S.cacheTier===1 ? 'A rock-and-timber cache, lid weighted with stone.' : S.cacheTier===2 ? 'You seal every seam with clay. Nothing is smelling its way in now.' : 'You raise the whole cache onto a timber platform, out of reach of anything on four legs.';

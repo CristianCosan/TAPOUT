@@ -270,6 +270,9 @@ export const DUGOUT_STAGES: any = [
   {stage:'walls',e:26,h:4,wood:4,moss:2},
   {stage:'roof', e:26,h:4,wood:4,moss:2},
 ];
+// rc.4 (stepBuilds): the steps each tier is built in (indexed as each cost table is). Each step gets an
+// even share of the tier's v12 energy, hours and materials. The shelter's steps are its v12 sessions.
+export const BUILD_STEPS: any = { shelter:[2,3,5], dugout:[3,1,1], firepit:[null,2,3], rack:[null,3,2], cache:[null,2,2,3] };
 export function dugoutStep(prog: number){ return RULES.dugoutStages ? DUGOUT_STAGES[prog] : DUGOUT_COST; }
 // rc.3 (campHarvest): how much fallen timber and loose stone lies around camp before it is picked clean.
 export const CAMP_HARVEST: any = { logs: 15, rocks: 12 };

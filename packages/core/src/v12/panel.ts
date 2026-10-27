@@ -5,6 +5,7 @@
 import { letterPanel } from './letters.ts';
 import { RULES } from './rules.ts';
 import { builtToday, fireCap, routeClosed } from './camp.ts';
+import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
 import { ambientTempC, eCost, eTime, shiveringActive } from './cost.ts';
 import { berryCount, cookedMealSpoiled, meatCount, oldestBerriesSpoiled, oldestMeatSpoiled } from './food.ts';
 import { TRAVEL_HOURS, campHarvesting, campLeft, clamp, hh, nowAbs, roundDisplay } from './helpers.ts';
@@ -707,24 +708,25 @@ function panelPass(){
   else if (routeClosed('shelter')) r=[false,'you chose the dugout'];
   else if (S.structure >= 1 && builtToday('shelter')) r=[false,'worked on today - it needs a night to settle'];
   else {
-    const c = SHELTER_COST[S.structure], need = BUILD_NEED[S.structure];
+    const c = stepCost('shelter', S.structure, S.buildProg), need = tierSteps('shelter', S.structure);
     const ok = S.stock.wood>=c.wood && (!c.moss||S.stock.moss>=c.moss) && (!c.clay||S.stock.clay>=c.clay);
     const missing = [c.wood+' logs', c.moss?c.moss+' moss':null, c.clay?c.clay+' clay':null].filter(Boolean).join(' + ');
     r = gate(c.e,c.h, ok, `need ${missing}`, `−{c}⚡ · ${durTxt(c.h)} · ${missing} · ${S.buildProg}/${need} → ${SHELTERS[S.structure+1]}`, 'oh');
   }
   setBtn('a-shelter', r[0], r[1]);
   if (hasKit('shovel') && !S.dugout){
-    const c = dugoutStep(S.dugoutProg);
+    const at = dugoutAt(S.dugoutProg);
+    const c = RULES.stepBuilds ? stepCost('dugout', at.t, at.k) : dugoutStep(S.dugoutProg);
     const missing = [c.wood ? c.wood+' logs' : null, c.moss ? c.moss+' moss' : null].filter(Boolean).join(' + ');
     const ok = S.stock.wood >= c.wood && (!c.moss || S.stock.moss >= c.moss);
-    r = routeClosed('dugout') ? [false,'you chose the shelter'] : builtToday('dugout') ? [false,'worked on today - it needs a night to settle'] : !ok ? [false, `need ${missing}`] : gate(c.e, c.h, true, '', `−{c}⚡ · ${durTxt(c.h)} · ${missing ? missing+' · ' : ''}${S.dugoutProg}/${DUGOUT_NEED} · top-tier warmth, near-immune to storms`, 'ohw');
+    r = routeClosed('dugout') ? [false,'you chose the shelter'] : builtToday('dugout') ? [false,'worked on today - it needs a night to settle'] : !ok ? [false, `need ${missing}`] : gate(c.e, c.h, true, '', `−{c}⚡ · ${durTxt(c.h)} · ${missing ? missing+' · ' : ''}${S.dugoutProg}/${dugoutTotal()} · top-tier warmth, near-immune to storms`, 'ohw');
     setBtn('a-dugout', r[0], r[1]);
   }
   r = S.structure < 1 ? [false,'build a lean-to first'] : (S.insulation >= 3 ? [false,'fully insulated'] : builtToday('insulate') ? [false,'worked on today - it needs a night to settle'] : gate(6,1, S.stock.moss >= 4, 'need 4 moss', `−{c}⚡ · ${durTxt(1)} · 4 moss · ${S.insulation}/3`, 'oh'));
   setBtn('a-insulate', r[0], r[1]);
   if (S.firepitTier>=2){ $('a-firepit-name').textContent = '⛰ Clay-lined pit'; r = [false,'built - heat holds longer']; }
   else {
-    const c = FIREPIT_COST[S.firepitTier+1], need = FIREPIT_NEED[S.firepitTier+1];
+    const c = stepCost('firepit', S.firepitTier+1, S.firepitProg), need = tierSteps('firepit', S.firepitTier+1);
     $('a-firepit-name').textContent = S.firepitTier===0 ? '⛰ Stone firepit' : '⛰ Clay-line the pit';
     const ok = S.stock.rocks>=c.rocks && (!c.clay||S.stock.clay>=c.clay);
     const missing = [c.rocks+' rocks', c.clay?c.clay+' clay':null].filter(Boolean).join(' + ');
@@ -733,10 +735,10 @@ function panelPass(){
   setBtn('a-firepit', r[0], r[1]);
   if (S.rackTier>=2){ $('a-rack-name').textContent = '🪵 Covered rack'; r = [false,'built - sheds rain, sturdier']; }
   else {
-    const c = RACK_COST[S.rackTier+1];
+    const c = stepCost('rack', S.rackTier+1, buildState('rack').k);
     $('a-rack-name').textContent = S.rackTier===0 ? '🪵 Smoking rack' : '🪵 Cover the rack';
-    const ok = S.stock.wood>=c.wood && (!c.rocks||S.stock.rocks>=c.rocks);
-    const missing = [c.wood+' logs', c.rocks?c.rocks+' rocks':null].filter(Boolean).join(' + ');
+    const ok = (!c.wood||S.stock.wood>=c.wood) && (!c.rocks||S.stock.rocks>=c.rocks);
+    const missing = [c.wood?c.wood+' logs':null, c.rocks?c.rocks+' rocks':null].filter(Boolean).join(' + ');
     r = builtToday('rack') ? [false,'worked on today - it needs a night to settle'] : gate(c.e,c.h, ok, `need ${missing}`, `−{c}⚡ · ${durTxt(c.h)} · ${missing}`, 'oh');
   }
   setBtn('a-rack', r[0], r[1]);
@@ -749,7 +751,7 @@ function panelPass(){
   }
   if (S.cacheTier>=3){ $('a-cache-name').textContent = '🗃 Elevated cache'; r = [false,'built - about as safe as it gets']; }
   else {
-    const c = CACHE_COST[S.cacheTier+1], need = CACHE_NEED[S.cacheTier+1];
+    const c = stepCost('cache', S.cacheTier+1, S.cacheProg), need = tierSteps('cache', S.cacheTier+1);
     $('a-cache-name').textContent = S.cacheTier===0 ? '🗃 Food cache' : S.cacheTier===1 ? '🗃 Reinforce cache' : '🗃 Elevate cache';
     const ok = (!c.wood||S.stock.wood>=c.wood) && (!c.rocks||S.stock.rocks>=c.rocks) && (!c.clay||S.stock.clay>=c.clay);
     const missing = [c.wood?c.wood+' logs':null, c.rocks?c.rocks+' rocks':null, c.clay?c.clay+' clay':null].filter(Boolean).join(' + ');

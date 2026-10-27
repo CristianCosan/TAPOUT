@@ -309,9 +309,30 @@ describe('rc.3 dugout stages: dig, then walls and roof', () => {
       expect(run.state.dugoutProg).toBe(1);
       expect(run.state.stock.wood).toBe(rules === V12_RULES ? 18 : 20);
       Object.assign(run.state, { hour: 8, energy: 120, day: run.state.day + 1 }); run.call('actDugout');
+      // rc.4 (stepBuilds): the pit is three steps in TAP / OUT, so the walls are the fourth.
+      if (rules === TAPOUT_RULES) { Object.assign(run.state, { hour: 8, energy: 120, day: run.state.day + 1 }); run.call('actDugout'); }
+      expect(run.state.stock.wood).toBe(rules === V12_RULES ? 16 : 20);
       Object.assign(run.state, { hour: 8, energy: 120, day: run.state.day + 1 }); run.call('actDugout');
       expect(run.state.stock.wood).toBe(rules === V12_RULES ? 14 : 16);
       expect(run.state.stock.moss).toBe(rules === V12_RULES ? 10 : 8);
+    }
+  });
+});
+
+describe('rc.4 step builds', () => {
+  it('v12 raises the tripod rack in one session; TAP / OUT in three steps for the same 4 logs', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'camp', hour: 8, energy: 120, maxEnergy: 120 });
+      run.state.stock.wood = 20;
+      run.call('actRack');
+      expect(run.state.rackTier).toBe(rules === V12_RULES ? 1 : 0);
+      if (rules === TAPOUT_RULES) {
+        Object.assign(run.state, { energy: 120 }); run.call('actRack');
+        Object.assign(run.state, { energy: 120 }); run.call('actRack');
+        expect(run.state.rackTier).toBe(1);
+      }
+      expect(run.state.stock.wood).toBe(16);
     }
   });
 });
