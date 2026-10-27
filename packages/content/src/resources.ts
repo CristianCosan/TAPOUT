@@ -55,6 +55,7 @@ export const UPGRADE_TEXT = {
   done: 'Finished. Nothing more to build on it.',
   needsShovel: 'Needs the shovel, which you did not pack.',
   settling: 'Worked on today. It can go on tomorrow.',
+  underWay: (name: string) => `${name}, going up`,
   mainChoose: 'Main build · pick one for this run',
   mainNow: (what: string) => `Main build · your ${what} now`,
   chooseNote: 'Starting one makes the other disappear.',
@@ -109,6 +110,26 @@ export const UPGRADE_TEXT = {
   locked: {
     'a-hugeRack': { name: 'Second, huge rack', why: 'Once the tripod rack stands.' },
   } as Record<string, { name: string; why: string }>,
+} as const;
+
+/** rc.4: the build menu (B). Nothing stands in camp until you start it; Dan picks the spot. */
+export const BUILD_MENU = {
+  title: 'Build',
+  key: 'B',
+  note: 'Nothing stands in camp until you start it. Pick one and Dan puts it in a sensible spot.',
+  notCamp: 'You build at camp. Head back there to start something.',
+  main: 'Main build',
+  camp: 'Camp builds',
+  make: 'Things to make',
+  open: 'Open',
+  start: 'Start',
+  made: 'Made',
+  builds: [
+    { id: 'firepit', action: 'a-firepit', station: 'fire', name: 'Firepit' },
+    { id: 'rack', action: 'a-rack', station: 'rack', name: 'Smoking rack' },
+    { id: 'cache', action: 'a-cache', station: 'cache', name: 'Food cache' },
+  ],
+  things: ['a-picker', 'a-chair', 'a-table', 'a-jug', 'a-flute'],
 } as const;
 
 /**

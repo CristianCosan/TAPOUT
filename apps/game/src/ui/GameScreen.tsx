@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
-import { BUILD_STATIONS, ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { BUILD_MENU, BUILD_STATIONS, ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -18,7 +18,7 @@ import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
 import { NoteBox } from './NoteBox.tsx';
 import { Glyph, ResIcon, Tooltip, Txt, WithIcons, resourceTip } from './icons.tsx';
-import { glyphHtml, noEmoji } from './glyphs.ts';
+import { glyphHtml, noEmoji, type GlyphId } from './glyphs.ts';
 import { BUILD_PICS } from './buildPics.ts';
 
 const BARS = [
@@ -74,7 +74,7 @@ function onHandlerClick(event: MouseEvent) {
 
 // ---- rails and bars
 
-function TopBar({ view, onJournal, onMap, onSound }: { view: View; onJournal: () => void; onMap: () => void; onSound: () => void }) {
+function TopBar({ view, onBuild, onJournal, onMap, onSound }: { view: View; onBuild: () => void; onJournal: () => void; onMap: () => void; onSound: () => void }) {
   const { hud } = view;
   return (
     <header className="hud-top">
@@ -86,6 +86,9 @@ function TopBar({ view, onJournal, onMap, onSound }: { view: View; onJournal: ()
           <Html key={id} className="pill" html={hudText(hud, id)} />
         ))}
       </div>
+      <button className="hud-btn" onClick={onBuild} title={`${BUILD_MENU.title} (${BUILD_MENU.key})`}>
+        <Glyph id="build" /> {BUILD_MENU.title}
+      </button>
       <button className="hud-btn" onClick={onMap} title="Map (M)">
         Map
       </button>
@@ -347,10 +350,11 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
         {showHave ? `${have(m)}/${k}` : k}
       </span>
     ));
-  const state = (id: UpgradeId, tier: number) => (
+  // A build with nothing finished yet but its first steps done shows what is going up, faded.
+  const state = (id: UpgradeId, tier: number, underWay = false) => (
     <div className="bstate">
-      <div className="bpic" dangerouslySetInnerHTML={{ __html: BUILD_PICS[id]![tier] ?? '' }} />
-      <b>{UPGRADE_TEXT.names[id][tier]}</b>
+      <div className={`bpic${underWay ? ' under-way' : ''}`} dangerouslySetInnerHTML={{ __html: BUILD_PICS[id]![underWay ? tier + 1 : tier] ?? '' }} />
+      <b>{underWay ? UPGRADE_TEXT.underWay(UPGRADE_TEXT.names[id][tier + 1]!) : UPGRADE_TEXT.names[id][tier]}</b>
       <p>{UPGRADE_TEXT.about[id][tier]}</p>
     </div>
   );
@@ -401,7 +405,7 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
     main = (
       <div className="main-build">
         <div className="mb-label">{UPGRADE_TEXT.mainNow(UPGRADE_TEXT.noun[id])}</div>
-        {state(id, path.current)}
+        {state(id, path.current, path.current === 0 && path.done > 0 && id !== 'shelter' && id !== 'dugout')}
         <div className="bstrip">
           {path.steps.map((st) => (
             <i key={st.step} className={`${st.state}${st.within === st.of ? ' mile' : ''}`} title={stepNames[st.step - 1]}>
@@ -474,6 +478,83 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
         </div>
       )}
     </section>
+  );
+}
+
+/** rc.4: whether a build that is not there until started has been started. */
+function started(what: 'rack' | 'cache' | 'comforts', view: View): boolean {
+  const S = view.state;
+  if (what === 'comforts') return !!S.chair || !!S.table;
+  return upgradePath(what).done > 0 || (what === 'rack' && !!S.hugeRack);
+}
+
+/** rc.4: the build menu (B). Everything you can build, with what it takes; starting one puts it up. */
+function BuildMenu({ view, onClose, onOpen }: { view: View; onClose: () => void; onOpen: (station: string) => void }) {
+  const panel = new Map(view.panel.map((e) => [e.id, e]));
+  const atCamp = view.state.loc === 'camp';
+  const shelter = upgradePath('shelter');
+  const dugout = upgradePath('dugout');
+  const bed = dugout.done > 0 ? { id: 'dugout' as const, path: dugout } : { id: 'shelter' as const, path: shelter };
+  const row = (key: string, icon: GlyphId, name: string, line: string, button: ReactNode) => (
+    <div key={key} className="bsub">
+      <span className="bsub-name">
+        <Glyph id={icon} size={18} /> {name}
+      </span>
+      {button}
+      <small>{line}</small>
+    </div>
+  );
+  const go = (label: string, onClick: () => void, enabled = true) => (
+    <button className="bsub-go" disabled={!enabled || !atCamp} onClick={onClick}>
+      {label}
+    </button>
+  );
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="build-menu" onClick={(e) => e.stopPropagation()}>
+        <h3>
+          {BUILD_MENU.title} <small>{BUILD_MENU.key}</small>
+        </h3>
+        <p className="mb-note">{atCamp ? BUILD_MENU.note : BUILD_MENU.notCamp}</p>
+        <div className="mb-label">{BUILD_MENU.main}</div>
+        {row('main', 'shelter', UPGRADE_TEXT.names[bed.id][bed.path.current]!, UPGRADE_TEXT.about[bed.id][bed.path.current]!, go(BUILD_MENU.open, () => onOpen('shelter')))}
+        <div className="mb-label quiet">{BUILD_MENU.camp}</div>
+        {BUILD_MENU.builds.map((b) => {
+          const path = upgradePath(b.id);
+          const entry = panel.get(b.action);
+          const first = path.done === 0;
+          const next = path.steps.find((st) => st.state === 'next');
+          const line = next ? `${path.steps.length} steps. ${first ? '' : `${UPGRADE_TEXT.names[b.id][path.current]}, step ${next.step} next.`}` : UPGRADE_TEXT.done;
+          return row(
+            b.id,
+            b.id,
+            b.name,
+            line,
+            first && entry
+              ? go(BUILD_MENU.start, () => session.click(entry.onclick), entry.enabled)
+              : go(BUILD_MENU.open, () => onOpen(b.station)),
+          );
+        })}
+        <div className="mb-label quiet">{BUILD_MENU.make}</div>
+        {BUILD_MENU.things.map((id) => {
+          const entry = panel.get(id);
+          if (!entry?.visible) return null;
+          return (
+            <div key={id} className={`bsub${entry.enabled ? '' : ' off'}`}>
+              <span className="bsub-name">
+                <Txt text={entry.label} />
+              </span>
+              {entry.enabled && go(BUILD_MENU.start, () => session.click(entry.onclick))}
+              {entry.detail && (
+                <small>
+                  <WithIcons text={entry.detail} />
+                </small>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -692,6 +773,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [labels, setLabels] = useState(false);
   const [debug, setDebug] = useState(!!guide);
   const [journal, setJournal] = useState(false);
+  const [build, setBuild] = useState(false);
   const [map, setMap] = useState(false);
   const [night, setNight] = useState<Offer | null>(null);
   const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
@@ -748,13 +830,15 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
         setSound(false);
         setJournal(false);
         setMap(false);
+        setBuild(false);
       } else if (e.key === 'Tab') {
         e.preventDefault();
         setSelected((current) => (current === 'you' ? null : 'you'));
       } else if (e.key === 'r' || e.key === 'R') {
         const rest = session.getView()?.panel.find((p) => p.id === 'a-rest');
         if (rest?.visible && rest.enabled && !session.getView()?.modal) session.click(rest.onclick);
-      } else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
+      } else if (e.key === 'b' || e.key === 'B') setBuild((open) => !open);
+      else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
       else if (e.key === 'm' || e.key === 'M') setMap((open) => !open);
       else if (e.key === 'F3') {
         e.preventDefault();
@@ -779,6 +863,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       const offers = offersFor(station, view);
       // Conditional stations exist only while v12 offers something there.
       if (station.when && offers.length === 0 && !guide) hiddenIds.add(station.id);
+      // rc.4: a build is not there until you start it.
+      if (station.built && !guide && !started(station.built, view)) hiddenIds.add(station.id);
       if (!offers.some((o) => o.enabled)) idleIds.add(station.id);
     }
     return { hidden: hiddenIds, idle: idleIds };
@@ -887,7 +973,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <div className="travel-fade" key={loc}>
             {layout.label}
           </div>
-          <TopBar view={view} onJournal={() => setJournal(true)} onMap={() => setMap(true)} onSound={() => setSound(true)} />
+          <TopBar view={view} onBuild={() => setBuild(true)} onJournal={() => setJournal(true)} onMap={() => setMap(true)} onSound={() => setSound(true)} />
           <BodyRail view={view} />
           {!frozen && <EnergyHud view={view} cost={station ? cost : 0} onBed={setNight} />}
           <StoresRail view={view} />
@@ -929,6 +1015,16 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           {sound && <SettingsPanel onClose={() => setSound(false)} />}
           {map && <MapOverlay view={view} onClose={() => setMap(false)} />}
           {journal && <Journal view={view} onClose={() => setJournal(false)} />}
+          {build && (
+            <BuildMenu
+              view={view}
+              onClose={() => setBuild(false)}
+              onOpen={(id) => {
+                setBuild(false);
+                setSelected(id);
+              }}
+            />
+          )}
           <Modal view={view} />
           <Tooltip root={root} />
         </>

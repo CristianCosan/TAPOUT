@@ -442,3 +442,11 @@ h3 { margin: 10px 0 10px; font-size: 15px; letter-spacing: 0.22em; text-transfor
 .test-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .test-btns .hud-btn { font-size: 16px; padding: 10px; }
 .win-scene .intro-subtitle b { color: var(--gold); }
+
+/* rc.4: the build menu (B). */
+.build-menu { width: 520px; max-height: 86vh; overflow: auto; padding: 18px 20px; border-radius: 14px; border: 1px solid #2b3d2e; background: #101812f2; display: flex; flex-direction: column; gap: 9px; }
+.build-menu h3 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 26px; letter-spacing: 0.06em; color: #e58f3c; }
+.build-menu h3 small { font-family: inherit; font-size: 14px; color: #8a7550; margin-left: 6px; }
+.build-menu .bsub-name { display: inline-flex; align-items: center; gap: 7px; }
+.bsub-go:disabled { opacity: 0.5; cursor: default; }
+.bpic.under-way svg { opacity: 0.45; filter: saturate(0.5); }
