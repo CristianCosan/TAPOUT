@@ -396,3 +396,61 @@ describe('rc.4 real times', () => {
     }
   });
 });
+
+describe('rc.5 clothing', () => {
+  it('changing takes a minute in TAP / OUT and does nothing in v12', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'camp', hour: 9 });
+      run.call('wear', 'shell');
+      expect(run.call('wearing', 'shell')).toBe(rules !== V12_RULES);
+      expect(run.state.hour - 9).toBeCloseTo(rules === V12_RULES ? 0 : 1 / 60, 5);
+    }
+  });
+  it('the shell keeps rain out and the jacket keeps warmth in, away from camp', () => {
+    const away = (rules: Readonly<RuleSet>, shell: boolean, jacket: boolean) => {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'woods', hour: 9, weather: 'rain', wet: 0, warmth: 80, hoursOutsideStreak: 0, clothes: { jacket, shell } });
+      run.call('tickHours', 2, true, '');
+      return { wet: run.state.wet as number, warmth: run.state.warmth as number };
+    };
+    const bare = away(TAPOUT_RULES, false, false);
+    expect(away(TAPOUT_RULES, true, false).wet).toBeLessThan(bare.wet);
+    expect(away(TAPOUT_RULES, false, true).warmth).toBeGreaterThan(bare.warmth);
+    expect(away(V12_RULES, true, true)).toEqual(away(V12_RULES, false, false));
+  });
+  it('heavy work in the jacket makes you sweat', () => {
+    const work = (jacket: boolean) => {
+      const run = start(TAPOUT_RULES);
+      Object.assign(run.state, { loc: 'camp', hour: 9, weather: 'clear', wet: 20, fireH: 0, clothes: { jacket, shell: false } });
+      run.call('tickHours', 2, false, 'w');
+      return run.state.wet as number;
+    };
+    expect(work(true)).toBeGreaterThan(work(false));
+  });
+});
+
+describe('rc.5 stove', () => {
+  it('is only built in TAPOUT, once the hut is framed', () => {
+    for (const rules of [V12_RULES, TAPOUT_RULES]) {
+      const run = start(rules);
+      Object.assign(run.state, { loc: 'camp', hour: 9, energy: 120, maxEnergy: 120, structure: 1 });
+      Object.assign(run.state.stock, { rocks: 20, clay: 10 });
+      run.call('actStove');
+      expect(!!run.state.stove).toBe(false);
+      run.state.structure = 2;
+      run.call('actStove');
+      expect(!!run.state.stove).toBe(rules !== V12_RULES);
+    }
+  });
+  it('keeps a banked fire going longer through the night', () => {
+    const night = (stove: boolean) => {
+      const run = start(TAPOUT_RULES);
+      Object.assign(run.state, { loc: 'camp', hour: 21, fireH: 6, structure: 2, stove });
+      run.state.stock.firewood = 0;
+      run.call('actSleep');
+      return run.state.warmth as number;
+    };
+    expect(night(true)).toBeGreaterThan(night(false));
+  });
+});

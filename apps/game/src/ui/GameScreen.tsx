@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { CAMP_HARVEST, GAME, ambientTempC, campLeft, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
-import { BUILD_MENU, BUILD_STATIONS, BUILD_TASKS, BUILD_TASK_TEXT, ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { BUILD_MENU, BUILD_STATIONS, BUILD_TASKS, BUILD_TASK_TEXT, ENERGY_HUD, HUNT_TEXT, HUNT_VOICE, INVENTORY_TEXT, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -21,6 +21,8 @@ import { NoteBox } from './NoteBox.tsx';
 import { Glyph, ResIcon, Tooltip, Txt, WithIcons, resourceTip } from './icons.tsx';
 import { glyphHtml, noEmoji, type GlyphId } from './glyphs.ts';
 import { BUILD_PICS } from './buildPics.ts';
+import { Inventory, ownedTools } from './Inventory.tsx';
+import type { Held } from '../world/hands.ts';
 
 const BARS = [
   ['health', 'Health'],
@@ -647,6 +649,39 @@ const RESULT_LABELS: Record<string, string> = {
 };
 const RESULT_ICONS: Record<string, ResourceId> = Object.fromEntries(STORES);
 
+/** rc.5: drawing the bow. The ring sways with your breath and steadies; any click looses. */
+function AimCard({ onLoose, onCancel }: { onLoose: () => void; onCancel: () => void }) {
+  const [t, setT] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const start = performance.now();
+    const tick = () => {
+      setT((performance.now() - start) / 1000);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && onCancel();
+    window.addEventListener('keydown', key);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('keydown', key);
+    };
+  }, []);
+  const settle = Math.max(0.15, 1 - t / 2.2);
+  const x = Math.sin(t * 1.7) * 26 * settle;
+  const y = Math.sin(t * 2.3 + 1) * 18 * settle;
+  return (
+    <div className="aim" onClick={onLoose}>
+      <div className="aim-ring" style={{ transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${0.6 + settle * 0.6})` }} />
+      <div className="aim-text">
+        <b>{HUNT_TEXT.aimTitle}</b>
+        <span>{HUNT_TEXT.aimHint}</span>
+        <button className="hud-btn" onClick={(e) => { e.stopPropagation(); onCancel(); }}>{HUNT_TEXT.aimCancel}</button>
+      </div>
+    </div>
+  );
+}
+
 function duration(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -854,6 +889,30 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [night, setNight] = useState<Offer | null>(null);
   const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
   const [sound, setSound] = useState(false);
+  const [inventory, setInventory] = useState(false);
+  const [held, setHeld] = useState<Held | null>(null);
+  const [aim, setAim] = useState<Offer | null>(null);
+  const [walkTo, setWalkTo] = useState<{ id: string; n: number } | undefined>(undefined);
+  // rc.5: Dan says it when the hunt changes, and following a trail to the animal walks you there.
+  const huntWas = useRef<string>((S.hunt?.state as string) ?? 'none');
+  useEffect(() => {
+    const now = (S.hunt?.state as string) ?? 'none';
+    const was = huntWas.current;
+    huntWas.current = now;
+    if (now === was) return;
+    const latest = ((S.log as Array<{ msg: string }>)[0]?.msg ?? '').toLowerCase();
+    const say = (kind: keyof typeof HUNT_VOICE) => {
+      const pick = HUNT_VOICE[kind][Math.floor(Math.random() * HUNT_VOICE[kind].length)]!;
+      speakPieces([pick.id], pick.say, 0);
+    };
+    if (was === 'spotted') say(latest.includes('missed') ? 'miss' : 'hit');
+    else if (now === 'tracks') say('tracks');
+    else if (now === 'hot') say('hot');
+    else if (now === 'spotted') {
+      say('spotted');
+      if (S.loc === 'woods') setWalkTo((w) => ({ id: 'animal', n: (w?.n ?? 0) + 1 }));
+    } else if (now === 'none' && !S.killSite && (latest.includes('lost') || latest.includes('gone'))) say('lost');
+  }, [view.version]);
   const [cost, setCost] = useState(0);
   const root = useRef<HTMLDivElement>(null);
   // A new day starts behind a curtain: the night passes, then the dawn report.
@@ -907,6 +966,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
         setJournal(false);
         setMap(false);
         setBuild(false);
+        setInventory(false);
       } else if (e.key === 'Tab') {
         e.preventDefault();
         setSelected((current) => (current === 'you' ? null : 'you'));
@@ -916,7 +976,13 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       } else if (e.key === 'b' || e.key === 'B') setBuild((open) => !open);
       else if (e.key === 'j' || e.key === 'J') setJournal((open) => !open);
       else if (e.key === 'm' || e.key === 'M') setMap((open) => !open);
-      else if (e.key === 'F3') {
+      else if (e.key === 'i' || e.key === 'I') setInventory((open) => !open);
+      else if (/^[0-5]$/.test(e.key)) {
+        // rc.5: carry a tool between jobs; the same key again empties your hands.
+        const v = session.getView();
+        const tool = e.key === '0' || !v ? undefined : ownedTools(v).find((t) => t.key === e.key);
+        if (e.key === '0' || tool) setHeld((now) => (!tool || now === tool.tool ? null : tool.tool));
+      } else if (e.key === 'F3') {
         e.preventDefault();
         setDebug((on) => !on);
       }
@@ -970,6 +1036,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       buildNeed: upgradePath('shelter').steps.find((st) => st.state === 'next')?.of ?? 1,
       insulation: S.insulation,
       bed: !!S.bed,
+      stove: !!S.stove,
       firepitTier: S.firepitTier,
       fireLit: S.fireH > 0,
       rackTier: S.rackTier,
@@ -980,6 +1047,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       day: S.day,
       winter: !!S.winter,
       species: hunt && hunt.state !== 'none' ? (hunt.species ?? '') : '',
+      huntState: hunt?.state ?? 'none',
+      wounded: !!(hunt as { wounded?: boolean } | undefined)?.wounded,
       logs: Math.floor(S.stock?.wood ?? 0),
       firewood: Math.floor(S.stock?.firewood ?? 0),
       meat: Math.ceil((S.meatQ ?? []).reduce((a: number, e: { n: number }) => a + e.n, 0)),
@@ -998,7 +1067,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
     };
     // v12 mutates its state in place; the view version marks a change.
   }, [S, view.version]);
-  const frozen = !!(view.modal || journal || map || night || keepsake || sound || curtain !== null);
+  const frozen = !!(view.modal || journal || map || night || keepsake || sound || inventory || aim || curtain !== null);
   useSoundCues(view, curtain !== null);
   useThoughts(view, !frozen && !view.endScreen && !guide);
   const worldInput: WorldInput = useMemo(
@@ -1017,8 +1086,10 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       frozen,
       birdsSilent: !!S.birdsSilent,
       aurora: auroraTonight(S),
+      held: aim ? 'bow' : held,
+      walkTo,
     }),
-    [loc, layout, hidden, selected, S.hour, S.weather, S.winter, S.day, props, frozen, S.birdsSilent],
+    [loc, layout, hidden, selected, S.hour, S.weather, S.winter, S.day, props, frozen, S.birdsSilent, held, aim, walkTo],
   );
 
   // rc.3: the win is a scene first; v12's cards wait underneath until it ends.
@@ -1045,6 +1116,12 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       setMap(true);
       return;
     }
+    // rc.5: the shot is drawn by hand first. The odds stay v12's.
+    if (offer.handler.startsWith('actShot') && offer.enabled) {
+      setSelected(null);
+      setAim(offer);
+      return;
+    }
     if (station && !station.exitTo && station.id !== 'you') setStandAt((at) => ({ ...at, [loc]: station.id }));
     // Back to looking around once you have done something.
     setSelected(null);
@@ -1067,6 +1144,20 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <button className="you-btn" onClick={() => setSelected(selected === 'you' ? null : 'you')} title="Things only you need (Tab)">
             You
           </button>
+          <button className="pack-btn" onClick={() => setInventory(true)} title={`${INVENTORY_TEXT.title} (${INVENTORY_TEXT.key})`}>
+            <Glyph id="pack" size={40} />
+          </button>
+          {aim && (
+            <AimCard
+              onLoose={() => {
+                const offer = aim;
+                setAim(null);
+                session.click(offer.handler);
+              }}
+              onCancel={() => setAim(null)}
+            />
+          )}
+          {inventory && <Inventory view={view} held={held} onHold={setHeld} onClose={() => setInventory(false)} />}
           {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} onBuild={startBuild} onKeepsake={(note) => {
             setSelected(null);
             setKeepsake(note);

@@ -127,6 +127,22 @@
   "hash": "1c26437f7c0f",
   "seconds": 2.81
  },
+ "b-a-stove-0": {
+  "hash": "7c02f036c5e2",
+  "seconds": 4.23
+ },
+ "b-a-stove-1": {
+  "hash": "47b007e19832",
+  "seconds": 3.82
+ },
+ "b-a-stove-2": {
+  "hash": "c90333635f07",
+  "seconds": 3.11
+ },
+ "b-a-stove-3": {
+  "hash": "e8641892d543",
+  "seconds": 4.95
+ },
  "b-a-table-0": {
   "hash": "e9c9063246e4",
   "seconds": 4.37
@@ -950,6 +966,78 @@
  "gone-3": {
   "hash": "15c0f70ccdc2",
   "seconds": 4.16
+ },
+ "h-hit-0": {
+  "hash": "376d86127e61",
+  "seconds": 3.39
+ },
+ "h-hit-1": {
+  "hash": "20db6e400ed1",
+  "seconds": 1.68
+ },
+ "h-hot-0": {
+  "hash": "98036a43a974",
+  "seconds": 3.91
+ },
+ "h-hot-1": {
+  "hash": "1bf2b9495bea",
+  "seconds": 5.39
+ },
+ "h-hot-2": {
+  "hash": "0ff7a270d363",
+  "seconds": 4.27
+ },
+ "h-lost-0": {
+  "hash": "af86801a56ed",
+  "seconds": 4.13
+ },
+ "h-lost-1": {
+  "hash": "b0245abf7c1a",
+  "seconds": 3.17
+ },
+ "h-lost-2": {
+  "hash": "34957b1a24d2",
+  "seconds": 2.42
+ },
+ "h-miss-0": {
+  "hash": "f2fd766d75f0",
+  "seconds": 2.43
+ },
+ "h-miss-1": {
+  "hash": "693f62344240",
+  "seconds": 3.51
+ },
+ "h-spotted-0": {
+  "hash": "634379e65d71",
+  "seconds": 2.88
+ },
+ "h-spotted-1": {
+  "hash": "01043bc41079",
+  "seconds": 2.86
+ },
+ "h-spotted-2": {
+  "hash": "9ad3ba6d76cf",
+  "seconds": 4.39
+ },
+ "h-spotted-3": {
+  "hash": "1a4ac9aad832",
+  "seconds": 2.08
+ },
+ "h-tracks-0": {
+  "hash": "f304e0c431d5",
+  "seconds": 3.65
+ },
+ "h-tracks-1": {
+  "hash": "53928a35397f",
+  "seconds": 4.48
+ },
+ "h-tracks-2": {
+  "hash": "a9c2f8289447",
+  "seconds": 3.44
+ },
+ "h-tracks-3": {
+  "hash": "9c912efa0c06",
+  "seconds": 4.15
  },
  "hungry-1": {
   "hash": "9ebe2c78993e",

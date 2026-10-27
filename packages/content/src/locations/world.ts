@@ -102,7 +102,7 @@ export const WORLD: Readonly<Record<LocationId, WorldArea>> = {
       ridge: { x: 7.5, z: -9, radius: 2.2 },
       timber: { x: -4, z: -6, radius: 1.2 },
       birch: { x: 1.5, z: -6.5, radius: 0.5 },
-      animal: { x: 6, z: -4, face: 30, radius: 0.8 },
+      animal: { x: 6, z: -4, face: 30, radius: 0.8, reach: 14 },
       trailhead: { x: 9.5, z: 3, face: -90, radius: 0.3 },
       deadfall: { x: -7, z: 1, face: 20, radius: 1.5 },
       moss: { x: 2.5, z: 1.5, radius: 1.0 },

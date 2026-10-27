@@ -1,13 +1,14 @@
-// Writes Dan's thought lines (D-067), his confessional pieces (D-068), his build lines (rc.4) and the spoken intro (rc.2) as JSON for the voice recorder, scripts/voice/render.py.
+// Writes Dan's thought lines (D-067), his confessional pieces (D-068), his build lines (rc.4), his hunting lines (rc.5) and the spoken intro (rc.2) as JSON for the voice recorder, scripts/voice/render.py.
 // npm run voice:lines -- out.json
 
 import { writeFileSync } from 'node:fs';
-import { BUILD_TASKS, CONFESSION_CLIPS, INTRO_VOICE, THOUGHTS, WIN_VOICE } from '@tapout/content';
+import { BUILD_TASKS, CONFESSION_CLIPS, HUNT_VOICE, INTRO_VOICE, THOUGHTS, WIN_VOICE } from '@tapout/content';
 
 const out = process.argv[2] ?? 'voice-lines.json';
 const lines = [
   ...THOUGHTS.map(({ id, say, speed }) => ({ id, say, speed })),
   ...Object.entries(BUILD_TASKS).flatMap(([key, t]) => t.say.map((say, i) => ({ id: `b-${key}-${i}`, say }))),
+  ...Object.values(HUNT_VOICE).flat().map(({ id, say }) => ({ id, say })),
   ...CONFESSION_CLIPS.map(({ id, say }) => ({ id, say, style: 'aloud' })),
   ...[...Object.values(INTRO_VOICE.notes).flat(), ...INTRO_VOICE.dropoff.flatMap((c) => (c ? [c] : [])), ...WIN_VOICE].map(({ id, say, voice, style }) => ({ id, say, voice, ...(style ? { style } : {}) })),
 ];

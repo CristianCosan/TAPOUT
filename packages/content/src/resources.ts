@@ -130,7 +130,7 @@ export const BUILD_MENU = {
     { id: 'rack', action: 'a-rack', station: 'rack', name: 'Smoking rack' },
     { id: 'cache', action: 'a-cache', station: 'cache', name: 'Food cache' },
   ],
-  things: ['a-picker', 'a-chair', 'a-table', 'a-jug', 'a-flute'],
+  things: ['a-bed', 'a-stove', 'a-picker', 'a-chair', 'a-table', 'a-jug', 'a-flute'],
 } as const;
 
 /**
@@ -138,7 +138,7 @@ export const BUILD_MENU = {
  * stages with their build button inside; extras are one-off builds.
  */
 export const BUILD_STATIONS: Readonly<Record<string, { paths: ReadonlyArray<{ id: 'shelter' | 'dugout' | 'firepit' | 'rack' | 'cache'; action: string }>; extras: readonly string[] }>> = {
-  shelter: { paths: [{ id: 'shelter', action: 'a-shelter' }, { id: 'dugout', action: 'a-dugout' }], extras: ['a-bed', 'a-insulate'] },
+  shelter: { paths: [{ id: 'shelter', action: 'a-shelter' }, { id: 'dugout', action: 'a-dugout' }], extras: ['a-bed', 'a-insulate', 'a-stove'] },
   fire: { paths: [{ id: 'firepit', action: 'a-firepit' }], extras: [] },
   rack: { paths: [{ id: 'rack', action: 'a-rack' }], extras: ['a-hugeRack'] },
   cache: { paths: [{ id: 'cache', action: 'a-cache' }], extras: [] },

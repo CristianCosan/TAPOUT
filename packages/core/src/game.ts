@@ -15,6 +15,7 @@ import * as director from './v12/director.ts';
 import * as endingSequences from './v12/endingSequences.ts';
 import * as endings from './v12/endings.ts';
 import * as food from './v12/food.ts';
+import * as gear from './v12/gear.ts';
 import * as helpers from './v12/helpers.ts';
 import * as interior from './v12/interior.ts';
 import * as medical from './v12/medical.ts';
@@ -40,7 +41,7 @@ import * as testMode from './v12/testMode.ts';
 export type { HomeThread } from './v12/home.ts';
 
 const MODULES = [
-  breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, helpers,
+  breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, gear, helpers,
   interior, medical, modifiers, night, person, recorder, resolve, rules, setup, shore, tags, threads,
   travel, tuning, woods, worry, panel, home, letters, testMode,
 ];
@@ -171,6 +172,8 @@ export { upgradePath, type UpgradeId, type UpgradePath, type UpgradeStep, type M
  * a random number; the UI uses them to describe the run, never to decide anything.
  */
 export { KIT_POOL, WEATHER, SHELTERS, BUILD_NEED, CARRY_CAP, GAME, MAX_SNARES_PER_SPOT, MAX_LINES_TOTAL } from './v12/tuning.ts';
+export { wearing, type Garment } from './v12/gear.ts';
+export { CLOTHES } from './v12/tuning.ts';
 export { ambientTempC } from './v12/cost.ts';
 export { fireCap } from './v12/camp.ts';
 export { campLeft } from './v12/helpers.ts';

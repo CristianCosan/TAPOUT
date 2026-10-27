@@ -7,11 +7,11 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FIRST_PERSON, SLOW_CHECK, type LocationLayout, type WorldArea } from '@tapout/content';
 import { mat, noise, rough, seeded } from './kit.ts';
-import { buildProp, propKey, type PropState } from './props.ts';
+import { buildProp, hoof, propKey, type PropState } from './props.ts';
 import { audio } from '../audio/engine.ts';
 import { settings } from '../settings.ts';
 import { Wildlife } from './life.ts';
-import { Hands, MOTIONS, type Motion } from './hands.ts';
+import { Hands, MOTIONS, type Held, type Motion } from './hands.ts';
 import { Ambience } from './sound.ts';
 
 export interface WorldInput {
@@ -34,6 +34,10 @@ export interface WorldInput {
   birdsSilent?: boolean;
   /** Northern lights tonight (scenery, chosen by the app). */
   aurora?: boolean;
+  /** The tool you carry between jobs (rc.5). */
+  held?: Held | null;
+  /** rc.5: walks you to a station (following a trail); a new n starts a new walk. */
+  walkTo?: { id: string; n: number };
 }
 
 export interface Hover {
@@ -243,6 +247,10 @@ export class World {
    * the logs and stones lying about camp or the trees in the woods. Looking at one is looking at
    * that station; camp's own pieces disappear as the timber and stone there are used up.
    */
+  private trail: THREE.Group | null = null;
+  private trailKey = '';
+  private glide: { from: THREE.Vector3; to: THREE.Vector3; look: THREE.Vector3; t: number } | null = null;
+  private walkN: number | null = null;
   private proxies: Array<{ obj: THREE.Mesh; station: string; kind?: 'logs' | 'rocks' }> = [];
   private hoveredProxy: THREE.Mesh | null = null;
   private clock = new THREE.Clock();
@@ -474,6 +482,64 @@ export class World {
       if (!sameArea) this.shownHour = -1;
     }
     this.syncStations(input);
+    this.syncTrail(input);
+    this.hands.hold(input.held ?? null);
+    this.syncWalk(input);
+  }
+
+  /** rc.5: the hunt's trail, hoof print by hoof print from the game trail toward the animal. */
+  private syncTrail(input: WorldInput): void {
+    const state = input.props.huntState ?? 'none';
+    const key = `${input.area.id}-${input.winter}-${state}-${!!input.props.wounded}-${input.hidden.has('tracks')}`;
+    if (key === this.trailKey) return;
+    this.trailKey = key;
+    this.trail?.removeFromParent();
+    this.trail = null;
+    const a = input.area.stations.tracks;
+    const b = input.area.stations.animal;
+    if (!a || !b || !['tracks', 'hot', 'trailing'].includes(state) || input.hidden.has('tracks')) return;
+    const g = new THREE.Group();
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const len = Math.hypot(dx, dz);
+    const ux = dx / len;
+    const uz = dz / len;
+    const color = state === 'hot' ? 0x140d06 : input.winter ? 0x6a7a8a : 0x261a10;
+    for (let i = 3; i * 0.45 < len - 1; i++) {
+      const side = i % 2 ? 0.13 : -0.13;
+      const x = a.x + ux * i * 0.45 - uz * side;
+      const z = a.z + uz * i * 0.45 + ux * side;
+      const p = hoof(color, 1.8);
+      p.position.set(x, this.ground(input.area, x, z) + 0.03, z);
+      p.rotation.y = Math.atan2(-ux, -uz);
+      g.add(p);
+      if (input.props.wounded && i % 3 === 0) {
+        const drop = new THREE.Mesh(new THREE.CircleGeometry(0.04, 6), mat(0x8a1a12));
+        drop.rotation.x = -Math.PI / 2;
+        drop.position.set(x + uz * 0.15, p.position.y + 0.005, z - ux * 0.15);
+        g.add(drop);
+      }
+    }
+    this.areaRoot.add(g);
+    this.trail = g;
+  }
+
+  /** rc.5: following a trail walks you along it, a few seconds, to where the animal stands. */
+  private syncWalk(input: WorldInput): void {
+    const walk = input.walkTo;
+    if (this.walkN === null) {
+      this.walkN = walk?.n ?? 0;
+      return;
+    }
+    if (!walk || walk.n === this.walkN) return;
+    this.walkN = walk.n;
+    const st = input.area.stations[walk.id];
+    if (!st) return;
+    const look = new THREE.Vector3(st.x, this.ground(input.area, st.x, st.z) + 0.9, st.z);
+    const away = new THREE.Vector3(this.pos.x - st.x, 0, this.pos.z - st.z);
+    if (away.lengthSq() < 0.01) away.set(0, 0, 1);
+    away.normalize().multiplyScalar(st.radius + 4.5);
+    this.glide = { from: this.pos.clone(), to: new THREE.Vector3(st.x + away.x, 0, st.z + away.z), look, t: 0 };
   }
 
   dispose(): void {
@@ -504,7 +570,7 @@ export class World {
   /** Where the scenery birds are. For tests and screenshots. */
   where() {
     const r = this.renderer.info.render;
-    return { x: this.pos.x, z: this.pos.z, prints: this.prints.count, calls: r.calls, triangles: r.triangles, rings: this.rings?.children.filter((c) => c.visible).length ?? 0, shoreZ: this.input?.area.shoreZ, slide: this.slide.visible ? { x: this.slide.geometry.getAttribute('position').getX(0), y: this.slide.geometry.getAttribute('position').getY(0), z: this.slide.geometry.getAttribute('position').getZ(0) } : null };
+    return { hover: this.hovered?.id, shown: [...this.stations].filter(([, n]) => n.group.visible).map(([id]) => id).join(','), x: this.pos.x, z: this.pos.z, prints: this.prints.count, calls: r.calls, triangles: r.triangles, rings: this.rings?.children.filter((c) => c.visible).length ?? 0, shoreZ: this.input?.area.shoreZ, slide: this.slide.visible ? { x: this.slide.geometry.getAttribute('position').getX(0), y: this.slide.geometry.getAttribute('position').getY(0), z: this.slide.geometry.getAttribute('position').getZ(0) } : null };
   }
 
   birds() {
@@ -517,6 +583,11 @@ export class World {
     // A handler name, or (a build's small jobs, rc.4) the motion itself.
     const motion = MOTIONS[fn] ?? (Object.values(MOTIONS).includes(fn as Motion) ? (fn as Motion) : undefined);
     if (motion) this.hands.play(motion);
+  }
+
+  /** Carries a tool in hand between jobs (rc.5, keys 1-5), or empties the hands. */
+  hold(tool: Held | null): void {
+    this.hands.hold(tool);
   }
 
   /** Stands you somewhere and points you at a spot. For tests and screenshots. */
@@ -558,6 +629,9 @@ export class World {
     }
     this.stations.clear();
     this.water = null;
+    this.trail = null;
+    this.trailKey = '';
+    this.glide = null;
     this.mist = null;
     this.groundFog = null;
     this.rings = null;
@@ -1179,8 +1253,23 @@ export class World {
         this.keepInside();
       }
     }
+    if (this.glide && ['KeyW', 'KeyA', 'KeyS', 'KeyD'].some((c) => this.keys.has(c))) this.glide = null;
+    if (this.glide) {
+      const g = this.glide;
+      const before = g.t;
+      g.t = Math.min(1, g.t + Math.min(0.25, raw) / 3);
+      const e = g.t * g.t * (3 - 2 * g.t);
+      this.pos.lerpVectors(g.from, g.to, e);
+      this.keepInside();
+      const d = g.look.clone().sub(this.eye());
+      this.yaw = Math.atan2(-d.x, -d.z);
+      this.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)) * 0.6;
+      if (Math.floor(before * 7) !== Math.floor(g.t * 7)) this.sound.step(false, input.winter);
+      if (g.t >= 1) this.glide = null;
+    }
     const eye = this.eye();
-    const doing = this.hands.update(dt);
+    const k = this.keys;
+    const doing = this.hands.update(dt, !input.frozen && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown'].some((c) => k.has(c)));
     this.camera.position.copy(eye);
     this.camera.position.y += doing.drop;
     this.camera.rotation.set(this.pitch + doing.pitch, this.yaw + doing.yaw, 0);

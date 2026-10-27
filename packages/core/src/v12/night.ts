@@ -24,7 +24,7 @@ import { RULES, say } from './rules.ts';
 import { S, SETTINGS } from './state.ts';
 import { checkThreads, showForcedTapoutCinematic, tickDryingAtFire, tickShiverClear } from './threads.ts';
 import { queueLocNews } from './travel.ts';
-import { GAME, LONELY_LINES, TUNING, computeMaxEnergy, contextualTapReason } from './tuning.ts';
+import { GAME, LONELY_LINES, TUNING, computeMaxEnergy, contextualTapReason, STOVE } from './tuning.ts';
 import { render, sfxFinalTwo, showModal } from './ui.ts';
 import { enforceMoraleCeiling, smokedShelfHours, triggerBearDread, worryLedgerDailyTick } from './worry.ts';
 // ============================== night / new day ==============================
@@ -68,17 +68,19 @@ export function actSleep(early?){
   { const sleepBurn = (S.winter ? 70*1.15 : 70) * nightH; S.kcal -= sleepBurn; S.kcalBurn += sleepBurn; }
   let stokeWakeUsed = false;
   const hadFireAtStart = S.fireH > 0;
+  const stove = RULES.stove && S.stove && !notAtCamp;
+  const burn = stove ? STOVE.nightFireMul : 1;
   if (!notAtCamp && S.fireH > 0){
-    const used = Math.min(S.fireH, nightH);
-    S.fireH = Math.max(0, S.fireH - nightH);
-    S.warmth = clamp(S.warmth + 3*used, 0, S.soakedThrough ? TUNING.exposure.soakedWarmthCap : 100);
+    const used = Math.min(S.fireH/burn, nightH);
+    S.fireH = Math.max(0, S.fireH - nightH*burn);
+    S.warmth = clamp(S.warmth + (stove ? STOVE.warmPerHour : 3)*used, 0, S.soakedThrough ? TUNING.exposure.soakedWarmthCap : 100);
     S.wet = clamp(S.wet - 7*used);
     tickDryingAtFire(used);
     tickShiverClear(used);
     if (nightH > used){
       const rem = nightH - used;
       S.wet = clamp(S.wet - 1.5*rem);
-      const dr = warmthDrainRate(false, true) * 0.55;
+      const dr = warmthDrainRate(false, true) * 0.55 * (stove ? STOVE.nightDrainMul : 1);
       S.warmth = clamp(S.warmth - dr*rem);
     }
   } else {

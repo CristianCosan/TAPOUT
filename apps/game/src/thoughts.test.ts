@@ -1,23 +1,25 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { BUILD_TASKS, CONFESSION_CLIPS, INTRO_DROPOFF, INTRO_VOICE, THOUGHTS, WIN_SCENE, WIN_VOICE } from '@tapout/content';
+import { BUILD_TASKS, CONFESSION_CLIPS, HUNT_VOICE, INTRO_DROPOFF, INTRO_VOICE, THOUGHTS, WIN_SCENE, WIN_VOICE } from '@tapout/content';
 import { plainWords } from './audio/thoughts.ts';
 
 const dir = new URL('../public/voice/', import.meta.url);
 // rc.4: Dan's lines while building, one recording per version.
 const BUILDING = Object.entries(BUILD_TASKS).flatMap(([key, t]) => t.say.map((_, i) => ({ id: `b-${key}-${i}` })));
+// rc.5: Dan's lines while hunting.
+const HUNTING = Object.values(HUNT_VOICE).flat();
 const INTRO = [...Object.values(INTRO_VOICE.notes).flat(), ...INTRO_VOICE.dropoff.flatMap((c) => (c ? [c] : [])), ...WIN_VOICE];
 
 describe("Dan's thoughts (D-067)", () => {
   it('has one recording for every line, and no stray ones', () => {
     const manifest = JSON.parse(readFileSync(new URL('manifest.json', dir), 'utf8')) as Record<string, unknown>;
-    const ids = [...THOUGHTS, ...CONFESSION_CLIPS, ...INTRO, ...BUILDING].map((t) => t.id);
+    const ids = [...THOUGHTS, ...CONFESSION_CLIPS, ...INTRO, ...BUILDING, ...HUNTING].map((t) => t.id);
     for (const id of ids) expect(existsSync(new URL(`${id}.ogg`, dir)), id).toBe(true);
     expect(Object.keys(manifest).sort()).toEqual(ids.sort());
   });
 
   it('gives every line its own id', () => {
-    const ids = [...THOUGHTS, ...CONFESSION_CLIPS, ...INTRO, ...BUILDING].map((t) => t.id);
+    const ids = [...THOUGHTS, ...CONFESSION_CLIPS, ...INTRO, ...BUILDING, ...HUNTING].map((t) => t.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 

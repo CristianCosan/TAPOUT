@@ -30,6 +30,12 @@ export interface PropState {
   winter: boolean;
   /** The animal you spotted, if any (v12's species id). */
   species: string;
+  /** rc.5: the stone stove is built. */
+  stove?: boolean;
+  /** v12's hunt state (rc.5: the trail on the ground shows it). */
+  huntState?: string;
+  /** A wounded animal leaves blood on its trail. */
+  wounded?: boolean;
   /** What lies in camp: logs and firewood on the pile, meat and berries at the hook, materials. */
   logs: number;
   firewood: number;
@@ -716,12 +722,31 @@ function birch(): THREE.Group {
   return g;
 }
 
+/** A grouse on the ground (rc.5: small game you can see, and shoot). */
+function grouse(fat: boolean): THREE.Group {
+  const g = new THREE.Group();
+  const k = fat ? 1.2 : 1;
+  const body = mesh(new THREE.SphereGeometry(0.16, 8, 6), mat(0x6a5440), 0, 0.2, 0);
+  body.scale.set(0.9, 0.85, 1.35);
+  g.add(body);
+  g.add(mesh(new THREE.SphereGeometry(0.075, 7, 5), mat(0x5a4632), 0, 0.36, 0.17));
+  g.add(mesh(new THREE.ConeGeometry(0.02, 0.05, 4), mat(0x2a2218), 0, 0.36, 0.25, Math.PI / 2, 0, 0));
+  const tail = mesh(new THREE.ConeGeometry(0.1, 0.2, 5), mat(0x4a3a2a), 0, 0.24, -0.22, -Math.PI / 2 - 0.3, 0, 0);
+  tail.scale.set(1.4, 1, 0.4);
+  g.add(tail);
+  for (const x of [-0.05, 0.05]) log(g, v(x, 0, 0.02), v(x, 0.1, 0), 0.01, 0x8a7a5a);
+  g.add(hitVolume(0.5, 0.5, 0.6, 0.25));
+  g.scale.setScalar(k * 1.3);
+  return g;
+}
+
 function animal(s: PropState): THREE.Group {
+  if (s.species === 'grouse' || s.species === 'fatGrouse') return grouse(s.species === 'fatGrouse');
   const g = new THREE.Group();
   const big = s.species === 'moose';
-  const small = s.species === 'hare' || s.species === 'grouse' || s.species === 'squirrel';
+  const small = s.species === 'hare' || s.species === 'squirrel' || s.species === 'fox' || s.species === 'fatHare';
   const k = big ? 1.5 : small ? 0.35 : 1;
-  const coat = s.species === 'hare' && s.winter ? 0xeeeeee : s.species === 'moose' ? 0x3a2a1e : 0x7a5a3a;
+  const coat = s.species === 'hare' && s.winter ? 0xeeeeee : s.species === 'moose' ? 0x3a2a1e : s.species === 'fox' ? 0xb0582a : 0x7a5a3a;
   g.add(mesh(rough(new THREE.CapsuleGeometry(0.32, 0.9, 3, 7), 0.05, 3), mat(coat), 0, 1.05, 0, Math.PI / 2, 0, 0));
   for (const [x, z] of [[-0.18, 0.45], [0.18, 0.45], [-0.18, -0.45], [0.18, -0.45]] as const) log(g, v(x, 0, z), v(x, 0.95, z), 0.05, coat);
   log(g, v(0, 1.2, 0.55), v(0, 1.65, 0.85), 0.11, coat);
@@ -729,8 +754,16 @@ function animal(s: PropState): THREE.Group {
   if (!small) {
     for (const side of [-1, 1]) log(g, v(side * 0.06, 1.8, 0.8), v(side * 0.35, 2.15, 0.7), 0.025, 0xb8a888);
   }
+  g.add(hitVolume(1.2, 2, 1.9, 1));
   g.scale.setScalar(k);
   return g;
+}
+
+/** An unseen box that catches the look ray, so a thin-legged animal is easy to aim at (rc.5). */
+function hitVolume(w: number, h: number, d: number, y: number): THREE.Mesh {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ visible: false }));
+  m.position.y = y;
+  return m;
 }
 
 /** The trapline post: spare wire loops, and a strip of red flagging tape for each snare you have set. */
@@ -814,13 +847,46 @@ function ridge(): THREE.Group {
   return g;
 }
 
-function tracks(): THREE.Group {
+/** rc.5: the stone stove at the back of the shelter, its flue up through the roof. */
+function stove(): THREE.Group {
   const g = new THREE.Group();
-  for (let i = 0; i < 12; i++) {
-    const m = mesh(new THREE.CircleGeometry(0.07, 6), mat(0x2a2018), (i % 2 ? 0.15 : -0.15) + i * 0.1, 0.02, 1.8 - i * 0.35, -Math.PI / 2);
-    m.scale.set(1, 1.6, 1);
+  const stone = (i: number) => 0x8c8a84 + ((i * 0x050505) % 0x101010);
+  for (let row = 0; row < 3; row++)
+    for (let i = 0; i < 4; i++) {
+      const r = mesh(new THREE.DodecahedronGeometry(0.13, 0), mat(stone(i + row)), -0.28 + i * 0.19, 0.1 + row * 0.2, 0, 0.3 * i, 0.5 * row, 0);
+      r.scale.set(1, 0.7, 1);
+      g.add(r);
+    }
+  g.add(mesh(new THREE.BoxGeometry(0.62, 0.06, 0.4), mat(0x9a8a7a), 0, 0.62, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.07, 0.08, 1.5, 7), mat(0x7a6a5a), 0.18, 1.35, 0));
+  g.add(mesh(new THREE.BoxGeometry(0.24, 0.18, 0.05), mat(0x1a1008), 0, 0.28, 0.2));
+  g.position.set(0.9, 0, -0.7);
+  return g;
+}
+
+/** One cloven hoof print: two halves, toes pointing along -z. */
+export function hoof(color: number, k = 1): THREE.Group {
+  const g = new THREE.Group();
+  for (const x of [-0.035, 0.035]) {
+    const m = mesh(new THREE.CircleGeometry(0.04 * k, 7), mat(color), x * k, 0, 0, -Math.PI / 2);
+    m.scale.set(0.8, 1.7, 1);
     g.add(m);
   }
+  return g;
+}
+
+function tracks(s: PropState): THREE.Group {
+  // rc.5: fresher sign is darker and plainer; a wounded animal bleeds on its trail.
+  const g = new THREE.Group();
+  const fresh = s.huntState === 'hot' || s.huntState === 'spotted';
+  const color = fresh ? 0x1a120a : 0x3a2e22;
+  for (let i = 0; i < 8; i++) {
+    const p = hoof(color, 1.3);
+    p.position.set((i % 2 ? 0.14 : -0.14) + i * 0.05, 0.02, 0.9 - i * 0.32);
+    g.add(p);
+    if (s.wounded && i % 2 === 0) g.add(mesh(new THREE.CircleGeometry(0.035, 6), mat(0x8a1a12), p.position.x + 0.12, 0.025, p.position.z - 0.1, -Math.PI / 2));
+  }
+  if (fresh) for (let i = 0; i < 5; i++) g.add(mesh(new THREE.CircleGeometry(0.22, 7), mat(0x4a5a2a), -0.5 + i * 0.25, 0.015, 0.4 - i * 0.1, -Math.PI / 2));
   return g;
 }
 
@@ -829,7 +895,11 @@ export function buildProp(id: string, s: PropState): THREE.Group {
   switch (id) {
     case 'fire': return fire(s);
     case 'water': return water();
-    case 'shelter': return shelter(s);
+    case 'shelter': {
+      const g = shelter(s);
+      if (s.stove) g.add(stove());
+      return g;
+    }
     case 'pack': return pack();
     case 'rack': return rack(s);
     case 'cache': return cache(s);
@@ -863,7 +933,7 @@ export function buildProp(id: string, s: PropState): THREE.Group {
     case 'stones': return stones();
     case 'moss': return mossyRocks(s);
     case 'berries': return berries(s);
-    case 'tracks': return tracks();
+    case 'tracks': return tracks(s);
     default:
       if (id.startsWith('to')) return exit(s.exitLabels[id] ?? id.slice(2).toUpperCase());
       return new THREE.Group();
@@ -874,7 +944,7 @@ export function buildProp(id: string, s: PropState): THREE.Group {
 export function propKey(id: string, s: PropState): string {
   switch (id) {
     case 'fire': return `${s.firepitTier}-${s.fireLit}`;
-    case 'shelter': return `${s.structure}-${s.buildProg ?? 0}-${s.dugout}-${s.dugoutProg ?? 0}-${s.insulation}-${s.bed}-${s.winter}`;
+    case 'shelter': return `${s.structure}-${s.buildProg ?? 0}-${s.dugout}-${s.dugoutProg ?? 0}-${s.insulation}-${s.bed}-${s.winter}-${!!s.stove}`;
     case 'rack': return `${s.rackTier}-${s.hugeRack}-${Math.min(10, s.smoking)}-${Math.min(10, s.smoked)}`;
     case 'cache': return `${s.cacheTier}`;
     case 'post': return `${Math.min(s.day, 40)}`;
@@ -886,6 +956,7 @@ export function propKey(id: string, s: PropState): string {
     case 'food': return `${Math.min(4, s.meat)}-${Math.min(12, s.berries)}`;
     case 'stock': return `${Math.min(10, s.rocks)}-${Math.min(15, Math.ceil(s.moss))}-${Math.min(3, s.clay)}-${s.tinder > 0}`;
     case 'animal': return `${s.species}-${s.winter}`;
+    case 'tracks': return `${s.huntState}-${!!s.wounded}`;
     case 'killsite': case 'jay': case 'clay': case 'timber': case 'moss': case 'berries': return `${s.winter}`;
     default: return '';
   }
