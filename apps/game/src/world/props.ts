@@ -14,6 +14,9 @@ export interface PropState {
   /** rc.4: sessions done towards the next shelter tier, and how many it needs. */
   buildProg?: number;
   buildNeed?: number;
+  /** rc.4: how much of camp's loose timber and stone is left, 0 to 1. */
+  campLogs?: number;
+  campRocks?: number;
   insulation: number;
   bed: boolean;
   firepitTier: number;

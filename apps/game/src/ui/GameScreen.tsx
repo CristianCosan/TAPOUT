@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { GAME, ambientTempC, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
-import { BUILD_MENU, BUILD_STATIONS, ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
+import { CAMP_HARVEST, GAME, ambientTempC, campLeft, dawnHour, duskHour, roundDisplay, upgradePath, type UpgradeId } from '@tapout/core';
+import { BUILD_MENU, BUILD_STATIONS, BUILD_TASKS, BUILD_TASK_TEXT, ENERGY_HUD, HUNT_TRAIL_LABELS, KEEPSAKES, UPGRADE_TEXT, type ResourceId, LOCATIONS, STAGE, WORLD, type IntroNote, type LocationId, type LocationLayout, type Station } from '@tapout/content';
 import { MapOverlay } from './MapOverlay.tsx';
 import { hudText, offersFor, specialOffer, type Offer } from './offers.ts';
 import { session, type ActionResult, type View } from '../session.ts';
@@ -14,6 +14,7 @@ import { useSoundCues } from '../audio/cues.ts';
 import { useThoughts } from '../audio/useThoughts.ts';
 import { ThoughtSubtitle } from './ThoughtSubtitle.tsx';
 import { playUi } from '../audio/effects.ts';
+import { speakPieces } from '../audio/thoughts.ts';
 import { SettingsPanel } from './SettingsPanel.tsx';
 import { Tips } from './Tips.tsx';
 import { NoteBox } from './NoteBox.tsx';
@@ -242,7 +243,7 @@ function EnergyHud({ view, cost, onBed }: { view: View; cost: number; onBed: (of
 
 // ---- the context panel, next to the station you clicked
 
-function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onKeepsake: (note: IntroNote) => void; onCost: (cost: number) => void; beside?: boolean }) {
+function ContextPanel({ station, view, onClose, onAct, onBuild, onKeepsake, onCost, beside }: { station: Station; view: View; onClose: () => void; onAct: (offer: Offer) => void; onBuild: (b: BuildStart) => void; onKeepsake: (note: IntroNote) => void; onCost: (cost: number) => void; beside?: boolean }) {
   const all = offersFor(station, view);
   const building = BUILD_STATIONS[station.id];
   const builds = new Set(building ? [...building.paths.map((p) => p.action), ...building.extras] : []);
@@ -280,7 +281,7 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
           ))}
         </div>
       )}
-      {BUILD_STATIONS[station.id] && <BuildPanel station={station.id} view={view} onAct={onAct} onCost={onCost} />}
+      {BUILD_STATIONS[station.id] && <BuildPanel station={station.id} view={view} onBuild={onBuild} onCost={onCost} />}
       {BUILD_STATIONS[station.id] && uses.length > 0 && (
         <h4 className="use-head">
           <Glyph id="look" /> {UPGRADE_TEXT.use}
@@ -328,7 +329,7 @@ function ContextPanel({ station, view, onClose, onAct, onKeepsake, onCost, besid
  * shelter you first pick the shelter or the dugout, and the other goes away. Everything else built
  * here goes below. Facts only, no advice.
  */
-function BuildPanel({ station, view, onAct, onCost }: { station: string; view: View; onAct: (offer: Offer) => void; onCost: (cost: number) => void }) {
+function BuildPanel({ station, view, onBuild, onCost }: { station: string; view: View; onBuild: (b: BuildStart) => void; onCost: (cost: number) => void }) {
   const spec = BUILD_STATIONS[station];
   if (!spec) return null;
   const panel = new Map(view.panel.map((e) => [e.id, e]));
@@ -337,8 +338,6 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
   if (spec.paths.length === 0 && extras.length === 0) return null;
   const routes = spec.paths.map((p) => ({ ...p, path: upgradePath(p.id) })).filter((r) => !r.path.closed);
   const have = (m: string) => Number(hudText(view.hud, STOCK_OF[m]!)) || 0;
-  const act = (entry: { id: string; label: string; detail: string; enabled: boolean; onclick: string }) =>
-    onAct({ key: entry.id, label: entry.label, detail: entry.detail, enabled: entry.enabled, handler: entry.onclick });
   const hover = (entry?: { enabled: boolean; detail: string }) => ({
     onMouseEnter: () => onCost(entry?.enabled ? energyCost(entry.detail) : 0),
     onMouseLeave: () => onCost(0),
@@ -373,7 +372,7 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
             const first = path.steps[0]!;
             const open = !!entry?.visible;
             return (
-              <button key={id} className="route-card" disabled={!open || !entry?.enabled} onClick={() => entry && act(entry)} {...hover(entry)}>
+              <button key={id} className="route-card" disabled={!open || !entry?.enabled} onClick={() => entry && onBuild({ key: `${id}.1`, name: UPGRADE_TEXT.steps[id][0]!, entry, hours: first.hours })} {...hover(entry)}>
                 <span className="bpic small" dangerouslySetInnerHTML={{ __html: BUILD_PICS[id]![id === 'dugout' ? 3 : 1] ?? '' }} />
                 <b>{UPGRADE_TEXT.routes[id].title}</b>
                 <small>{UPGRADE_TEXT.routes[id].hint}</small>
@@ -433,7 +432,7 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
               </span>
             </div>
             {entry?.visible && (
-              <button className="build-btn" disabled={!entry.enabled} onClick={() => act(entry)} {...hover(entry)}>
+              <button className="build-btn" disabled={!entry.enabled} onClick={() => onBuild({ key: `${id}.${next.step}`, name: stepNames[next.step - 1] ?? '', entry, hours: next.hours })} {...hover(entry)}>
                 <Glyph id="build" /> <span>{UPGRADE_TEXT.go(stepNames[next.step - 1] ?? '')}</span>
                 {!entry.enabled && entry.detail && !path.settling && <em>{noEmoji(entry.detail)}</em>}
               </button>
@@ -458,7 +457,7 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
                 <Txt text={entry.label} />
               </span>
               {entry.enabled && (
-                <button className="bsub-go" onClick={() => act(entry)} {...hover(entry)}>
+                <button className="bsub-go" onClick={() => onBuild({ key: entry.id === 'a-insulate' ? `a-insulate.${(view.state.insulation ?? 0) + 1}` : entry.id, name: noEmoji(entry.label), entry })} {...hover(entry)}>
                   <Glyph id="build" size={15} /> {UPGRADE_TEXT.build}
                 </button>
               )}
@@ -481,6 +480,59 @@ function BuildPanel({ station, view, onAct, onCost }: { station: string; view: V
   );
 }
 
+/** A build step about to start (rc.4): which jobs to show, and the v12 button that does it. */
+interface BuildStart {
+  key: string;
+  name: string;
+  entry: { id: string; label: string; detail: string; enabled: boolean; onclick: string };
+  hours?: number;
+}
+
+/**
+ * rc.4: the small jobs of one build step, one click each with a hands motion. Dan says one of his
+ * lines for the step partway through. Nothing is spent until the last job runs the v12 action.
+ */
+function BuildTaskCard({ task, onStop, onDone }: { task: BuildStart; onStop: () => void; onDone: () => void }) {
+  const spec = BUILD_TASKS[task.key]!;
+  const [done, setDone] = useState(0);
+  // Which line, and on which job he says it.
+  const [pick] = useState(() => ({ line: Math.floor(Math.random() * spec.say.length), at: Math.max(1, Math.floor(spec.jobs.length / 2)) }));
+  const said = done >= pick.at;
+  const per = task.hours ? duration(Math.max(5, Math.round((task.hours * 60) / spec.jobs.length / 5) * 5)) : '';
+  const click = () => {
+    const next = done + 1;
+    if (next >= spec.jobs.length) {
+      onDone();
+      return;
+    }
+    session.gesture(spec.motion);
+    if (next === pick.at) speakPieces([`b-${task.key}-${pick.line}`], spec.say[pick.line]!, 0);
+    setDone(next);
+  };
+  return (
+    <div className="build-task">
+      <h3>{BUILD_TASK_TEXT.title(task.name)}</h3>
+      <ol>
+        {spec.jobs.map((job, i) => (
+          <li key={job} className={i < done ? 'ok' : i === done ? 'now' : ''}>
+            {i < done ? <Glyph id="star" size={15} /> : <Glyph id="build" size={15} />} {job}
+          </li>
+        ))}
+      </ol>
+      {said && <p className="build-say">{spec.say[pick.line]}</p>}
+      <button className="build-btn" onClick={click}>
+        <Glyph id="build" /> <span>{per ? BUILD_TASK_TEXT.next(spec.jobs[done]!, per) : spec.jobs[done]}</span>
+      </button>
+      <div className="build-task-foot">
+        <button className="hud-btn" onClick={onStop}>
+          {BUILD_TASK_TEXT.stop}
+        </button>
+        <small>{BUILD_TASK_TEXT.note}</small>
+      </div>
+    </div>
+  );
+}
+
 /** rc.4: whether a build that is not there until started has been started. */
 function started(what: 'rack' | 'cache' | 'comforts', view: View): boolean {
   const S = view.state;
@@ -489,7 +541,7 @@ function started(what: 'rack' | 'cache' | 'comforts', view: View): boolean {
 }
 
 /** rc.4: the build menu (B). Everything you can build, with what it takes; starting one puts it up. */
-function BuildMenu({ view, onClose, onOpen }: { view: View; onClose: () => void; onOpen: (station: string) => void }) {
+function BuildMenu({ view, onClose, onOpen, onBuild }: { view: View; onClose: () => void; onOpen: (station: string) => void; onBuild: (b: BuildStart) => void }) {
   const panel = new Map(view.panel.map((e) => [e.id, e]));
   const atCamp = view.state.loc === 'camp';
   const shelter = upgradePath('shelter');
@@ -531,7 +583,7 @@ function BuildMenu({ view, onClose, onOpen }: { view: View; onClose: () => void;
             b.name,
             line,
             first && entry
-              ? go(BUILD_MENU.start, () => session.click(entry.onclick), entry.enabled)
+              ? go(BUILD_MENU.start, () => onBuild({ key: `${b.id}.1`, name: UPGRADE_TEXT.steps[b.id][0]!, entry, hours: next?.hours }), entry.enabled)
               : go(BUILD_MENU.open, () => onOpen(b.station)),
           );
         })}
@@ -544,7 +596,7 @@ function BuildMenu({ view, onClose, onOpen }: { view: View; onClose: () => void;
               <span className="bsub-name">
                 <Txt text={entry.label} />
               </span>
-              {entry.enabled && go(BUILD_MENU.start, () => session.click(entry.onclick))}
+              {entry.enabled && go(BUILD_MENU.start, () => onBuild({ key: id, name: noEmoji(entry.label), entry }))}
               {entry.detail && (
                 <small>
                   <WithIcons text={entry.detail} />
@@ -774,6 +826,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   const [debug, setDebug] = useState(!!guide);
   const [journal, setJournal] = useState(false);
   const [build, setBuild] = useState(false);
+  const [task, setTask] = useState<BuildStart | null>(null);
   const [map, setMap] = useState(false);
   const [night, setNight] = useState<Offer | null>(null);
   const [keepsake, setKeepsake] = useState<IntroNote | null>(null);
@@ -889,6 +942,8 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
       // The picture reads 1-2 as digging and 3 as walled, whatever the number of steps.
       dugoutProg: ((d) => (d.current >= 2 ? 3 : Math.min(2, d.done)))(upgradePath('dugout')),
       buildProg: S.buildProg ?? 0,
+      campLogs: campLeft('logs') / CAMP_HARVEST.logs,
+      campRocks: campLeft('rocks') / CAMP_HARVEST.rocks,
       buildNeed: upgradePath('shelter').steps.find((st) => st.state === 'next')?.of ?? 1,
       insulation: S.insulation,
       bed: !!S.bed,
@@ -948,6 +1003,14 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
   if (view.endScreen && !view.modal) return <EndScreen view={view} />;
   const station = selected ? layout.stations.find((s) => s.id === selected) : null;
 
+  // rc.4: a build is a few small jobs first; the step itself happens with the last one.
+  const startBuild = (b: BuildStart) => {
+    setSelected(null);
+    setBuild(false);
+    if (BUILD_TASKS[b.key]) setTask(b);
+    else session.click(b.entry.onclick);
+  };
+
   const act = (offer: Offer) => {
     if ((offer.key === 'sleep' || offer.key === 'turnInEarly') && offer.enabled) {
       setSelected(null);
@@ -981,7 +1044,7 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
           <button className="you-btn" onClick={() => setSelected(selected === 'you' ? null : 'you')} title="Things only you need (Tab)">
             You
           </button>
-          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} onKeepsake={(note) => {
+          {station && <ContextPanel station={station} view={view} onClose={() => setSelected(null)} onAct={act} onBuild={startBuild} onKeepsake={(note) => {
             setSelected(null);
             setKeepsake(note);
           }} onCost={setCost} beside />}
@@ -1022,6 +1085,18 @@ export function GameScreen({ view, guide }: { view: View; guide?: boolean }) {
               onOpen={(id) => {
                 setBuild(false);
                 setSelected(id);
+              }}
+              onBuild={startBuild}
+            />
+          )}
+          {task && (
+            <BuildTaskCard
+              key={task.key}
+              task={task}
+              onStop={() => setTask(null)}
+              onDone={() => {
+                setTask(null);
+                session.click(task.entry.onclick);
               }}
             />
           )}

@@ -194,6 +194,11 @@ export class Session {
     return () => this.callListeners.delete(f);
   }
 
+  /** A small job inside a build (rc.4): shows its hands motion and sound, changes nothing. */
+  gesture(motion: string): void {
+    for (const f of this.callListeners) f(motion);
+  }
+
   /** Runs a v12 handler, exactly as clicking that button in v12 would. */
   click(handler: string): void {
     if (!this.run) return;
