@@ -69,17 +69,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             </label>
           );
         })}
-        <h4>{T.controls}</h4>
-        <label className="sound-row">
-          <span className="sound-name">
-            <b>{T.sensitivity.label}</b>
-            <em>{T.sensitivity.hint}</em>
-          </span>
-          <input type="range" min={30} max={200} value={Math.round(s.mouseSpeed * 100)} onChange={(e) => setSetting('mouseSpeed', Number(e.target.value) / 100)} />
-          <span className="sound-val">{Math.round(s.mouseSpeed * 100)}</span>
-        </label>
-        <Toggle {...T.invertY} on={s.invertY} set={(on) => setSetting('invertY', on)} />
-        <Toggle {...T.headBob} on={s.headBob} set={(on) => setSetting('headBob', on)} />
         <h4>{T.game}</h4>
         <Toggle {...TIPS_TEXT.setting} on={s.tips} set={(on) => setSetting('tips', on)} />
         <Toggle {...THOUGHT_TEXT.subtitles} on={s.thoughtSubtitles} set={(on) => setSetting('thoughtSubtitles', on)} />

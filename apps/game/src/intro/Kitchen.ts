@@ -1,10 +1,12 @@
 // The night before (D-033): your kitchen, the kit spread over the table. Packing is the kit
-// choice: click an item to put it in the pack, again to take it out. Letters, the phone, the
+// choice: click an item to put it in the pack, again to take it out. Point and click (D-113):
+// three fixed shots of the room, the arrows step between them. Letters, the phone, the
 // photo and the answering machine say who you are without a page of text.
 
 import * as THREE from 'three';
-import { FIRST_PERSON } from '@tapout/content';
+import { FIRST_PERSON, type WorldShot } from '@tapout/content';
 import { mat, mesh, pole, rough, seeded, v } from '../world/kit.ts';
+import { ShotCamera } from '../world/shots.ts';
 
 export interface KitchenHover {
   id: string;
@@ -16,11 +18,16 @@ export interface KitchenHover {
 export interface KitchenEvents {
   hover: (h: KitchenHover | null) => void;
   click: (id: string, kind: 'kit' | 'note') => void;
-  looking: (on: boolean) => void;
+  shot: (index: number, count: number, label: string) => void;
 }
 
 const ROOM = { w: 6, d: 5, h: 2.6 };
 const TABLE = { x: 0, z: -0.3, w: 2.5, d: 1.4, h: 0.78 };
+const SHOTS: readonly WorldShot[] = [
+  { id: 'table', label: 'The kitchen table', eye: { x: 0, y: 1.85, z: 1.45 }, at: { x: 0.1, y: 0.7, z: -0.45 }, fov: 60 },
+  { id: 'counter', label: 'The counter', eye: { x: 0.7, y: 1.6, z: 1.2 }, at: { x: -3, y: 1.0, z: -0.8 }, fov: 60 },
+  { id: 'window', label: 'The window', eye: { x: 0.3, y: 1.6, z: 1.6 }, at: { x: 0, y: 1.4, z: -2.5 }, fov: 58 },
+];
 
 function kitModel(id: string): THREE.Group {
   const g = new THREE.Group();
@@ -107,11 +114,8 @@ export class Kitchen {
   private packFill!: THREE.Mesh;
   private packed = new Set<string>();
   private blink!: THREE.Mesh;
-  private pos = new THREE.Vector3(0, 0, 1.6);
-  private yaw = 0;
-  private pitch = -0.38;
-  private keys = new Set<string>();
-  private locked = false;
+  private shots: ShotCamera;
+  private shot = 0;
   private mouse: { x: number; y: number } | null = null;
   private hovered: KitchenHover | null = null;
   private raycaster = new THREE.Raycaster();
@@ -133,18 +137,30 @@ export class Kitchen {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.appendChild(this.renderer.domElement);
-    this.camera.rotation.order = 'YXZ';
+    this.shots = new ShotCamera(this.camera);
     this.build();
     this.bind();
+    this.goShot(0, true);
     this.renderer.setAnimationLoop(() => this.frame());
   }
 
   dispose(): void {
     this.renderer.setAnimationLoop(null);
     this.unbind();
-    if (document.pointerLockElement === this.renderer.domElement) document.exitPointerLock();
     this.renderer.dispose();
     this.renderer.domElement.remove();
+  }
+
+  /** Steps to the next shot (1) or the one before (-1). */
+  turn(step: number): void {
+    if (this.frozen) return;
+    this.goShot((this.shot + step + SHOTS.length) % SHOTS.length, false);
+  }
+
+  private goShot(i: number, cut: boolean): void {
+    this.shot = i;
+    this.shots.go(SHOTS[i]!, () => 0, cut);
+    this.events.shot(i, SHOTS.length, SHOTS[i]!.label);
   }
 
   setPacked(ids: ReadonlySet<string>): void {
@@ -285,15 +301,12 @@ export class Kitchen {
 
   // ---- input
 
-  private onKey = (e: KeyboardEvent) => (e.type === 'keydown' ? this.keys.add(e.code) : this.keys.delete(e.code));
-  private onBlur = () => this.keys.clear();
+  private onKey = (e: KeyboardEvent) => {
+    if (e.repeat) return;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.turn(-1);
+    else if (e.code === 'ArrowRight' || e.code === 'KeyD') this.turn(1);
+  };
   private onMove = (e: MouseEvent) => {
-    if (this.locked) {
-      if (this.frozen) return;
-      this.yaw -= e.movementX * FIRST_PERSON.lookSensitivity;
-      this.pitch = Math.max(-1.3, Math.min(1.3, this.pitch - e.movementY * FIRST_PERSON.lookSensitivity));
-      return;
-    }
     if (e.target !== this.renderer.domElement) {
       this.mouse = null;
       return;
@@ -303,53 +316,38 @@ export class Kitchen {
   };
   private onDown = (e: MouseEvent) => {
     if (e.button !== 0 || this.frozen) return;
-    if (!this.locked) this.onMove(e);
+    this.onMove(e);
     this.updateHover();
     const h = this.hovered;
-    if (h) {
-      this.events.click(h.id, h.kind);
-      return;
-    }
-    if (!this.locked) void this.renderer.domElement.requestPointerLock?.()?.catch?.(() => undefined);
-  };
-  private onLock = () => {
-    this.locked = document.pointerLockElement === this.renderer.domElement;
-    if (this.locked) this.mouse = null;
-    this.events.looking(this.locked);
+    if (h) this.events.click(h.id, h.kind);
   };
 
   private bind(): void {
     window.addEventListener('keydown', this.onKey);
-    window.addEventListener('keyup', this.onKey);
-    window.addEventListener('blur', this.onBlur);
     window.addEventListener('mousemove', this.onMove);
     this.renderer.domElement.addEventListener('mousedown', this.onDown);
-    document.addEventListener('pointerlockchange', this.onLock);
   }
 
   private unbind(): void {
     window.removeEventListener('keydown', this.onKey);
-    window.removeEventListener('keyup', this.onKey);
-    window.removeEventListener('blur', this.onBlur);
     window.removeEventListener('mousemove', this.onMove);
     this.renderer.domElement.removeEventListener('mousedown', this.onDown);
-    document.removeEventListener('pointerlockchange', this.onLock);
   }
 
   // ---- every frame
 
   private updateHover(): void {
     let next: KitchenHover | null = null;
-    if (!this.frozen && (this.locked || this.mouse)) {
-      const ndc = this.locked ? new THREE.Vector2(0, 0) : new THREE.Vector2((this.mouse!.x / 1920) * 2 - 1, -(this.mouse!.y / 1080) * 2 + 1);
+    if (!this.frozen && this.mouse && !this.shots.moving) {
+      const ndc = new THREE.Vector2((this.mouse.x / 1920) * 2 - 1, -(this.mouse.y / 1080) * 2 + 1);
       this.raycaster.setFromCamera(ndc, this.camera);
       const hit = this.raycaster.intersectObjects(this.clickables.filter((c) => c.visible), true)[0];
-      if (hit && hit.distance < 3.2) {
+      if (hit && hit.distance < 6) {
         let o: THREE.Object3D | null = hit.object;
         while (o && !o.userData.pick) o = o.parent;
         if (o) {
           const p = o.userData.pick as { id: string; kind: 'kit' | 'note' };
-          next = { ...p, x: this.locked ? 960 : this.mouse!.x, y: this.locked ? 540 : this.mouse!.y };
+          next = { ...p, x: this.mouse.x, y: this.mouse.y };
         }
       }
     }
@@ -375,39 +373,14 @@ export class Kitchen {
         }
       });
     }
-    this.renderer.domElement.style.cursor = this.locked ? 'none' : next ? 'pointer' : 'crosshair';
+    this.renderer.domElement.style.cursor = next ? 'pointer' : 'default';
   }
 
   private frame(): void {
-    const dt = Math.min(0.05, this.clock.getDelta());
+    const raw = this.clock.getDelta();
+    const dt = Math.min(0.05, raw);
     this.time += dt;
-    if (!this.frozen) {
-      const k = this.keys;
-      const f = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
-      const s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
-      this.yaw += ((k.has('ArrowLeft') ? 1 : 0) - (k.has('ArrowRight') ? 1 : 0)) * dt * 1.8;
-      if (f || s) {
-        const len = Math.hypot(f, s);
-        const fx = -Math.sin(this.yaw);
-        const fz = -Math.cos(this.yaw);
-        const speed = 1.8;
-        this.pos.x += ((fx * f - fz * s) / len) * speed * dt;
-        this.pos.z += ((fz * f + fx * s) / len) * speed * dt;
-        this.pos.x = Math.max(-ROOM.w / 2 + 0.95, Math.min(ROOM.w / 2 - 0.35, this.pos.x));
-        this.pos.z = Math.max(-ROOM.d / 2 + 0.4, Math.min(ROOM.d / 2 - 0.35, this.pos.z));
-        // Not through the table.
-        const dx = this.pos.x - TABLE.x;
-        const dz = this.pos.z - TABLE.z;
-        const ox = TABLE.w / 2 + 0.3 - Math.abs(dx);
-        const oz = TABLE.d / 2 + 0.3 - Math.abs(dz);
-        if (ox > 0 && oz > 0) {
-          if (ox < oz) this.pos.x += Math.sign(dx || 1) * ox;
-          else this.pos.z += Math.sign(dz || 1) * oz;
-        }
-      }
-    }
-    this.camera.position.set(this.pos.x, FIRST_PERSON.eyeHeight, this.pos.z);
-    this.camera.rotation.set(this.pitch, this.yaw, 0);
+    this.shots.update(Math.min(0.25, raw), this.time);
     this.blink.visible = Math.sin(this.time * 5) > 0;
     this.updateHover();
     this.renderer.render(this.scene, this.camera);

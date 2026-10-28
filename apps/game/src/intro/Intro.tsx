@@ -97,7 +97,7 @@ function KitchenStage({ onZip }: { onZip: (ids: string[]) => void }) {
   const [packed, setPacked] = useState<Set<string>>(new Set());
   const [hover, setHover] = useState<KitchenHover | null>(null);
   const [note, setNote] = useState<IntroNote | null>(null);
-  const [looking, setLooking] = useState(false);
+  const [shot, setShot] = useState<{ index: number; count: number; label: string } | null>(null);
   const seenAxe = useRef(false);
   const latest = useRef({ packed, setNote });
   latest.current = { packed, setNote };
@@ -106,7 +106,7 @@ function KitchenStage({ onZip }: { onZip: (ids: string[]) => void }) {
     if (!host.current) return;
     const k = new Kitchen(host.current, POOL, {
       hover: setHover,
-      looking: setLooking,
+      shot: (index, count, label) => setShot({ index, count, label }),
       click: (id, kind) => {
         if (kind === 'note') {
           latest.current.setNote(NOTES[id] ?? null);
@@ -137,7 +137,6 @@ function KitchenStage({ onZip }: { onZip: (ids: string[]) => void }) {
 
   useEffect(() => {
     if (scene.current) scene.current.frozen = note !== null;
-    if (note && document.pointerLockElement) document.exitPointerLock();
     // Read aloud while you look at it; putting it down stops the voice.
     const id = note && Object.keys(NOTES).find((key) => NOTES[key] === note);
     if (id && NOTE_VOICE[id]) say(NOTE_VOICE[id]!);
@@ -177,7 +176,24 @@ function KitchenStage({ onZip }: { onZip: (ids: string[]) => void }) {
           </button>
         </div>
       </div>
-      {looking && !note && <div className={`crosshair${hover ? ' on' : ''}`} />}
+      {shot && !note && (
+        <>
+          <button className="shot-arrow left" onClick={() => scene.current?.turn(-1)}>
+            ‹
+          </button>
+          <button className="shot-arrow right" onClick={() => scene.current?.turn(1)}>
+            ›
+          </button>
+          <div className="shot-name">
+            <b>{shot.label}</b>
+            <span className="shot-dots">
+              {Array.from({ length: shot.count }, (_, i) => (
+                <i key={i} className={i === shot.index ? 'on' : ''} />
+              ))}
+            </span>
+          </div>
+        </>
+      )}
       {hover && !note && (
         <div className="look-label intro-hover" style={{ left: hover.x, top: hover.y + 34 }}>
           {item ? (
@@ -205,7 +221,7 @@ function KitchenStage({ onZip }: { onZip: (ids: string[]) => void }) {
           </div>
         </div>
       )}
-      {!looking && !note && <div className="move-hint">Click anywhere to look around · W A S D to walk · Esc frees the mouse</div>}
+      {!hover && !note && <div className="move-hint">Click things to pack them or look at them · ‹ › or A D to turn</div>}
     </div>
   );
 }
@@ -240,7 +256,8 @@ function DropoffStage({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     if (!host.current) return;
     const w = new World(host.current);
-    w.configure(input, { select: () => undefined, clear: () => undefined, hover: () => undefined, looking: () => undefined, slow: () => undefined });
+    w.configure(input, { select: () => undefined, clear: () => undefined, hover: () => undefined, slow: () => undefined });
+    w.standAtSpawn();
     const plane = floatPlane();
     plane.position.set(5, -0.15, -7);
     plane.rotation.y = Math.PI / 2 + 0.4;
@@ -292,7 +309,7 @@ function DropoffStage({ onDone }: { onDone: () => void }) {
       }
     };
     const click = (e: MouseEvent) => {
-      if (document.pointerLockElement && e.button === 0) latestNext.current();
+      if (e.button === 0 && e.target instanceof HTMLCanvasElement) latestNext.current();
     };
     window.addEventListener('keydown', key);
     window.addEventListener('mousedown', click);

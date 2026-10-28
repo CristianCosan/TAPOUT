@@ -27,13 +27,13 @@ export const SETTINGS_TEXT = {
   lowGraphics: { label: 'Lighter graphics', hint: 'For slower computers: lower resolution and simpler shadows' },
   keys: 'Keys',
   keyList: [
-    ['Click', 'Look around (the mouse stays captured); click a lit thing to use it'],
-    ['W A S D', 'Walk · Shift to run'],
+    ['Click', 'Use whatever lights up under the pointer'],
+    ['‹ ›  or  A D', 'Look the other way: the next view of this place'],
     ['R', 'Sit down and rest, wherever you are'],
     ['Tab', 'Things only you need: rest, sit and watch, tinder'],
     ['M', 'Map'],
     ['J', 'Journal'],
-    ['Esc', 'Free the mouse, close what is open'],
+    ['Esc', 'Close what is open'],
     ['F11', 'Full screen'],
     ['F8', 'Write a playtest note'],
   ],
@@ -66,8 +66,8 @@ export const CREDITS_TEXT = {
  */
 export const TIPS = [
   { id: 'body', when: 'start', title: 'Your body', text: 'The bars on the left fall as the hours pass and as you work. Food, water and warmth are the ones that can end a run.' },
-  { id: 'look', when: 'start', title: 'Looking and using', text: 'Things you can use light up when you look at them. Click one to see what you can do there, what it costs and how long it takes.' },
-  { id: 'time', when: 'firstAction', title: 'Time', text: 'Every action takes time and energy; the clock is at the top. Walking around inside a place costs nothing.' },
+  { id: 'look', when: 'start', title: 'Looking and using', text: 'Things you can use light up under the pointer. Click one to see what you can do there, what it costs and how long it takes. The arrows at the sides show the other views of this place.' },
+  { id: 'time', when: 'firstAction', title: 'Time', text: 'Every action takes time and energy; the clock is at the top. Changing view inside a place costs nothing.' },
   { id: 'travel', when: 'away', title: 'Other places', text: 'The signposts take you between Camp, the Shore and the Woods. The walk costs time, and your pack carries one kind of load back.' },
   { id: 'dusk', when: 'dusk', title: 'Night', text: 'You sleep at the shelter. Before you lie down, the night preview shows the weather, the fire and how cold it will get.' },
   { id: 'resolve', when: 'wavering', title: 'Resolve', text: 'Resolve is your will to stay. Hard days wear it down, steady ones and small comforts build it back. You can see it with Tab.' },
