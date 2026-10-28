@@ -56,7 +56,8 @@ export function WinScene({ weather, winter, tempC, onDone }: { weather: string; 
   useEffect(() => {
     if (!host.current) return;
     const w = new World(host.current);
-    w.configure(input, { select: () => undefined, clear: () => undefined, hover: () => undefined, looking: () => undefined, slow: () => undefined });
+    w.configure(input, { select: () => undefined, clear: () => undefined, hover: () => undefined, slow: () => undefined });
+    w.standAtSpawn();
     const at = w.standing;
     const boat = medBoat();
     // Bow on the stones at the water's edge, off to the left, clear of the two on the beach.

@@ -1,11 +1,11 @@
-// The first-person world (D-030): one small 3D area at a time, built from code shapes, that you
-// walk around in. Looking at a station lights it up; clicking it opens its v12 actions in the
-// React panel. Walking costs no game time. Light, sky, fog and weather follow v12's clock and
+// The world (D-030, point and click since D-113): one small 3D area at a time, built from code
+// shapes, seen from a few fixed camera shots. Pointing at a station lights it up; clicking it
+// opens its v12 actions in the React panel. Changing shot costs no game time. Light, sky, fog and weather follow v12's clock and
 // weather, which the screen passes in; nothing here changes the run.
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { FIRST_PERSON, SLOW_CHECK, type LocationLayout, type WorldArea } from '@tapout/content';
+import { FIRST_PERSON, SLOW_CHECK, type LocationLayout, type WorldArea, type WorldShot } from '@tapout/content';
 import { mat, noise, rough, seeded } from './kit.ts';
 import { buildProp, hoof, propKey, type PropState } from './props.ts';
 import { audio } from '../audio/engine.ts';
@@ -13,6 +13,7 @@ import { settings } from '../settings.ts';
 import { Wildlife } from './life.ts';
 import { Hands, MOTIONS, type Held, type Motion } from './hands.ts';
 import { Ambience } from './sound.ts';
+import { bestShot, ShotCamera } from './shots.ts';
 
 export interface WorldInput {
   area: WorldArea;
@@ -36,14 +37,14 @@ export interface WorldInput {
   aurora?: boolean;
   /** The tool you carry between jobs (rc.5). */
   held?: Held | null;
-  /** rc.5: walks you to a station (following a trail); a new n starts a new walk. */
+  /** rc.5: takes the camera to a station (following a trail); a new n starts a new move. */
   walkTo?: { id: string; n: number };
 }
 
 export interface Hover {
   id: string;
   label: string;
-  /** Close enough to use. */
+  /** Close enough to use (always, now that every shot frames what it shows). */
   near: boolean;
   /** Where to show the label, in stage pixels. */
   x: number;
@@ -54,8 +55,8 @@ export interface WorldEvents {
   select: (id: string) => void;
   clear: () => void;
   hover: (hover: Hover | null) => void;
-  /** Pointer lock came or went: whether you are looking around with the mouse. */
-  looking: (on: boolean) => void;
+  /** The shot changed: which one of how many, and its name. */
+  shot?: (index: number, count: number, label: string) => void;
   /** The picture has been stuttering since the world opened (asked once, on full graphics). */
   slow: () => void;
 }
@@ -237,10 +238,9 @@ export class World {
   private pos = new THREE.Vector3();
   private yaw = 0;
   private pitch = 0;
-  private keys = new Set<string>();
-  private bob = 0;
   private hands = new Hands();
-  private locked = false;
+  private shots: ShotCamera;
+  private shot = 0;
   private mouse: { x: number; y: number } | null = null;
   private hovered: Hover | null = null;
   private raycaster = new THREE.Raycaster();
@@ -251,7 +251,6 @@ export class World {
    */
   private trail: THREE.Group | null = null;
   private trailKey = '';
-  private glide: { from: THREE.Vector3; to: THREE.Vector3; look: THREE.Vector3; t: number } | null = null;
   private walkN: number | null = null;
   private proxies: Array<{ obj: THREE.Mesh; station: string; kind?: 'logs' | 'rocks' }> = [];
   private hoveredProxy: THREE.Mesh | null = null;
@@ -289,8 +288,10 @@ export class World {
     host.appendChild(this.renderer.domElement);
 
     this.camera = new THREE.PerspectiveCamera(FIRST_PERSON.fov, 1920 / 1080, 0.05, 900);
-    this.camera.rotation.order = 'YXZ';
     this.camera.add(this.hands.root);
+    // Fixed shots show the place, not your hands.
+    this.hands.root.visible = false;
+    this.shots = new ShotCamera(this.camera);
     this.scene.add(this.camera);
 
     this.sun.castShadow = true;
@@ -472,14 +473,14 @@ export class World {
 
   configure(input: WorldInput, events: WorldEvents): void {
     this.events = events;
-    this.syncLock(input);
     const prev = this.input;
     this.input = input;
     const key = `${input.area.id}-${input.winter}`;
     if (key !== this.areaKey) {
       const sameArea = prev?.area.id === input.area.id;
       this.buildArea(input);
-      if (!sameArea) this.spawn(input.area);
+      if (!sameArea) this.shot = 0;
+      this.goShot(this.shot, true);
       this.areaKey = key;
       if (!sameArea) this.shownHour = -1;
     }
@@ -488,6 +489,52 @@ export class World {
     this.syncIce(input);
     this.hands.hold(input.held ?? null);
     this.syncWalk(input);
+    // Opening a station from the map or the build menu turns to a shot that shows it.
+    if (input.selected && input.selected !== prev?.selected) this.showStation(input.selected);
+  }
+
+  /** Steps to the next shot (1) or the one before (-1). */
+  turn(step: number): void {
+    const n = this.input?.area.shots.length ?? 0;
+    if (!n || this.input?.frozen) return;
+    this.goShot((this.shot + step + n) % n, false);
+  }
+
+  goShot(i: number, cut: boolean): void {
+    const area = this.input?.area;
+    const shot = area?.shots[i];
+    if (!area || !shot) return;
+    this.shot = i;
+    this.shots.go(shot, (x, z) => this.ground(area, x, z), cut);
+    this.events?.shot?.(i, area.shots.length, shot.label);
+  }
+
+  /** Turns to the shot that shows a station best, if the one you are on does not show it. */
+  private showStation(id: string): void {
+    const area = this.input!.area;
+    const st = area.stations[id];
+    const node = this.stations.get(id);
+    if (!st || !node) return;
+    const c = node.box.getCenter(new THREE.Vector3());
+    this.camera.updateMatrixWorld();
+    const p = c.clone().project(this.camera);
+    if (p.z < 1 && Math.abs(p.x) < 0.85 && Math.abs(p.y) < 0.85) return;
+    const best = bestShot(area.shots, st, (x, z) => this.ground(area, x, z));
+    if (best >= 0 && best !== this.shot) this.goShot(best, false);
+  }
+
+  /** A shot of its own, a few steps from a station and looking at it (the hunt, tests). */
+  private closeShot(id: string, cut: boolean): boolean {
+    const area = this.input!.area;
+    const st = area.stations[id];
+    if (!st) return false;
+    const eye = this.camera.position;
+    const away = new THREE.Vector3(eye.x - st.x, 0, eye.z - st.z);
+    if (away.lengthSq() < 0.01) away.set(0, 0, 1);
+    away.normalize().multiplyScalar(st.radius + 5);
+    const shot: WorldShot = { id, label: area.shots[this.shot]?.label ?? '', eye: { x: st.x + away.x, y: 2, z: st.z + away.z }, at: { x: st.x, y: 0.9, z: st.z }, fov: 55 };
+    this.shots.go(shot, (x, z) => this.ground(area, x, z), cut);
+    return true;
   }
 
   /** rc.5: the hunt's trail, hoof print by hoof print from the game trail toward the animal. */
@@ -536,13 +583,7 @@ export class World {
     }
     if (!walk || walk.n === this.walkN) return;
     this.walkN = walk.n;
-    const st = input.area.stations[walk.id];
-    if (!st) return;
-    const look = new THREE.Vector3(st.x, this.ground(input.area, st.x, st.z) + 0.9, st.z);
-    const away = new THREE.Vector3(this.pos.x - st.x, 0, this.pos.z - st.z);
-    if (away.lengthSq() < 0.01) away.set(0, 0, 1);
-    away.normalize().multiplyScalar(st.radius + 4.5);
-    this.glide = { from: this.pos.clone(), to: new THREE.Vector3(st.x + away.x, 0, st.z + away.z), look, t: 0 };
+    this.closeShot(walk.id, false);
   }
 
   dispose(): void {
@@ -551,7 +592,6 @@ export class World {
     this.unbind();
     this.unready();
     this.sound.stop();
-    if (document.pointerLockElement === this.renderer.domElement) document.exitPointerLock();
     this.renderer.dispose();
     this.renderer.domElement.remove();
     this.frost.remove();
@@ -565,9 +605,16 @@ export class World {
   /** Called every frame with the frame time and the time since the world began. */
   onFrame: ((dt: number, t: number) => void) | null = null;
 
-  /** Where you stand, for scenes that place things around you. */
+  /** Where the camera stands, for scenes that place things around it. */
   get standing(): THREE.Vector3 {
-    return this.pos.clone();
+    return new THREE.Vector3(this.camera.position.x, 0, this.camera.position.z);
+  }
+
+  /** Holds a scene's camera where you arrive, at eye height, looking out the way you face. */
+  standAtSpawn(): void {
+    const sp = this.input!.area.spawn;
+    const a = (-sp.look * Math.PI) / 180;
+    this.stand(sp.x, sp.z, { x: sp.x - Math.sin(a) * 20, y: FIRST_PERSON.eyeHeight - 1.6, z: sp.z - Math.cos(a) * 20 });
   }
 
   /** Where the scenery birds are. For tests and screenshots. */
@@ -593,31 +640,28 @@ export class World {
     this.hands.hold(tool);
   }
 
-  /** Stands you somewhere and points you at a spot. For tests and screenshots. */
+  /** Puts the camera somewhere, looking at a spot. For tests and screenshots. */
   stand(x: number, z: number, at: { x: number; y: number; z: number }): void {
-    this.pos.set(x, 0, z);
-    const eye = this.eye();
-    const d = new THREE.Vector3(at.x, at.y, at.z).sub(eye);
-    this.yaw = Math.atan2(-d.x, -d.z);
-    this.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
+    const area = this.input!.area;
+    const g = (px: number, pz: number) => this.ground(area, px, pz);
+    this.shots.go({ id: 'stand', label: '', eye: { x, y: FIRST_PERSON.eyeHeight, z }, at: { x: at.x, y: at.y - g(at.x, at.z), z: at.z } }, g, true);
   }
 
-  /** Points you at a station from a step away. For tests and the robot player. */
+  /** Cuts to a close shot of a station; returns where it sits on the stage. For tests and the robot player. */
   lookAt(id: string): boolean {
     const node = this.stations.get(id);
     if (!node || !node.group.visible) return false;
-    const c = node.box.getCenter(new THREE.Vector3());
-    const st = this.input!.area.stations[id]!;
-    const away = new THREE.Vector3(this.pos.x - st.x, 0, this.pos.z - st.z);
-    if (away.lengthSq() < 0.01) away.set(0, 0, 1);
-    away.normalize().multiplyScalar(st.radius + 1.6);
-    this.pos.set(st.x + away.x, 0, st.z + away.z);
-    this.keepInside();
-    const eye = this.eye();
-    const d = c.clone().sub(eye);
-    this.yaw = Math.atan2(-d.x, -d.z);
-    this.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z));
-    return true;
+    return this.closeShot(id, true);
+  }
+
+  /** Where a station's middle sits on the 1920x1080 stage right now, or null if out of shot. */
+  screenOf(id: string): { x: number; y: number } | null {
+    const node = this.stations.get(id);
+    if (!node || !node.group.visible) return null;
+    this.camera.updateMatrixWorld();
+    const p = node.box.getCenter(new THREE.Vector3()).project(this.camera);
+    if (p.z >= 1 || Math.abs(p.x) > 1 || Math.abs(p.y) > 1) return null;
+    return { x: ((p.x + 1) / 2) * 1920, y: ((1 - p.y) / 2) * 1080 };
   }
 
   // ---- building an area
@@ -635,7 +679,6 @@ export class World {
     this.iceMarks = null;
     this.trail = null;
     this.trailKey = '';
-    this.glide = null;
     this.mist = null;
     this.groundFog = null;
     this.rings = null;
@@ -1129,30 +1172,16 @@ export class World {
     if (fire) this.fireLight.position.copy(fire.group.position).add(new THREE.Vector3(0, 0.9, 0));
   }
 
-  private spawn(area: WorldArea): void {
-    this.pos.set(area.spawn.x, 0, area.spawn.z);
-    this.yaw = (-area.spawn.look * Math.PI) / 180;
-    this.pitch = -0.08;
-  }
-
   // ---- input
 
   private onKeyDown = (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement) return;
     this.sound.start();
-    this.keys.add(e.code);
+    if (e.repeat || this.input?.frozen) return;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.turn(-1);
+    else if (e.code === 'ArrowRight' || e.code === 'KeyD') this.turn(1);
   };
-  private onKeyUp = (e: KeyboardEvent) => this.keys.delete(e.code);
-  private onBlur = () => this.keys.clear();
   private onMouseMove = (e: MouseEvent) => {
-    if (this.locked) {
-      if (this.input?.frozen) return;
-      const s = settings();
-      const k = FIRST_PERSON.lookSensitivity * s.mouseSpeed;
-      this.yaw -= e.movementX * k;
-      this.pitch = Math.max(-1.35, Math.min(1.35, this.pitch - e.movementY * k * (s.invertY ? -1 : 1)));
-      return;
-    }
     const rect = this.renderer.domElement.getBoundingClientRect();
     if (e.target !== this.renderer.domElement) {
       this.mouse = null;
@@ -1163,105 +1192,30 @@ export class World {
   private onMouseDown = (e: MouseEvent) => {
     this.sound.start();
     if (e.button !== 0 || this.input?.frozen) return;
-    if (!this.locked) this.onMouseMove(e);
+    this.onMouseMove(e);
     // What is under the pointer right now, not as of the last frame.
-    this.updateHover(this.eye());
+    this.updateHover();
     const h = this.hovered;
-    if (h && h.near) {
-      // The panel opening frees the mouse (syncLock) and closing it takes it back.
-      this.events?.select(h.id);
-      return;
-    }
-    if (!this.locked) {
-      this.events?.clear();
-      this.wantLook = true;
-      this.lock();
-    }
-  };
-  /**
-   * Once you have clicked to look around, the mouse keeps looking: it is freed while a panel,
-   * card or menu is open and taken back as soon as it closes. Esc frees it until you click again.
-   */
-  private wantLook = false;
-  private freedForUi = false;
-
-  private syncLock(input: WorldInput): void {
-    const busy = input.frozen || input.selected !== null;
-    if (busy && this.locked) {
-      this.freedForUi = true;
-      document.exitPointerLock();
-    } else if (!busy && this.wantLook && !this.locked) {
-      this.lock();
-    }
-  }
-
-  private lock(): void {
-    const canvas = this.renderer.domElement;
-    try {
-      void canvas.requestPointerLock?.()?.catch?.(() => undefined);
-    } catch {
-      // Without a recent click the browser may refuse; the next click on the world takes it.
-    }
-  }
-
-  private onLockChange = () => {
-    const was = this.locked;
-    this.locked = document.pointerLockElement === this.renderer.domElement;
-    if (this.locked) this.wantLook = true;
-    else if (was && !this.freedForUi) this.wantLook = false;
-    this.freedForUi = false;
-    if (this.locked) this.mouse = null;
-    this.events?.looking(this.locked);
+    if (h) this.events?.select(h.id);
+    else this.events?.clear();
   };
 
   private bind(): void {
     window.addEventListener('keydown', this.onKeyDown);
-    window.addEventListener('keyup', this.onKeyUp);
-    window.addEventListener('blur', this.onBlur);
     window.addEventListener('mousemove', this.onMouseMove);
     this.renderer.domElement.addEventListener('mousedown', this.onMouseDown);
-    document.addEventListener('pointerlockchange', this.onLockChange);
   }
 
   private unbind(): void {
     window.removeEventListener('keydown', this.onKeyDown);
-    window.removeEventListener('keyup', this.onKeyUp);
-    window.removeEventListener('blur', this.onBlur);
     window.removeEventListener('mousemove', this.onMouseMove);
     this.renderer.domElement.removeEventListener('mousedown', this.onMouseDown);
-    document.removeEventListener('pointerlockchange', this.onLockChange);
   }
 
   // ---- every frame
 
   private eye(): THREE.Vector3 {
-    const area = this.input!.area;
-    return new THREE.Vector3(this.pos.x, this.feet(area, this.pos.x, this.pos.z) + FIRST_PERSON.eyeHeight + (settings().headBob ? Math.sin(this.bob) * 0.035 : 0), this.pos.z);
-  }
-
-  private keepInside(): void {
-    const area = this.input!.area;
-    for (const [id, node] of this.stations) {
-      const st = area.stations[id];
-      if (!st || !st.radius || !node.group.visible) continue;
-      const dx = this.pos.x - st.x;
-      const dz = this.pos.z - st.z;
-      const d = Math.hypot(dx, dz);
-      const min = st.radius + 0.35;
-      if (d < min && d > 0.0001) {
-        this.pos.x = st.x + (dx / d) * min;
-        this.pos.z = st.z + (dz / d) * min;
-      }
-    }
-    const r = Math.hypot(this.pos.x, this.pos.z);
-    if (this.iceWalk() && area.shoreZ !== undefined && this.pos.z < area.shoreZ + 0.8) {
-      // rc.7: in winter the frozen lake is ground too, out to a point.
-      this.pos.x = Math.max(-area.walkRadius, Math.min(area.walkRadius, this.pos.x));
-      this.pos.z = Math.max(this.pos.z, area.shoreZ - this.iceWalk());
-      return;
-    }
-    if (r > area.walkRadius) this.pos.multiplyScalar(area.walkRadius / r);
-    if (area.shoreZ !== undefined) this.pos.z = Math.max(this.pos.z, area.shoreZ + 0.8);
+    return this.camera.position.clone();
   }
 
   private lowGraphics: boolean | null = null;
@@ -1310,64 +1264,19 @@ export class World {
     this.time += dt;
     const input = this.input;
 
-    // Walking.
-    if (!input.frozen) {
-      const k = this.keys;
-      const f = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
-      const s = (k.has('KeyD') ? 1 : 0) - (k.has('KeyA') ? 1 : 0);
-      const turn = (k.has('ArrowLeft') ? 1 : 0) - (k.has('ArrowRight') ? 1 : 0);
-      this.yaw += turn * dt * 1.8;
-      if (f || s) {
-        const speed = k.has('ShiftLeft') || k.has('ShiftRight') ? FIRST_PERSON.runSpeed : FIRST_PERSON.walkSpeed;
-        const len = Math.hypot(f, s);
-        const fx = -Math.sin(this.yaw);
-        const fz = -Math.cos(this.yaw);
-        this.pos.x += ((fx * f - fz * s) / len) * speed * dt;
-        this.pos.z += ((fz * f + fx * s) / len) * speed * dt;
-        const before = Math.sin(this.bob);
-        this.bob += dt * speed * 2.6;
-        if (before > 0 && Math.sin(this.bob) <= 0) {
-          this.sound.step(speed > FIRST_PERSON.walkSpeed, input.winter);
-          if (this.onIce()) this.sound.creak(!!input.props.thinIce);
-          if (input.winter) this.footprint(input.area);
-        }
-        this.keepInside();
-      }
-    }
-    if (this.glide && ['KeyW', 'KeyA', 'KeyS', 'KeyD'].some((c) => this.keys.has(c))) this.glide = null;
-    if (this.glide) {
-      const g = this.glide;
-      const before = g.t;
-      g.t = Math.min(1, g.t + Math.min(0.25, raw) / 3);
-      const e = g.t * g.t * (3 - 2 * g.t);
-      this.pos.lerpVectors(g.from, g.to, e);
-      this.keepInside();
-      const d = g.look.clone().sub(this.eye());
-      this.yaw = Math.atan2(-d.x, -d.z);
-      this.pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)) * 0.6;
-      if (Math.floor(before * 7) !== Math.floor(g.t * 7)) this.sound.step(false, input.winter);
-      if (g.t >= 1) this.glide = null;
-    }
+    // The glide runs on real time, so a slow frame rate does not drag it out.
+    this.shots.update(Math.min(0.25, raw), this.time);
     const eye = this.eye();
-    const k = this.keys;
-    const doing = this.hands.update(dt, !input.frozen && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown'].some((c) => k.has(c)));
-    this.camera.position.copy(eye);
-    this.camera.position.y += doing.drop;
-    this.camera.rotation.set(this.pitch + doing.pitch, this.yaw + doing.yaw, 0);
-
-    // Walking away from what you had open puts it away.
-    if (input.selected) {
-      const st = input.area.stations[input.selected];
-      if (st && Math.hypot(this.pos.x - st.x, this.pos.z - st.z) > Math.max(st.reach ?? 0, st.radius + FIRST_PERSON.reach + 1.5)) this.events?.clear();
-    }
+    // Sounds that fade with distance hear from where the camera stands.
+    this.pos.set(eye.x, 0, eye.z);
+    this.hands.update(dt, false);
 
     this.onFrame?.(dt, this.time);
-    this.updateHover(eye);
+    this.updateHover();
     this.updateSky(dt);
     this.updateFire(dt);
     this.updateWeather(dt, eye);
     this.updateAurora(dt);
-    this.updateBreath(dt, eye, this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'));
     this.updateFrost(dt);
     this.updateLife(dt);
     const fire = this.stations.get('fire');
@@ -1386,24 +1295,23 @@ export class World {
     this.renderer.render(this.scene, this.camera);
   }
 
-  private updateHover(eye: THREE.Vector3): void {
+  private updateHover(): void {
     const input = this.input!;
+    const eye = this.eye();
     let next: Hover | null = null;
     const lastProxy = this.hoveredProxy;
     this.hoveredProxy = null;
-    if (!input.frozen && (this.locked || this.mouse)) {
-      const ndc = this.locked ? new THREE.Vector2(0, 0) : new THREE.Vector2((this.mouse!.x / 1920) * 2 - 1, -(this.mouse!.y / 1080) * 2 + 1);
+    if (!input.frozen && this.mouse && !this.shots.moving) {
+      const ndc = new THREE.Vector2((this.mouse.x / 1920) * 2 - 1, -(this.mouse.y / 1080) * 2 + 1);
       this.raycaster.setFromCamera(ndc, this.camera);
       const groups = [...this.stations.values()].filter((n) => n.group.visible).map((n) => n.group);
       let id: string | null = null;
       let dist = Infinity;
       const proxyOf = new Map<THREE.Object3D, string>(this.proxies.filter((p) => p.obj.visible && this.stations.get(p.station)?.group.visible).map((p) => [p.obj, p.station]));
       const hit = this.raycaster.intersectObjects([...groups, ...proxyOf.keys()], true).find((h) => h.object.visible);
-      let proxyNear: boolean | null = null;
       if (hit && proxyOf.has(hit.object)) {
         id = proxyOf.get(hit.object)!;
         dist = hit.distance;
-        proxyNear = Math.hypot(hit.point.x - this.pos.x, hit.point.z - this.pos.z) <= FIRST_PERSON.reach + 0.8;
         this.hoveredProxy = hit.object instanceof THREE.InstancedMesh ? null : (hit.object as THREE.Mesh);
       } else if (hit) {
         let o: THREE.Object3D | null = hit.object;
@@ -1425,11 +1333,9 @@ export class World {
         }
       }
       if (id && dist < 60) {
-        const st = input.area.stations[id]!;
         const station = input.layout.stations.find((s) => s.id === id);
-        const flat = Math.hypot(this.pos.x - st.x, this.pos.z - st.z);
-        const near = proxyNear ?? flat <= Math.max(st.reach ?? 0, st.radius + FIRST_PERSON.reach);
-        next = { id, label: station?.label ?? id, near, x: this.locked ? 960 : this.mouse!.x, y: this.locked ? 540 : this.mouse!.y };
+        // Whatever a shot shows, you can use.
+        next = { id, label: station?.label ?? id, near: true, x: this.mouse.x, y: this.mouse.y };
       }
     }
     const prev = this.hovered;
@@ -1453,7 +1359,7 @@ export class World {
         }
       }
     }
-    this.renderer.domElement.style.cursor = !this.locked && next?.near ? 'pointer' : this.locked ? 'none' : 'crosshair';
+    this.renderer.domElement.style.cursor = next ? 'pointer' : 'default';
   }
 
   /** v12's hour and weather, as light. The shown clock eases forward to the run's. */
@@ -2089,22 +1995,7 @@ export class World {
   private printNext = 0;
   private printLeft = false;
 
-  /** In winter each step leaves a print in the snow, left and right in turn; the oldest fade out of the list. */
-  private footprint(area: WorldArea): void {
-    this.printLeft = !this.printLeft;
-    const side = this.printLeft ? 0.11 : -0.11;
-    const x = this.pos.x + Math.cos(this.yaw) * side;
-    const z = this.pos.z - Math.sin(this.yaw) * side;
-    const d = this.leafDummy;
-    d.position.set(x, this.feet(area, x, z) + 0.012, z);
-    d.rotation.set(0, this.yaw, 0);
-    d.scale.set(0.75, 1, 1.5);
-    d.updateMatrix();
-    this.prints.setMatrixAt(this.printNext, d.matrix);
-    this.printNext = (this.printNext + 1) % PRINTS;
-    this.prints.count = Math.min(PRINTS, Math.max(this.prints.count, this.printNext === 0 ? PRINTS : this.printNext));
-    this.prints.instanceMatrix.needsUpdate = true;
-  }
+
 
   private groundMat: THREE.MeshStandardMaterial | null = null;
   private wetness = 0;

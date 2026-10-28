@@ -16,10 +16,24 @@ export interface WorldStation {
   reach?: number;
 }
 
+/**
+ * Point and click (D-113): one fixed camera shot. `eye.y` and `at.y` are metres above the
+ * ground under them. The shots of an area are in turning order: the arrows step through them.
+ */
+export interface WorldShot {
+  id: string;
+  label: string;
+  eye: { x: number; y: number; z: number };
+  at: { x: number; y: number; z: number };
+  fov?: number;
+}
+
 export interface WorldArea {
   id: LocationId;
   /** Where you stand on arrival, and the direction you look (degrees, 0 = north/lake). */
   spawn: { x: number; z: number; look: number };
+  /** The fixed views of this place; the first is where you arrive. */
+  shots: readonly WorldShot[];
   /** You can walk anywhere inside this circle. */
   walkRadius: number;
   /** The lake's near edge (z), if the lake is in view; open water beyond it. */
@@ -41,6 +55,12 @@ export const WORLD: Readonly<Record<LocationId, WorldArea>> = {
   camp: {
     id: 'camp',
     spawn: { x: 0, z: 5.5, look: 0 },
+    shots: [
+      { id: 'camp', label: 'Camp', eye: { x: 0, y: 7.5, z: 11.5 }, at: { x: 0, y: 0, z: -1.5 }, fov: 64 },
+      { id: 'fireside', label: 'Fire and shelter', eye: { x: 3, y: 2.4, z: 6.5 }, at: { x: -4.5, y: 0.6, z: -1 }, fov: 58 },
+      { id: 'lake', label: 'Down to the lake', eye: { x: 0, y: 2.4, z: -3 }, at: { x: 0, y: 0, z: -30 }, fov: 62 },
+      { id: 'stores', label: 'Rack and woodpile', eye: { x: -3, y: 2.4, z: 6.5 }, at: { x: 6, y: 0.6, z: -0.5 }, fov: 58 },
+    ],
     walkRadius: 13,
     // Camp sits a little uphill in the timber, out of the wind and above any high water, with
     // the shore in sight below (Sir, rc.2).
@@ -74,6 +94,12 @@ export const WORLD: Readonly<Record<LocationId, WorldArea>> = {
   shore: {
     id: 'shore',
     spawn: { x: 0, z: 7, look: 0 },
+    shots: [
+      { id: 'shore', label: 'The shore', eye: { x: 0, y: 4.5, z: 13 }, at: { x: 0, y: 0, z: -3 }, fov: 66 },
+      { id: 'water', label: "The water's edge", eye: { x: 0, y: 2, z: 5 }, at: { x: 0, y: 0.3, z: -16 }, fov: 64 },
+      { id: 'west', label: 'Net and clay bank', eye: { x: 3, y: 2.3, z: 9 }, at: { x: -7, y: 0.4, z: 1 }, fov: 58 },
+      { id: 'east', label: 'Rocks and channel', eye: { x: -3, y: 2.3, z: 9 }, at: { x: 8, y: 0.4, z: 1 }, fov: 58 },
+    ],
     walkRadius: 14,
     shoreZ: -2,
     iceWalk: 18,
@@ -98,6 +124,12 @@ export const WORLD: Readonly<Record<LocationId, WorldArea>> = {
   woods: {
     id: 'woods',
     spawn: { x: 0, z: 7, look: 0 },
+    shots: [
+      { id: 'woods', label: 'The woods', eye: { x: 0, y: 4.5, z: 10.5 }, at: { x: 0, y: 0.3, z: -2 }, fov: 66 },
+      { id: 'timber', label: 'Timber and birch', eye: { x: 1, y: 2.2, z: 4 }, at: { x: -2, y: 1, z: -6 }, fov: 60 },
+      { id: 'ridge', label: 'Ridge and game trail', eye: { x: -2, y: 2.3, z: 5 }, at: { x: 7, y: 0.8, z: -4 }, fov: 60 },
+      { id: 'back', label: 'Berries and the way back', eye: { x: 1, y: 2.4, z: -2 }, at: { x: 0, y: 0.4, z: 8 }, fov: 64 },
+    ],
     walkRadius: 13,
     trees: { count: 260, clearing: 12, outer: 50, seed: 37, birchShare: 0.12 },
     rocks: { count: 18, seed: 13 },
