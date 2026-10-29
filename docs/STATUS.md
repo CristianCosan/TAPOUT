@@ -1,6 +1,6 @@
 # Status
 
-**One Winter (D-114 to D-119, 3.0.0-ow.6) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
+**One Winter (D-114 to D-120, 3.0.0-ow.7) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
 `apps/desktop/one-winter/game.html`, playable in the browser (https://claude.ai/artifact/Db6GhJvze7a9i4JKJdK31T) and,
 from this version, as the Windows build: the desktop app's renderer is that page with the fonts bundled
 (`apps/desktop/scripts/copy-renderer.cjs`). All numbers sit in one `N` object at the top of the rules section.
@@ -12,7 +12,8 @@ night cards (twenty in all) and eight small daytime events, at most one a day. S
 only: ravens fly over with their shadows, a loon swims and dives on open water, a fox trots out of the woods, dusk
 gets a warm light, and the music takes darker chords from day 12. Step 8 (D-118, 3.0.0-ow.5) keeps the big moments of a
 run and tells up to eight of them on the end card, and lists your last ten runs on the start screen. Step 9 (D-119, 3.0.0-ow.6) adds four kit items to unlock (second
-tarp, salt and spices, snowshoes, a photo of your parents) and four rare night cards dealt into about one run in three. Everything below this section describes the v12 port and the first-person build,
+tarp, salt and spices, snowshoes, a photo of your parents) and four rare night cards dealt into about one run in three. Step 10 (D-120, 3.0.0-ow.7) is a polish pass: the browser page
+lets the game fill the screen, the locked kit list folds away, and phones get the place buttons and tips out of the way. Everything below this section describes the v12 port and the first-person build,
 kept for reference.
 
 

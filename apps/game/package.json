@@ -1,6 +1,6 @@
 {
   "name": "@tapout/game",
-  "version": "3.0.0-ow.6",
+  "version": "3.0.0-ow.7",
   "private": true,
   "type": "module",
   "scripts": {
