@@ -85,6 +85,10 @@ body.app .stage{border:0}
 .choice.danger b{color:var(--fire)}
 .choice.on{border-color:var(--fire);background:rgba(208,122,44,.16)}
 .choice.on b::after{content:"  ✓";color:var(--fire)}
+.story{margin:0;padding:0;list-style:none;display:grid;gap:5px;font-size:15px;line-height:1.4;color:#C9CDC2;border-left:2px solid rgba(208,122,44,.5);padding-left:12px}
+.story b{font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-size:13px;color:var(--fire);margin-right:6px}
+.past{font-size:14px;color:#8E9486}.past summary{cursor:pointer;font-family:var(--display);letter-spacing:.1em;text-transform:uppercase}
+.past ol{margin-top:6px;gap:3px}.past b{color:var(--fg)}
 .kit{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media (max-width:560px){.kit{grid-template-columns:1fr}}
 .kit .choice{padding:9px 12px}
@@ -114,7 +118,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 
 <div class="wrap">
   <header class="top">
-    <p class="eyebrow">One Winter · step 7 · a living world</p>
+    <p class="eyebrow">One Winter · step 8 · the story of your run</p>
     <h1>Outlast nine rivals before the North wins</h1>
   </header>
 
@@ -508,7 +512,19 @@ function travel(site){if(!S||S.over||!modalEl.hidden||S.site===site)return;
   if(S.ankle>0){if(S.turn>=3)return;S.site=site;log(`You limp to the ${SCENES[site].name}. It takes all morning.`);passTurn()}
   else{S.site=site;sfx('step');log(['You walk down to the water.','You climb back up to camp.','You follow the trail into the trees.'][['shore','camp','woods'].indexOf(site)])}
   after();if(!S.over&&modalEl.hidden&&S.turn<3)maybeEvent()}
-function after(){clampAll();save();refresh();if(checkEnd())return;if(S.turn>=3)setTimeout(nightfall,700)}
+// ---------- the story of the run: a few moments kept, told back at the end ----------
+function note(w,text){if(!S.story)S.story=[];S.story.push({d:S.day,w,t:text})}
+function milestones(){const f=S.flags;
+  if(S.caughtFish>0&&!f.m_fish){f.m_fish=1;note(3,'Your first fish, pulled in cold and heavy.')}
+  if(S.caughtHares>0&&!f.m_hare){f.m_hare=1;note(3,'Your first hare from the snares.')}
+  if(S.shelter>=3&&!f.m_hut){f.m_hut=1;note(3,'The shelter is finished: log sides, a snow roof, a reflector behind the fire.')}
+  if(S.letter&&!f.m_letter){f.m_letter=1;note(2,"You read Mara's letter twice.")}
+  if(S.ankle>0&&!f.m_ankle){f.m_ankle=1;note(3,'You hurt your ankle in the dark.')}}
+const AWE=['aurora','moose','wolves','owl','stars','fire2','radio','ice'];
+function storyLines(){const st=(S.story||[]).map((e,i)=>({...e,i}));if(!st.length)return [];
+  const keep=new Set([st[0].i,st[st.length-1].i]);st.slice().sort((a,b)=>b.w-a.w||a.i-b.i).forEach(e=>{if(keep.size<8)keep.add(e.i)});
+  return st.filter(e=>keep.has(e.i)).map(e=>`<li><b>Day ${e.d}</b> ${e.t}</li>`)}
+function after(){clampAll();milestones();save();refresh();if(checkEnd())return;if(S.turn>=3)setTimeout(nightfall,700)}
 function checkEnd(){if(S.over)return true;if(S.will<=0){endRun('will');return true}if(S.warmth<=0||S.body<=0){endRun(S.warmth<=0?'cold':'body');return true}return false}
 
 // ---------- night ----------
@@ -608,7 +624,7 @@ function maybeEvent(){if(S.over||S.turn>=3||S.flags.evDay===S.day||R()>=.3)retur
   const ids=Object.keys(EVENTS).filter(id=>EVENTS[id].site===S.site&&!(S.events||[]).includes(id)&&(!EVENTS[id].when||EVENTS[id].when()));if(!ids.length)return;
   const id=ids[R()*ids.length|0],ev=EVENTS[id];S.events=[...(S.events||[]),id];save();
   cardEl.innerHTML=`<p class="k">Day ${S.day} · ${SCENES[S.site].name}</p><h2>${ev.title}</h2><p>${ev.text}</p>`;
-  ev.choices.forEach(ch=>cardEl.appendChild(btn(`<b>${ch.t}</b><small>${ch.d}</small>`,()=>{closeModal();log(ch.run());after()},'choice')));openModal()}
+  ev.choices.forEach(ch=>cardEl.appendChild(btn(`<b>${ch.t}</b><small>${ch.d}</small>`,()=>{closeModal();const tx=ch.run();if(ch.d!=='Nothing happens.')note(1,`${ev.title}. ${tx}`);log(tx);after()},'choice')));openModal()}
 function loseFood(){if(S.hung)return false;if(S.hares>0){S.hares--;return true}if(S.fish>0){S.fish--;return true}return false}
 function pickCard(){
   if(S.will<28&&!S.flags.phoneDay||S.will<28&&S.day-S.flags.phoneDay>=3){S.flags.phoneDay=S.day;return 'phone'}
@@ -634,7 +650,7 @@ function showCard(){const card=CARDS[S.card];music.mood('night');
   cardEl.innerHTML=`<p class="k">Night ${S.day} · ${deg(temp()-6)}</p><h2>${card.title}</h2><p class="night">${S.cardSum}</p><p>${card.text()}</p>`;
   card.choices.forEach(ch=>{const d=typeof ch.d==='function'?ch.d():ch.d;const b=btn(`<b>${ch.t}</b><small>${d}</small>`,()=>ch.tap?confirmTap():resolve(ch),'choice'+(ch.danger?' danger':''));
     if(ch.can&&!ch.can())b.disabled=true;cardEl.appendChild(b)});openModal()}
-function resolve(ch){const text=ch.run();clampAll();S.card=null;S.phase='slept';save();refresh();if(checkEnd())return;
+function resolve(ch){const text=ch.run();clampAll();const cd=CARDS[S.card];if(cd)note(AWE.includes(S.card)?2:1,`${cd.title}. ${text}`);S.card=null;S.phase='slept';save();refresh();if(checkEnd())return;
   cardEl.innerHTML=`<p class="k">Night ${S.day}</p><p>${text}</p>`;const b=btn('Sleep',morning);cardEl.appendChild(b);b.focus()}
 function confirmTap(){cardEl.innerHTML=`<p class="k">The sat phone</p><h2>Press it?</h2><p>This ends your run. A boat comes within the hour.</p>`;
   cardEl.appendChild(btn('Yes, press it',()=>endRun('tap'),'choice danger'));cardEl.appendChild(btn('No, put it away',()=>{S.will+=2;resolve({run:()=>'Your thumb hovers. Then you put it back.'})},'choice'))}
@@ -646,6 +662,8 @@ function morning(){
   if(S.caught>0&&R()<N.thief+S.mods.thief){S.caught=Math.max(0,S.caught-1);S.flags.thief=true}else S.flags.thief=false;
   if(S.flags.lostMorning){S.turn=1;S.flags.lostMorning=false;S.flags.crew=true}else S.flags.crew=false;
   save();
+  if(gone.length&&S.rivals.length<=2&&S.rivals.length>0)note(2,`${gone.join(' and ')} tapped out. ${S.rivals.length===1?'One rival':'Two rivals'} left.`);
+  if(S.day===iceDay())note(2,'The lake froze over in the night.');
   if(S.rivals.length===0){endRun('win');return}
   const pron=who=>(RIVALS.find(r=>r[0]===who)||[0,'they'])[1];
   const news=gone.length===0?'<p>No boats in the night. Everyone is still out there.</p>':gone.map(w=>`<p><b>${w}</b> tapped out. ${pron(w)==='they'?'They':pron(w)==='she'?'She':'He'} ${WHY[R()*WHY.length|0]}.</p>`).join('');
@@ -658,6 +676,7 @@ function morning(){
 const PLACE=k=>['1st','2nd','3rd'][k-1]||k+'th';
 function endRun(kind){S.over=true;S.result=kind;music.mood('night');
   const place=kind==='win'?1:S.rivals.length+1;S.place=place;
+  note(5,{win:'The last rival is gone. You won.',tap:'You pressed the button.',will:'You pressed the button. The thought won.',cold:'The medics took you out, too cold to go on.',body:'The medics took you out. Your body had had enough.'}[kind]);
   const T={win:['You won',`Day ${S.day}. The last rival tapped out in the night. The boat that comes is for you, with a cheque for $400,000 and Mara on the dock.`,S.season<5?'Each win opens a harder season.':'You beat the hardest winter there is.'],
     tap:['You pressed the button',`Day ${S.day}. Forty minutes later you hear the boat.`,'No shame in it. The show goes on without you.'],
     will:['The thought wins',`Day ${S.day}. You sit with the phone for an hour, then press it.`,'Will ran out. Warm meals, the fire and small wins keep it up.'],
@@ -666,11 +685,13 @@ function endRun(kind){S.over=true;S.result=kind;music.mood('night');
   const best=META.best,isBest=!best||place<best.place||(place===best.place&&S.day>best.day);if(isBest)META.best={place,day:S.day};
   const fresh=UNLOCKS.filter(u=>!META.unlocked.includes(u.id)&&u.test(S));fresh.forEach(u=>META.unlocked.push(u.id));
   let newSeason=false;if(kind==='win'&&S.season>=META.maxSeason&&META.maxSeason<5){META.maxSeason++;pickSeason=META.maxSeason;newSeason=true}
+  META.history=[{season:S.season,winter:S.winter,place,day:S.day,kind,items:S.items.slice()},...(META.history||[])].slice(0,10);
   saveMeta(META);try{localStorage.removeItem('oneWinter.run')}catch(e){}
   const unl=fresh.map(u=>`<p style="color:var(--fire)">New kit unlocked: <b>${ITEMS.find(i=>i.id===u.id).t}</b>. ${ITEMS.find(i=>i.id===u.id).d}</p>`).join('')+(newSeason?`<p style="color:var(--fire)">New season unlocked: <b>${SEASONS[META.maxSeason-1].t}</b>. ${SEASONS[META.maxSeason-1].d}</p>`:'');
   cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · ${winterOf().t} · ${kind==='win'?'winner':'run over'}</p><h2>${T[0]}</h2><p>${T[1]}</p>
    <p style="font-family:var(--display);font-size:26px;letter-spacing:.04em">You placed ${PLACE(place)} of 10${isBest?' <span style="color:var(--fire)">· your best yet</span>':best?` · best: ${PLACE(best.place)}`:''}</p>
    <div class="stats"><span>Days<b>${S.day}</b></span><span>Fish<b>${S.caughtFish}</b></span><span>Hares<b>${S.caughtHares}</b></span><span>Shelter<b>${S.shelter}/3</b></span></div>${unl}
+   <ol class="story">${storyLines().join('')}</ol>
    <p class="muted">Your kit: ${S.items.map(id=>ITEMS.find(i=>i.id===id).t).join(', ')}. ${T[2]}</p>`;
   const b=btn('Play again',()=>{newRun();intro();prefetch()},'go');cardEl.appendChild(b);openModal();b.focus()}
 function intro(){current=ensureScene('camp');refresh();
@@ -688,6 +709,8 @@ function intro(){current=ensureScene('camp');refresh();
   S.offer.forEach(id=>{const it=ITEMS.find(i=>i.id===id);const b=btn(`<b>${it.t}</b><small>${it.d}</small>`,()=>{if(pick.has(id))pick.delete(id);else if(pick.size<3)pick.add(id);b.classList.toggle('on',pick.has(id));go.disabled=pick.size!==3;go.textContent=pick.size===3?'Start the run':`Pick ${3-pick.size} more`},'choice');grid.appendChild(b)});
   go.textContent='Pick 3 more';cardEl.appendChild(go);
   if(META.tipsOff){const tb=btn('Turn tips back on',()=>{META.tipsOff=false;META.tipsSeen=[];saveMeta(META);tb.remove()},'choice');cardEl.appendChild(tb)}
+  const H=META.history||[];if(H.length){const d=document.createElement('details');d.className='past';
+    d.innerHTML=`<summary>Your past runs (${H.length})</summary><ol>${H.map(h=>`<li><b>${PLACE(h.place)}</b> · day ${h.day} · season ${h.season} · ${(WINTERS.find(w=>w.id===h.winter)||WINTERS[0]).t.toLowerCase()} · ${h.items.map(id=>ITEMS.find(i=>i.id===id).t).join(', ')}</li>`).join('')}</ol>`;cardEl.appendChild(d)}
   const lk=UNLOCKS.filter(u=>!META.unlocked.includes(u.id));if(lk.length){const p=document.createElement('p');p.className='locked';p.innerHTML='Still locked: '+lk.map(u=>`${ITEMS.find(i=>i.id===u.id).t} (${u.how})`).join(', ')+'.';cardEl.appendChild(p)}
   openModal()}
 function resume(){if(!S.mods){S.season=1;S.mods=seasonMods(1)}closeModal();logEl.innerHTML=(S.log||[]).map(l=>`<p>${l}</p>`).join('');refresh();
