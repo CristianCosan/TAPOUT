@@ -114,7 +114,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 
 <div class="wrap">
   <header class="top">
-    <p class="eyebrow">One Winter · step 6 · more surprises</p>
+    <p class="eyebrow">One Winter · step 7 · a living world</p>
     <h1>Outlast nine rivals before the North wins</h1>
   </header>
 
@@ -760,6 +760,43 @@ const grain=document.createElement('canvas');grain.width=W;grain.height=H;
 (function(){const gc=grain.getContext('2d'),d=gc.createImageData(W,H),p=d.data,gr=mulberry(99);for(let i=0;i<p.length;i+=4){const v=gr();p[i]=p[i+1]=p[i+2]=v>.5?235:20;p[i+3]=gr()*34}gc.putImageData(d,0,0)})();
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const smoke=[],flakes=[];let lastPuff=0;for(let i=0;i<90;i++)flakes.push({x:R()*W,y:R()*H,s:.4+R()*.8,r:1+R()*2.2,p:R()*6});
+// ---------- life: scenery only, never touches the run ----------
+const life={birds:null,nextBird:6,loon:null,fox:null,nextFox:8,scene:null};
+function drawLife(t){if(reduce)return;const sc=current;
+  if(life.scene!==sc){life.scene=sc;life.loon=null;life.fox=null}
+  // ravens crossing, with their shadows on the ground
+  if(!life.birds&&t>life.nextBird){const n=1+(R()*3|0),y=120+R()*600,left=R()<.5;life.birds={b:t,y,dir:left?1:-1,vy:(R()-.5)*40,n,off:[...Array(n)].map((_,i)=>[i*-46+(R()-.5)*20,(R()-.5)*60,R()*6])}}
+  if(life.birds){const B=life.birds,age=t-B.b,x0=B.dir>0?-80+age*150:W+80-age*150,y0=B.y+age*B.vy;
+    if(x0<-160||x0>W+160){life.birds=null;life.nextBird=t+25+R()*45}
+    else B.off.forEach(([dx,dy,p])=>{const x=x0+dx*B.dir,y=y0+dy,f=Math.sin(t*7+p)*10;
+      [[x+60,y+80,css(C.ink,.16),2.4],[x,y,css(C.ink,.9),2.2]].forEach(([bx,by,col,lw])=>{lc.strokeStyle=col;lc.lineWidth=lw;lc.lineCap='round';lc.beginPath();
+        lc.moveTo(bx-20,by-f);lc.quadraticCurveTo(bx-9,by-6-f*.3,bx,by);lc.quadraticCurveTo(bx+9,by-6-f*.3,bx+20,by-f);lc.stroke()})})}
+  // a loon on the open lake, diving now and then
+  if(sc.kind!=='woods'&&!iced()&&sc.ripples.length){
+    if(!life.loon){const r=sc.ripples[R()*sc.ripples.length|0];life.loon={x:r.x,y:r.y,a:R()*6.28,dive:t+12+R()*20}}
+    const L=life.loon;let under=false;
+    if(t>L.dive){under=t<L.dive+4;if(!under){L.dive=t+15+R()*25;L.x+=Math.cos(L.a)*60;L.y+=Math.sin(L.a)*60;L.a+=(R()-.5)*2}}
+    if(sc.LAt(L.x+Math.cos(L.a)*30,L.y+Math.sin(L.a)*30)<sc.cfg.deep+.01||L.x<40||L.x>W-40||L.y<40||L.y>H-40)L.a+=Math.PI*.9;
+    if(!under){L.x+=Math.cos(L.a)*.25;L.y+=Math.sin(L.a)*.25;
+      lc.strokeStyle=css(mix(C.lake,C.snow,.5),.5);lc.lineWidth=1.5;for(let k=1;k<=2;k++){const bx=L.x-Math.cos(L.a)*(14+k*12),by=L.y-Math.sin(L.a)*(14+k*12),s=6+k*6;
+        lc.beginPath();lc.moveTo(bx+Math.cos(L.a+2.4)*s,by+Math.sin(L.a+2.4)*s);lc.lineTo(bx,by);lc.lineTo(bx+Math.cos(L.a-2.4)*s,by+Math.sin(L.a-2.4)*s);lc.stroke()}
+      lc.save();lc.translate(L.x,L.y);lc.rotate(L.a);lc.scale(1.35,1.35);lc.fillStyle=css(C.ink,.92);lc.beginPath();lc.ellipse(0,0,15,6,0,0,6.283);lc.fill();
+      lc.beginPath();lc.arc(13,0,4.5,0,6.283);lc.fill();lc.fillStyle=css(C.snow,.85);[[-6,-2],[-2,2],[2,-2],[6,1.5]].forEach(([p,q])=>{lc.fillRect(p,q,1.6,1.6)});lc.restore()}
+    else if(t<L.dive+.8){lc.strokeStyle=css(C.snow,.5*(1-(t-L.dive)/.8));lc.lineWidth=1.5;lc.beginPath();lc.arc(L.x,L.y,8+(t-L.dive)*20,0,6.283);lc.stroke()}}
+  // a fox trotting out of the woods along the trail
+  if(sc.kind==='woods'){
+    if(!life.fox&&t>life.nextFox){life.fox={b:t,path:sc.paths[0].slice().reverse()}}
+    if(life.fox){const F=life.fox,d=(t-F.b)*70;let acc=0,pos=null,ang=0;
+      for(let i=0;i<F.path.length-1;i++){const [ax,ay]=F.path[i],[bx,by]=F.path[i+1],seg=Math.hypot(bx-ax,by-ay);if(d<=acc+seg){const k=(d-acc)/seg;pos=[ax+(bx-ax)*k,ay+(by-ay)*k];ang=Math.atan2(by-ay,bx-ax);break}acc+=seg}
+      if(!pos){life.fox=null;life.nextFox=t+70+R()*80}
+      else{const [x,y]=pos,bob=Math.sin(t*12)*1.2;lc.save();lc.translate(x,y+bob);lc.rotate(ang);lc.scale(1.3,1.3);
+        lc.fillStyle=css(C.ink,.22);lc.beginPath();lc.ellipse(4,6,16,6,0,0,6.283);lc.fill();
+        const fur=mix(C.fire,C.ink,.15);lc.fillStyle=css(fur);lc.strokeStyle=css(C.ink,.8);lc.lineWidth=1.2;
+        lc.beginPath();lc.moveTo(-14,0);lc.quadraticCurveTo(-30,-6+Math.sin(t*6)*3,-34,2);lc.quadraticCurveTo(-26,4,-14,2);lc.fill();lc.stroke();
+        lc.fillStyle=css(C.snow,.9);lc.beginPath();lc.arc(-33,2,2.5,0,6.283);lc.fill();
+        lc.fillStyle=css(fur);lc.beginPath();lc.ellipse(0,0,14,5.5,0,0,6.283);lc.fill();lc.stroke();
+        lc.beginPath();lc.moveTo(12,-4);lc.lineTo(22,0);lc.lineTo(12,4);lc.closePath();lc.fill();lc.stroke();
+        lc.fillStyle=css(C.ink);[[13,-5],[13,5]].forEach(([p,q])=>{lc.beginPath();lc.arc(p,q,1.8,0,6.283);lc.fill()});lc.restore()}}}}
 function frame(ms){const t=reduce?0:ms/1000;lc.clearRect(0,0,W,H);
   if(current&&S){const iw=iceW(S.day);
     current.ripples.forEach(r=>{if(r.L<current.cfg.shallow+iw+.01)return;const a=.5+.5*Math.sin(t*r.s+r.p),dx=Math.sin(t*.15+r.p)*6;lc.strokeStyle=css(mix(C.lake,C.snow,.45),.15+.45*a);lc.lineWidth=2;lc.lineCap='round';
@@ -777,7 +814,9 @@ function frame(ms){const t=reduce?0:ms/1000;lc.clearRect(0,0,W,H);
       const k=age/9,x=s.x+age*26*wind+Math.sin(age*.8+s.w)*8,y=s.y-age*17;lc.fillStyle=css(C.snow,(s.big?.2:.08)*(1-k)*(age<.6?age/.6:1));lc.beginPath();lc.arc(x,y,6+age*4.2,0,6.283);lc.fill()}
     if(w==='snow'||w==='storm'){const n=w==='storm'?90:45;for(let i=0;i<n;i++){const f=flakes[i],y=(f.y+t*28*f.s*(w==='storm'?1.8:1))%H,x=((f.x+Math.sin(t*.5+f.p)*14+t*8*wind*(w==='storm'?6:1))%W+W)%W;lc.fillStyle=css(C.snow,.8);lc.beginPath();lc.arc(x,y,f.r,0,6.283);lc.fill()}}
     if(hover&&modalEl.hidden){const s=spotOf(hover);if(s&&ACTIONS[hover].site===S.site){lc.save();lc.setLineDash([8,7]);lc.lineDashOffset=-t*20;lc.strokeStyle=css(C.snow,.95);lc.lineWidth=2.5;lc.beginPath();lc.arc(s[0],s[1],s[2],0,6.283);lc.stroke();lc.restore()}}
+    drawLife(t);
     const tod=!modalEl.hidden&&(S.phase==='night'||S.phase==='slept'||S.over)?3:Math.min(S.turn,2);const tint=[[C.lake,.12],[C.snow,0],[C.ink,.24],[C.ink,.5]][tod];if(tint[1]>0){lc.fillStyle=css(tint[0],tint[1]);lc.fillRect(0,0,W,H)}
+    if(tod===2){const g=lc.createLinearGradient(W,0,0,H);g.addColorStop(0,css(C.fire,.16));g.addColorStop(1,css(C.fire,0));lc.fillStyle=g;lc.fillRect(0,0,W,H)}
     if(w==='storm'||w==='over'||w==='snow'){lc.fillStyle=css(C.lake,w==='storm'?.16:.06);lc.fillRect(0,0,W,H)}
   }
   const v=lc.createRadialGradient(W/2,H/2,H*.45,W/2,H/2,H*1.05);v.addColorStop(0,css(C.ink,0));v.addColorStop(1,css(C.ink,.42));lc.fillStyle=v;lc.fillRect(0,0,W,H);
@@ -817,7 +856,8 @@ function padVoice(f,when,dur){const {ac,music,rev}=A,lp=ac.createBiquadFilter();
   [-7,7].forEach(c=>{const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=f;o.detune.value=c;o.connect(lp);o.start(when);o.stop(when+dur+.1)});
   lp.connect(gn);const dry=ac.createGain();dry.gain.value=.35;gn.connect(dry);dry.connect(music);gn.connect(rev)}
 const CHORDS=[[146.83,220,349.23],[116.54,174.61,220,293.66],[87.31,130.81,220,261.63],[110,164.81,261.63]];let ci=0,mi=5;
-function chordLoop(){if(!A.running)return;const t=A.ac.currentTime+.1;CHORDS[ci%4].forEach(f=>padVoice(f,t,14));ci++;setTimeout(chordLoop,11000)}
+const CHORDS_LATE=[[146.83,220,293.66,329.63],[98,146.83,233.08],[116.54,174.61,293.66],[110,164.81,220,329.63]];
+function chordLoop(){if(!A.running)return;const t=A.ac.currentTime+.1;(S&&S.day>=12?CHORDS_LATE:CHORDS)[ci%4].forEach(f=>padVoice(f,t,14));ci++;setTimeout(chordLoop,11000)}
 function melodyLoop(){if(!A.running)return;const t=A.ac.currentTime+.05,st=[-2,-1,-1,0,1,1,2];mi=clamp(mi+st[R()*st.length|0],1,10);pluck(NOTES[mi],t,.2+R()*.16);
   const sparse=S?Math.min(1,S.day/16):0;
   if(R()<.3-sparse*.15)pluck(NOTES[clamp(mi+[1,2,-1][R()*3|0],0,10)],t+.42+R()*.3,.13);if(R()<.18)pluck(NOTES[0],t+.02,.12);setTimeout(melodyLoop,(R()<.12?7500+R()*3000:2300+R()*4300)*(1+sparse*.6))}
