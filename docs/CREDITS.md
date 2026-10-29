@@ -12,6 +12,17 @@ Assets must be CC0 or free for commercial use with no payment (D-031).
 | Phaser (layout-guide screens only) | https://phaser.io | MIT |
 | Electron (Windows shell) | https://www.electronjs.org | MIT |
 
+## Fonts (One Winter, D-114)
+
+Shipped as files in `apps/desktop/one-winter/fonts/` with their licence texts; the browser build loads the same fonts from Google Fonts.
+
+| What | Source | Licence |
+|---|---|---|
+| Barlow Condensed (500, 700) | https://fonts.google.com/specimen/Barlow+Condensed | SIL Open Font License 1.1 |
+| Atkinson Hyperlegible (400, 700) | https://fonts.google.com/specimen/Atkinson+Hyperlegible | SIL Open Font License 1.1 |
+
+One Winter's pictures, music and sounds are all made in code inside `apps/desktop/one-winter/game.html`.
+
 ## Models, textures, sounds
 
 None. As of build 0.0.3 every model, sign and sound is generated in code
