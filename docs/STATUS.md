@@ -1,6 +1,6 @@
 # Status
 
-**One Winter (D-114 to D-116, 3.0.0-ow.3) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
+**One Winter (D-114 to D-117, 3.0.0-ow.4) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
 `apps/desktop/one-winter/game.html`, playable in the browser (https://claude.ai/artifact/Db6GhJvze7a9i4JKJdK31T) and,
 from this version, as the Windows build: the desktop app's renderer is that page with the fonts bundled
 (`apps/desktop/scripts/copy-renderer.cjs`). All numbers sit in one `N` object at the top of the rules section.
@@ -8,7 +8,9 @@ Built and approved in four steps the same day: the look and music, three playabl
 unlocks and the Windows build. Step 5 (D-115, 3.0.0-ow.2) gives every run its own map: the same three places with a
 new shore, lake, forest, rocks and lake name, rolled from `S.mapSeed`. It also adds short first-run tips you can close
 or turn off, and colder late days and nights. Step 6 (D-116, 3.0.0-ow.3) adds a kind of winter per run (six), six more
-night cards (twenty in all) and eight small daytime events, at most one a day. Everything below this section describes the v12 port and the first-person build,
+night cards (twenty in all) and eight small daytime events, at most one a day. Step 7 (D-117, 3.0.0-ow.4) is scenery
+only: ravens fly over with their shadows, a loon swims and dives on open water, a fox trots out of the woods, dusk
+gets a warm light, and the music takes darker chords from day 12. Everything below this section describes the v12 port and the first-person build,
 kept for reference.
 
 
