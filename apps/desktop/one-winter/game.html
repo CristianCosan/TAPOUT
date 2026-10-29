@@ -114,7 +114,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 
 <div class="wrap">
   <header class="top">
-    <p class="eyebrow">One Winter · step 5 · a new map every run</p>
+    <p class="eyebrow">One Winter · step 6 · more surprises</p>
     <h1>Outlast nine rivals before the North wins</h1>
   </header>
 
@@ -281,7 +281,8 @@ function compass(g,x,y){g.save();g.translate(x,y);const c=css(mix(C.lake,C.snow,
 
 // ---------- one picture per place per day: snow grows, the lake freezes ----------
 const snowThr=d=>Math.max(.34,.62-(d-1)*.02);
-const iceW=d=>d<N.iceDay?0:Math.min(.22,.07+(d-N.iceDay)*.03);
+const iceDay=()=>(S&&S.iceDay)||N.iceDay;
+const iceW=d=>d<iceDay()?0:Math.min(.22,.07+(d-iceDay())*.03);
 function dayCanvas(sc,day){const key=day+'-'+(sc.kind==='shore'&&S?S.hips:'');if(sc.cv&&sc.cvDay===key)return sc.cv;
   const cfg=sc.cfg,thr=snowThr(day),iw=iceW(day),cv=sc.cv||document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
   SEED=sc.seed;const img=g.createImageData(W,H),px=img.data,cls=new Uint8Array(W*H),{L,SN,B}=sc;
@@ -422,17 +423,27 @@ let META=loadMeta(),pickSeason=META.maxSeason;
 const R=Math.random;
 let S=null;
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=R()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
-function makeWeather(mods){const w=[];const t=[];for(let d=1;d<=24;d++){let k=d===1?'clear':d===2?'over':d===3?'snow':null;
-  if(!k){const r=R();k=(d>5&&w[d-2]!=='storm'&&r<.13)?'storm':r<.35?'snow':r<.55?'wind':r<.8?'over':'clear'}w.push(k);
-  t.push(Math.round(Math.max(N.tempFloor,N.tempStart-N.tempDrop*(d-1)+(R()*4-2))-(k==='storm'?3:0)+(k==='clear'&&d>6?-2:0)+mods.temp))}return {w,t}}
-function newRun(season,mapSeed){season=season||pickSeason;const mods=seasonMods(season),wx=makeWeather(mods);
-  S={mapSeed:mapSeed||1+(R()*999983|0),day:1,turn:0,site:'camp',...N.start,fish:0,hares:0,caughtFish:0,caughtHares:0,shelter:0,fire:0,items:[],letter:false,pem:0,aid:0,hips:mods.hips,season,mods,iceFish:0,
+// each run also rolls a kind of winter, on top of the season
+const WINTERS=[
+  {id:'plain',t:'An ordinary winter',d:'Cold, then colder.'},
+  {id:'early',t:'An early freeze',d:'The lake freezes on day 8 instead of day 11.',ice:8},
+  {id:'mild',t:'A slow start',d:'The first week is mild. From day 12 it is colder than usual.',temp:d=>d<=7?4:d>=12?-3:0},
+  {id:'snowy',t:'A snowy winter',d:'More snow days. Hare tracks are easy to read, so snares catch more.',snow:.15,snare:.06},
+  {id:'windy',t:'A windy winter',d:'More wind off the lake. Fish bite more in the chop.',wind:.15,fish:.05},
+  {id:'berries',t:'A good berry year',d:'Twice as many rose hips on the shore.',hips:2}];
+const winterOf=()=>WINTERS.find(w=>w.id===(S&&S.winter))||WINTERS[0];
+function makeWeather(mods,wi){wi=wi||WINTERS[0];const sn=wi.snow||0,wd=wi.wind||0;const w=[];const t=[];for(let d=1;d<=24;d++){let k=d===1?'clear':d===2?'over':d===3?'snow':null;
+  if(!k){const r=R();k=(d>5&&w[d-2]!=='storm'&&r<.13)?'storm':r<.35+sn?'snow':r<.55+sn+wd?'wind':r<.8+sn*.5+wd*.5?'over':'clear'}w.push(k);
+  t.push(Math.round(Math.max(N.tempFloor,N.tempStart-N.tempDrop*(d-1)+(R()*4-2))-(k==='storm'?3:0)+(k==='clear'&&d>6?-2:0)+mods.temp+(wi.temp?wi.temp(d):0)))}return {w,t}}
+function newRun(season,mapSeed,winter){season=season||pickSeason;const wi=WINTERS.find(w=>w.id===winter)||WINTERS[R()*WINTERS.length|0],mods=seasonMods(season);
+  mods.fish+=wi.fish||0;mods.snare+=wi.snare||0;mods.hips*=wi.hips||1;const wx=makeWeather(mods,wi);
+  S={winter:wi.id,iceDay:wi.ice||N.iceDay,events:[],mapSeed:mapSeed||1+(R()*999983|0),day:1,turn:0,site:'camp',...N.start,fish:0,hares:0,caughtFish:0,caughtHares:0,shelter:0,fire:0,items:[],letter:false,pem:0,aid:0,hips:mods.hips,season,mods,iceFish:0,
     snares:0,caught:0,ankle:0,hung:false,wx:wx.w,temps:wx.t,rivals:RIVALS.map(r=>r[0]),out:[],log:[],over:false,result:null,
-    deck:shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl']),used:[],flags:{},
+    deck:shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw']),used:[],flags:{},
     offer:shuffle(META.unlocked.slice()).slice(0,6)}}
 const has=id=>S.items.includes(id);
 const temp=()=>S.temps[S.day-1],wxNow=()=>S.wx[S.day-1];
-const iced=()=>S.day>=N.iceDay;
+const iced=()=>S.day>=iceDay();
 const turnCold=()=>Math.max(2,Math.round(N.coldBase+(N.tempStart-temp())*N.coldPerDeg)+(wxNow()==='storm'?N.stormCold:0)-(has('socks')?N.socks:0));
 const fireCost=()=>temp()<-8?N.fireWoodCold:N.fireWood;
 const fishChance=()=>{if(wxNow()==='storm')return 0;const b=iced()?N.iceFishOdds:N.fishOdds-N.fishDrop*(S.day-1);return clamp(b+S.mods.fish+(has('net')?N.netBonus*(iced()?.5:1):0)+(iced()&&has('auger')?.2:0),.05,.9)};
@@ -496,7 +507,7 @@ function doAction(id){if(!S||S.over||!modalEl.hidden)return;const a=ACTIONS[id];
 function travel(site){if(!S||S.over||!modalEl.hidden||S.site===site)return;
   if(S.ankle>0){if(S.turn>=3)return;S.site=site;log(`You limp to the ${SCENES[site].name}. It takes all morning.`);passTurn()}
   else{S.site=site;sfx('step');log(['You walk down to the water.','You climb back up to camp.','You follow the trail into the trees.'][['shore','camp','woods'].indexOf(site)])}
-  after()}
+  after();if(!S.over&&modalEl.hidden&&S.turn<3)maybeEvent()}
 function after(){clampAll();save();refresh();if(checkEnd())return;if(S.turn>=3)setTimeout(nightfall,700)}
 function checkEnd(){if(S.over)return true;if(S.will<=0){endRun('will');return true}if(S.warmth<=0||S.body<=0){endRun(S.warmth<=0?'cold':'body');return true}return false}
 
@@ -546,13 +557,58 @@ const CARDS={
   snareNight:{title:'Up the trail',text:()=>'Something thrashes in the dark, up where your snares are.',when:()=>S.snares>0,
     choices:[{t:'Go now with the headlamp',d:'Warmth −8. You might hurt yourself in the dark.',run(){S.warmth-=8;if(R()<.15){S.ankle=2;S.body-=12;return 'A root in the dark. Your ankle rolls. Walking anywhere will cost you a turn for two days.'}if(R()<.6){S.hares++;S.caughtHares++;S.will+=4;return 'A hare, fresh in the wire. You carry it back.'}return 'Just an empty snare, pulled loose.'}},
       {t:'Wait for morning',d:'Whatever it is might get away.',run(){if(R()<.5){S.caught=Math.min(3,S.caught+1);return 'At dawn you can see something white in the snare.'}return 'By morning it has pulled free.'}}]},
-  ice:{title:'The lake booms',text:()=>'All night the ice groans and booms as it grows. Like thunder underneath you.',when:()=>S.day>=N.iceDay-1,
+  ice:{title:'The lake booms',text:()=>'All night the ice groans and booms as it grows. Like thunder underneath you.',when:()=>S.day>=iceDay()-1,
     choices:[{t:'Listen to it',d:'Will +5.',run(){S.will+=5;return 'Eerie, and beautiful.'}},
       {t:'Pull the hood tight',d:'Body +3.',run(){S.body+=3;return 'You sleep, mostly.'}}]},
   owl:{title:'The owl',text:()=>'A great grey owl lands on the ridge pole of your tarp and stares at the fire.',
     choices:[{t:'Talk to it',d:'Will +6.',run(){S.will+=6;return 'It listens to your whole day. Then it is gone without a sound.'}},
       {t:'Shoo it off',d:'Nothing happens.',run(){return 'It goes. You feel a bit lonelier.'}}]}
 };
+Object.assign(CARDS,{
+  radio:{title:'The crew radio',text:()=>'The little radio for weather calls picks up a hockey game, far away and crackly.',
+    choices:[{t:'Listen to the whole game',d:'Warmth −3, Will +7.',run(){S.warmth-=3;S.will+=7;return 'Overtime. You cheer out loud, alone in the dark.'}},
+      {t:'Save the battery',d:'Body +2.',run(){S.body+=2;return 'You switch it off and sleep.'}}]},
+  fever:{title:'Chills',text:()=>'You wake up sweating and shaking at the same time.',when:()=>S.day>6,
+    choices:[{t:'Sit up by the fire with hot water',d:()=>S.wood>=1?'Uses 1 wood. Body +4.':'Needs 1 wood.',can:()=>S.wood>=1,run(){S.wood--;S.body+=4;return 'Mug after mug. By dawn it breaks.'}},
+      {t:'Sleep it off',d:'It might pass. It might not.',run(){if(R()<.5){S.body-=2;return 'It passes in the night.'}S.body-=10;return 'A bad night. You feel hollow in the morning.'}}]},
+  stars:{title:'No moon',text:()=>'No moon, no cloud. More stars than dark.',when:()=>wxNow()==='clear',
+    choices:[{t:'Lie on your back and look',d:'Warmth −6, Will +8.',run(){S.warmth-=6;S.will+=8;return 'A satellite crosses. Then another. You lose count.'}},
+      {t:'Stay in the bag',d:'Warmth +2.',run(){S.warmth+=2;return 'You fall asleep looking out the gap in the tarp.'}}]},
+  wolverine:{title:'Something heavy',text:()=>'Something heavy is pulling at the woodpile. It grunts.',when:()=>S.day>7&&S.wood>=2,
+    choices:[{t:'Bang the pot and yell',d:'It will probably go. Will −2.',run(){S.will-=2;if(R()<.75)return 'A wolverine, low and wide. It goes, slowly, like it is doing you a favour.';S.wood-=2;return 'It takes its time. Two logs gone.'}},
+      {t:'Let it be',d:'You will lose some wood.',run(){S.wood=Math.max(0,S.wood-2);return 'In the morning, two logs are dragged off into the trees.'}}]},
+  fire2:{title:'Another fire',text:()=>'Far across the water, a tiny orange point. Another contestant, still in it.',when:()=>S.rivals.length>1&&!iced(),
+    choices:[{t:'Flash your headlamp at it',d:'Will +5.',run(){S.will+=5;return 'After a long minute, a light flashes back.'}},
+      {t:'Turn your back to it',d:'Body +3.',run(){S.body+=3;return 'Not your problem. You sleep.'}}]},
+  thaw:{title:'A warm wind',text:()=>'A warm wind in the night. Everything drips and the snow goes grey.',when:()=>S.day>8,
+    choices:[{t:'Dry your gear by the fire',d:()=>S.wood>=1?'Uses 1 wood. Warmth +6.':'Needs 1 wood.',can:()=>S.wood>=1,run(){S.wood--;S.warmth+=6;return 'Steam off your socks, your gloves, your hat.'}},
+      {t:'Sleep in it',d:'Warmth −5.',run(){S.warmth-=5;return 'Damp all night. It freezes hard again by morning.'}}]}
+});
+
+// ---------- small things that happen during the day, at most one a day ----------
+const EVENTS={
+  pike:{site:'shore',title:'In the shallows',text:'A pike, frozen at the edge of the ice, perfectly kept.',when:()=>iced(),
+    choices:[{t:'Chip it free',d:'Warmth −5. One fish.',run(){S.warmth-=5;S.fish++;return 'Ten minutes with the axe. A whole pike.'}},{t:'Leave it',d:'Nothing happens.',run(){return 'You leave it for the ravens.'}}]},
+  jug:{site:'shore',title:'Washed up',text:'Boards and a length of rope, tangled in the reeds after the last blow.',
+    choices:[{t:'Haul it all up',d:'+2 wood. Food −3.',run(){S.wood+=2;S.food-=3;return 'Dry boards, good for the fire.'}},{t:'Leave it',d:'Nothing happens.',run(){return 'You leave it in the reeds.'}}]},
+  tracks:{site:'shore',title:'Tracks',text:'Wolf tracks along the beach, fresh, as wide as your hand.',
+    choices:[{t:'Follow them a little way',d:'Could be something. Could be a scare.',run(){if(R()<.6){S.will+=6;return 'A scatter of hair and bones. They ate well. Somehow that helps.'}S.will-=4;return 'The tracks go into thick spruce. You back out fast.'}},{t:'Go back to what you were doing',d:'Nothing happens.',run(){return 'You keep one eye on the treeline.'}}]},
+  grouse:{site:'woods',title:'A spruce grouse',text:'A spruce grouse sits on a low branch, much too calm for its own good.',
+    choices:[{t:'Throw a stick',d:'About 5 in 10. A small meal if it works.',run(){if(R()<.5){S.hares++;return 'Got it. About the size of a hare, and it cooks like one.'}S.will-=2;return 'It flutters to a higher branch and looks at you.'}},{t:'Watch it',d:'Will +3.',run(){S.will+=3;return 'It eats spruce needles, one at a time.'}}]},
+  cabin:{site:'woods',title:'An old cabin',text:"The roof of an old trapper's cabin, fallen in under the snow.",
+    choices:[{t:'Dig around inside',d:'Warmth −4. Maybe something.',run(){S.warmth-=4;if(R()<.6){S.food+=15;return 'A tin of beans, years old, still sealed. Food +15.'}return 'Rusty traps and mouse nests. Nothing to eat.'}},{t:'Leave it',d:'Nothing happens.',run(){return 'Somebody lived out here once.'}}]},
+  birch:{site:'woods',title:'Birch',text:'A stand of birch, bark peeling off in sheets. The best tinder there is.',
+    choices:[{t:'Strip some bark and wood',d:'+2 wood. Food −2.',run(){S.wood+=2;S.food-=2;return 'Papery bark and dry branches, stuffed in every pocket.'}},{t:'Leave it',d:'Nothing happens.',run(){return 'You leave the birches alone.'}}]},
+  raven:{site:'camp',title:'A raven',text:'A raven lands on the woodpile and talks at you in clicks and croaks.',
+    choices:[{t:'Talk back',d:'Will +4.',run(){S.will+=4;return 'You have a whole conversation. It wins.'}},{t:'Shoo it',d:'Nothing happens.',run(){return 'It flaps off, complaining.'}}]},
+  drone:{site:'camp',title:'The drone',text:"The crew's camera drone hums low over camp and hangs there.",
+    choices:[{t:'Wave and show them the camp',d:'Will +3.',run(){S.will+=3;return 'Somewhere, an editor is choosing this shot.'}},{t:'Ignore it',d:'Nothing happens.',run(){return 'It drifts off down the shore.'}}]}
+};
+function maybeEvent(){if(S.over||S.turn>=3||S.flags.evDay===S.day||R()>=.3)return;S.flags.evDay=S.day;
+  const ids=Object.keys(EVENTS).filter(id=>EVENTS[id].site===S.site&&!(S.events||[]).includes(id)&&(!EVENTS[id].when||EVENTS[id].when()));if(!ids.length)return;
+  const id=ids[R()*ids.length|0],ev=EVENTS[id];S.events=[...(S.events||[]),id];save();
+  cardEl.innerHTML=`<p class="k">Day ${S.day} · ${SCENES[S.site].name}</p><h2>${ev.title}</h2><p>${ev.text}</p>`;
+  ev.choices.forEach(ch=>cardEl.appendChild(btn(`<b>${ch.t}</b><small>${ch.d}</small>`,()=>{closeModal();log(ch.run());after()},'choice')));openModal()}
 function loseFood(){if(S.hung)return false;if(S.hares>0){S.hares--;return true}if(S.fish>0){S.fish--;return true}return false}
 function pickCard(){
   if(S.will<28&&!S.flags.phoneDay||S.will<28&&S.day-S.flags.phoneDay>=3){S.flags.phoneDay=S.day;return 'phone'}
@@ -594,7 +650,7 @@ function morning(){
   const pron=who=>(RIVALS.find(r=>r[0]===who)||[0,'they'])[1];
   const news=gone.length===0?'<p>No boats in the night. Everyone is still out there.</p>':gone.map(w=>`<p><b>${w}</b> tapped out. ${pron(w)==='they'?'They':pron(w)==='she'?'She':'He'} ${WHY[R()*WHY.length|0]}.</p>`).join('');
   cardEl.innerHTML=`<p class="k">Day ${S.day} · ${deg(temp())} · ${WX[wxNow()]}</p><h2>${gone.length?'A boat in the night':'Morning'}</h2>${news}<p>${S.rivals.length} ${S.rivals.length===1?'rival':'rivals'} left.</p>
-    ${S.day===N.iceDay?'<p class="muted">Ice has grown out from the shore overnight. You will have to fish through it now.</p>':''}
+    ${S.day===iceDay()?'<p class="muted">Ice has grown out from the shore overnight. You will have to fish through it now.</p>':''}
     ${wxNow()==='storm'?'<p class="muted">A storm today. Every turn away from the fire costs a lot more warmth, and the lake is too rough to fish.</p>':''}
     ${S.flags.crew?'<p class="muted">The crew is here all morning, filming you. You lose the morning turn.</p>':''}
     ${S.caught>0?`<p class="muted">Something is caught in your snares.</p>`:''}${S.flags.thief?'<p class="muted">Fox tracks around the snares. Something got eaten before you came.</p>':''}`;
@@ -612,7 +668,7 @@ function endRun(kind){S.over=true;S.result=kind;music.mood('night');
   let newSeason=false;if(kind==='win'&&S.season>=META.maxSeason&&META.maxSeason<5){META.maxSeason++;pickSeason=META.maxSeason;newSeason=true}
   saveMeta(META);try{localStorage.removeItem('oneWinter.run')}catch(e){}
   const unl=fresh.map(u=>`<p style="color:var(--fire)">New kit unlocked: <b>${ITEMS.find(i=>i.id===u.id).t}</b>. ${ITEMS.find(i=>i.id===u.id).d}</p>`).join('')+(newSeason?`<p style="color:var(--fire)">New season unlocked: <b>${SEASONS[META.maxSeason-1].t}</b>. ${SEASONS[META.maxSeason-1].d}</p>`:'');
-  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · ${kind==='win'?'winner':'run over'}</p><h2>${T[0]}</h2><p>${T[1]}</p>
+  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · ${winterOf().t} · ${kind==='win'?'winner':'run over'}</p><h2>${T[0]}</h2><p>${T[1]}</p>
    <p style="font-family:var(--display);font-size:26px;letter-spacing:.04em">You placed ${PLACE(place)} of 10${isBest?' <span style="color:var(--fire)">· your best yet</span>':best?` · best: ${PLACE(best.place)}`:''}</p>
    <div class="stats"><span>Days<b>${S.day}</b></span><span>Fish<b>${S.caughtFish}</b></span><span>Hares<b>${S.caughtHares}</b></span><span>Shelter<b>${S.shelter}/3</b></span></div>${unl}
    <p class="muted">Your kit: ${S.items.map(id=>ITEMS.find(i=>i.id===id).t).join(', ')}. ${T[2]}</p>`;
@@ -624,8 +680,8 @@ function intro(){current=ensureScene('camp');refresh();
     cardEl.appendChild(btn(`Continue day ${saved.day}`,()=>{S=saved;startSound();resume()},'go'));
     cardEl.appendChild(btn('Start a new run',()=>{intro.skipSaved=true;try{localStorage.removeItem('oneWinter.run')}catch(e){}newRun();intro();prefetch()},'choice'));openModal();return}
   const pick=new Set();best=META.best;
-  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · Day 1 · ${deg(S.temps[0])}${best?` · your best: ${PLACE(best.place)} of 10`:''}</p><h2>The boat leaves at dawn</h2><p>Ten people on ten stretches of shore, nobody in sight of anyone. Last one in wins $400,000. You have a tarp, an axe, a ferro rod, a pot, a fishing line and three snare wires.</p><p><b>Pick 3 more things for your pack.</b></p>`;
-  if(META.maxSeason>1){const row=document.createElement('div');row.className='seasons';SEASONS.slice(0,META.maxSeason).forEach((se,i)=>{const b=btn(`<b>${i+1}</b>`,()=>{pickSeason=i+1;newRun(i+1,S.mapSeed);intro()},'choice'+(S.season===i+1?' on':''));b.title=se.t+': '+se.d;row.appendChild(b)});
+  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · Day 1 · ${deg(S.temps[0])}${best?` · your best: ${PLACE(best.place)} of 10`:''}</p><h2>The boat leaves at dawn</h2><p class="night">This run: ${winterOf().t}. ${winterOf().d}</p><p>Ten people on ten stretches of shore, nobody in sight of anyone. Last one in wins $400,000. You have a tarp, an axe, a ferro rod, a pot, a fishing line and three snare wires.</p><p><b>Pick 3 more things for your pack.</b></p>`;
+  if(META.maxSeason>1){const row=document.createElement('div');row.className='seasons';SEASONS.slice(0,META.maxSeason).forEach((se,i)=>{const b=btn(`<b>${i+1}</b>`,()=>{pickSeason=i+1;newRun(i+1,S.mapSeed,S.winter);intro()},'choice'+(S.season===i+1?' on':''));b.title=se.t+': '+se.d;row.appendChild(b)});
     cardEl.appendChild(row);const sd=document.createElement('p');sd.className='locked';sd.textContent=SEASONS[S.season-1].t+': '+SEASONS[S.season-1].d;cardEl.appendChild(sd)}
   const grid=document.createElement('div');grid.className='kit';cardEl.appendChild(grid);
   const go=btn('Start the run',()=>{S.items=[...pick];startSound();closeModal();log('The boat is gone. Just you, the lake and the cameras.');save();refresh()},'go');go.disabled=true;
@@ -651,7 +707,7 @@ function prefetch(){setTimeout(()=>{ensureScene('shore');setTimeout(()=>ensureSc
 const TIPS={
   start:'Each turn costs food and warmth. Sitting at camp by a lit fire, warmth goes up instead.',
   dusk:'A fire lit at dusk is still burning when night comes, and that makes the night much warmer.',
-  shore:'Fish bite less as the water gets colder. Around day 11 the lake freezes over.',
+  shore:'Fish bite less as the water gets colder. Later in the winter the lake freezes over.',
   woods:'Snares catch hares overnight. Foxes find a catch that sits too long.',
   night:'Every night is colder than the one before. Shelter, a blanket and a lit fire each take some of the cold off.',
   low:'When any bar reaches zero, the run ends. Body drops while Food is empty or Warmth is under 20.'};
