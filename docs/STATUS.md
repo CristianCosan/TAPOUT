@@ -1,11 +1,13 @@
 # Status
 
-**One Winter (D-114, 3.0.0-ow.1) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
+**One Winter (D-114, D-115, 3.0.0-ow.2) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
 `apps/desktop/one-winter/game.html`, playable in the browser (https://claude.ai/artifact/Db6GhJvze7a9i4JKJdK31T) and,
 from this version, as the Windows build: the desktop app's renderer is that page with the fonts bundled
 (`apps/desktop/scripts/copy-renderer.cjs`). All numbers sit in one `N` object at the top of the rules section.
 Built and approved in four steps the same day: the look and music, three playable days, a full run, then seasons,
-unlocks and the Windows build. Everything below this section describes the v12 port and the first-person build,
+unlocks and the Windows build. Step 5 (D-115, 3.0.0-ow.2) gives every run its own map: the same three places with a
+new shore, lake, forest, rocks and lake name, rolled from `S.mapSeed`. It also adds short first-run tips you can close
+or turn off, and colder late days and nights. Everything below this section describes the v12 port and the first-person build,
 kept for reference.
 
 
