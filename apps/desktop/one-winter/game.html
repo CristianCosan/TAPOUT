@@ -118,7 +118,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 
 <div class="wrap">
   <header class="top">
-    <p class="eyebrow">One Winter · step 8 · the story of your run</p>
+    <p class="eyebrow">One Winter · step 9 · more kit, rare nights</p>
     <h1>Outlast nine rivals before the North wins</h1>
   </header>
 
@@ -387,7 +387,7 @@ const N={start:{warmth:80,food:70,body:90,will:70,wood:1},
   fireTurns:4,fireWood:2,fireWoodCold:3,fireGain:20,woodGain:3,woodsWood:5,sawBonus:2,woodFood:4,woodsFood:6,
   shelterCost:[3,4,6],cookFish:30,cookHare:40,cookWill:5,hipsStart:7,forageFood:12,scrapFood:6,
   fishOdds:.45,fishDrop:.012,iceFishOdds:.3,netBonus:.2,iceDay:11,stormCold:5,snareOdds:.26,wireBonus:.14,snareBreak:.1,thief:.35,
-  letterWill:20,pemmican:25,firstAid:25,socks:1,harmonica:4,
+  letterWill:20,pemmican:25,firstAid:25,socks:1,harmonica:4,spices:5,snowshoes:2,photo:2,
   rivalOdds:d=>d<5?.14:.2+.025*d,forceDay:15,doubleDay:18};
 const deg=v=>(v<0?'−'+(-v):v)+' °C';
 const TURN=['Morning','Midday','Dusk'];
@@ -405,14 +405,22 @@ const ITEMS=[
   {id:'pemmican',t:'Pemmican',d:'Three bars of fat and meat. Eat one any time: Food +25.'},
   {id:'firstaid',t:'First aid kit',d:'Use twice: Body +25.'},
   {id:'thermos',t:'Thermos',d:'Every morning: Warmth +6, Will +2.'},
-  {id:'auger',t:'Ice auger',d:'Fishing through the ice is about 2 in 10 better.'}];
+  {id:'auger',t:'Ice auger',d:'Fishing through the ice is about 2 in 10 better.'},
+  {id:'tarp',t:'Second tarp',d:'Storm days at camp cost no extra warmth.'},
+  {id:'spices',t:'Salt and spices',d:'Every cooked meal gives Will +5 more.'},
+  {id:'snowshoes',t:'Snowshoes',d:'Turns in the Woods cost 2 less warmth, and woods work 2 less food.'},
+  {id:'photo',t:'Photo of your parents',d:'Tomas and Ilse at the lake cabin. Will +2 every night.'}];
 const BASE_KIT=['net','blanket','letter','wire','socks','saw'];
 const UNLOCKS=[
   {id:'harmonica',how:'reach day 10',test:S=>S.day>=10},
   {id:'pemmican',how:'catch 4 hares in one run',test:S=>S.caughtHares>=4},
   {id:'auger',how:'catch 3 fish through the ice in one run',test:S=>(S.iceFish||0)>=3},
   {id:'firstaid',how:'place 3rd or better',test:S=>S.place<=3},
-  {id:'thermos',how:'win a run',test:S=>S.result==='win'}];
+  {id:'thermos',how:'win a run',test:S=>S.result==='win'},
+  {id:'tarp',how:'live through 3 storms in one run',test:S=>(S.storms||0)>=3},
+  {id:'spices',how:'cook 14 meals in one run',test:S=>(S.meals||0)>=14},
+  {id:'snowshoes',how:'cut deadwood 12 times in one run',test:S=>(S.cuts||0)>=12},
+  {id:'photo',how:'reach day 15',test:S=>S.day>=15}];
 const SEASONS=[
   {t:'Season 1',d:'A normal winter.'},
   {t:'Season 2 · Early winter',d:'Every day is 3 °C colder.'},
@@ -443,12 +451,16 @@ function newRun(season,mapSeed,winter){season=season||pickSeason;const wi=WINTER
   mods.fish+=wi.fish||0;mods.snare+=wi.snare||0;mods.hips*=wi.hips||1;const wx=makeWeather(mods,wi);
   S={winter:wi.id,iceDay:wi.ice||N.iceDay,events:[],mapSeed:mapSeed||1+(R()*999983|0),day:1,turn:0,site:'camp',...N.start,fish:0,hares:0,caughtFish:0,caughtHares:0,shelter:0,fire:0,items:[],letter:false,pem:0,aid:0,hips:mods.hips,season,mods,iceFish:0,
     snares:0,caught:0,ankle:0,hung:false,wx:wx.w,temps:wx.t,rivals:RIVALS.map(r=>r[0]),out:[],log:[],over:false,result:null,
-    deck:shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw']),used:[],flags:{},
+    deck:shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw',...['lynx','plane','chocolate','silence'].filter(()=>R()<.35)]),used:[],flags:{},
     offer:shuffle(META.unlocked.slice()).slice(0,6)}}
 const has=id=>S.items.includes(id);
 const temp=()=>S.temps[S.day-1],wxNow=()=>S.wx[S.day-1];
 const iced=()=>S.day>=iceDay();
 const turnCold=()=>Math.max(2,Math.round(N.coldBase+(N.tempStart-temp())*N.coldPerDeg)+(wxNow()==='storm'?N.stormCold:0)-(has('socks')?N.socks:0));
+const cookWill=()=>N.cookWill+(has('spices')?N.spices:0);
+const woodsFood=()=>N.woodsFood-(has('snowshoes')?N.snowshoes:0);
+const warmCost=()=>Math.max(1,turnCold()+(S.site==='shore'?N.shoreWind:0)-(S.site==='camp'?S.shelter*N.shelterDay:0)
+  -(S.site==='camp'&&has('tarp')&&wxNow()==='storm'?N.stormCold:0)-(S.site==='woods'&&has('snowshoes')?N.snowshoes:0));
 const fireCost=()=>temp()<-8?N.fireWoodCold:N.fireWood;
 const fishChance=()=>{if(wxNow()==='storm')return 0;const b=iced()?N.iceFishOdds:N.fishOdds-N.fishDrop*(S.day-1);return clamp(b+S.mods.fish+(has('net')?N.netBonus*(iced()?.5:1):0)+(iced()&&has('auger')?.2:0),.05,.9)};
 const snareChance=()=>N.snareOdds+S.mods.snare+(has('wire')?N.wireBonus:0);
@@ -464,8 +476,8 @@ const ACTIONS={
     run(){S.wood-=fireCost();S.warmth+=N.fireGain;S.will+=3;S.fire=N.fireTurns;sfx('fire');return S.day<4?'The ferro rod throws a fat spark. Flames climb the birch bark.':'You feed it split wood until it roars.'}},
   cook:{site:'camp',name:()=>S.hares>0?'Cook a hare':'Cook a fish',spot:[780,412,36],
     can:()=>(S.fish<1&&S.hares<1)?'Needs a fish or a hare.':S.fire<1?'Needs a lit fire.':true,
-    say:()=>S.hares>0?`Uses 1 hare. Food +${N.cookHare}, Will +${N.cookWill}.`:`Uses 1 fish. Food +${N.cookFish}, Will +${N.cookWill}.`,
-    run(){S.will+=N.cookWill;if(S.hares>0){S.hares--;S.food+=N.cookHare;return 'Hare on a spit. Fat drips and spits in the coals. The best meal in days.'}S.fish--;S.food+=N.cookFish;return 'Skin crackling on a green stick. You eat it all, bones picked clean.'}},
+    say:()=>S.hares>0?`Uses 1 hare. Food +${N.cookHare}, Will +${cookWill()}.`:`Uses 1 fish. Food +${N.cookFish}, Will +${cookWill()}.`,
+    run(){S.will+=cookWill();S.meals=(S.meals||0)+1;if(S.hares>0){S.hares--;S.food+=N.cookHare;return 'Hare on a spit. Fat drips and spits in the coals. The best meal in days.'}S.fish--;S.food+=N.cookFish;return 'Skin crackling on a green stick. You eat it all, bones picked clean.'}},
   shelter:{site:'camp',name:()=>SHELTER[Math.min(S.shelter,2)],spot:[585,425,62],
     can:()=>S.shelter>=3?'The shelter is finished.':S.wood>=N.shelterCost[S.shelter]||`Needs ${N.shelterCost[S.shelter]} wood.`,
     say:()=>S.shelter>=3?'':`Uses ${N.shelterCost[S.shelter]} wood. Every night is ${N.shelterNight} warmer, and days at camp a little warmer.`,
@@ -488,8 +500,8 @@ const ACTIONS={
     run(){const good=S.hips>0&&S.day<12;if(good){S.hips--;S.food+=N.forageFood}else S.food+=N.scrapFood;
       if(R()<.45){S.wood+=2;return (good?'Sour, seedy, good.':'Frozen cattail roots, barely worth it.')+' And a bundle of dry driftwood. +2 wood.'}return good?'Sour, seedy, good. Your fingers are scratched to bits.':'Frozen cattail roots, barely worth it.'}},
   deadwood:{site:'woods',name:()=>'Cut deadwood',spot:[700,470,80],
-    say:()=>`+${N.woodsWood+(has('saw')?N.sawBonus:0)} wood. Hard work: Food −${N.woodsFood} more.`,
-    run(){const n=N.woodsWood+(has('saw')?N.sawBonus:0);S.wood+=n;S.food-=N.woodsFood;sfx('chop');return `You buck the fallen spruce into rounds and haul them back. +${n} wood.`}},
+    say:()=>`+${N.woodsWood+(has('saw')?N.sawBonus:0)} wood. Hard work: Food −${woodsFood()} more.`,
+    run(){const n=N.woodsWood+(has('saw')?N.sawBonus:0);S.wood+=n;S.food-=woodsFood();S.cuts=(S.cuts||0)+1;sfx('chop');return `You buck the fallen spruce into rounds and haul them back. +${n} wood.`}},
   setSnares:{site:'woods',name:()=>S.snares<3?'Set snares on the trail':'Snares are set',spot:[1150,300,70],
     can:()=>S.snares>=3?'All three snares are out.':true,
     say:()=>`Set all three. Each night each one has about ${tens(snareChance())} in 10 chance of a hare.`,
@@ -504,7 +516,7 @@ function spotOf(id){const a=ACTIONS[id];if(Array.isArray(a.spot))return a.spot;c
 function clampAll(){['warmth','food','body','will'].forEach(k=>S[k]=clamp(Math.round(S[k]),0,100))}
 function passTurn(){S.food-=N.foodTurn;
   if(S.site==='camp'&&S.fire>0)S.warmth+=N.fireWarm;
-  else S.warmth-=Math.max(1,turnCold()+(S.site==='shore'?N.shoreWind:0)-(S.site==='camp'?S.shelter*N.shelterDay:0));
+  else S.warmth-=warmCost();
   if(S.fire>0)S.fire--;if(S.food<=0)S.body-=10;if(S.warmth<20)S.body-=6;S.turn++}
 function doAction(id){if(!S||S.over||!modalEl.hidden)return;const a=ACTIONS[id];if(avail(id)!==true||(!a.free&&S.turn>=3))return;
   log(a.run());if(!a.free)passTurn();after()}
@@ -601,6 +613,23 @@ Object.assign(CARDS,{
       {t:'Sleep in it',d:'Warmth −5.',run(){S.warmth-=5;return 'Damp all night. It freezes hard again by morning.'}}]}
 });
 
+// rare nights: each run deals each of these into the deck about one time in three
+Object.assign(CARDS,{
+  lynx:{title:'At the edge of the light',text:()=>'A lynx sits just past the firelight, ears tufted, watching you. It does not move.',
+    choices:[{t:'Sit still and watch it back',d:'Warmth −3, Will +10.',run(){S.warmth-=3;S.will+=10;return 'For a long time neither of you moves. Then it is simply gone.'}},
+      {t:'Throw a stick toward it',d:'Nothing happens.',run(){return 'It turns and melts into the spruce.'}}]},
+  plane:{title:'Thirty thousand feet',text:()=>'A plane crosses high overhead, blinking red and white. Somewhere up there people are eating peanuts.',
+    choices:[{t:'Flash your headlamp at it',d:'Will +4.',run(){S.will+=4;return 'Nobody sees it. You feel better anyway.'}},
+      {t:'Roll over and sleep',d:'Body +2.',run(){S.body+=2;return 'The engine noise fades after a long time.'}}]},
+  chocolate:{title:'Under the woodpile',text:()=>'Digging out frozen logs, you find a bar of chocolate in foil. A crew member must have dropped it.',when:()=>S.day>8,
+    choices:[{t:'Eat it, slowly',d:'Food +12, Will +4.',run(){S.food+=12;S.will+=4;return 'Square by square, letting each one melt. Incredible.'}},
+      {t:'Hand it to the crew tomorrow',d:'Will +6.',run(){S.will+=6;return 'Kerry laughs and says it is the most honest thing on the show.'}}]},
+  silence:{title:'The quiet',text:()=>'No wind. No ice cracking. No birds. The quietest night of your life.',when:()=>S.day>12,
+    choices:[{t:'Sit in it',d:'Will +6.',run(){S.will+=6;return 'You can hear your own heartbeat. It is steady.'}},
+      {t:'Hum something',d:'Will +3, Body +2.',run(){S.will+=3;S.body+=2;return 'An old song your mother used to sing. You only know half the words.'}}]}
+});
+AWE.push('lynx','silence');
+
 // ---------- small things that happen during the day, at most one a day ----------
 const EVENTS={
   pike:{site:'shore',title:'In the shallows',text:'A pike, frozen at the edge of the ice, perfectly kept.',when:()=>iced(),
@@ -636,7 +665,7 @@ function pickCard(){
 function nightfall(){if(S.over||!modalEl.hidden)return;S.site='camp';
   const w0=S.warmth,f0=S.food,v0=S.will,b0=S.body,lit=S.fire>0,t=temp()-6;
   S.warmth+=-Math.round(N.nightBase+(N.tempStart-t)*N.nightPerDeg)+S.shelter*N.shelterNight+(has('blanket')?N.blanketNight:0)+(lit?N.fireNight:0);
-  S.food-=N.nightFood;S.will-=Math.round(N.nightWill+S.mods.will+S.day*N.nightWillPerDay)-(lit?N.fireWill:0)-(lit&&has('harmonica')?N.harmonica:0);
+  S.food-=N.nightFood;S.will-=Math.round(N.nightWill+S.mods.will+S.day*N.nightWillPerDay)-(lit?N.fireWill:0)-(lit&&has('harmonica')?N.harmonica:0)-(has('photo')?N.photo:0);
   S.body+=(S.warmth>=40&&S.food>=30)?6:-8;if(S.fire>0)S.fire--;
   // snares work overnight
   for(let i=0;i<S.snares;i++)if(R()<snareChance())S.caught=Math.min(S.snares,S.caught+1);
@@ -658,6 +687,7 @@ function morning(){
   // rivals
   const gone=[];let n=R()<N.rivalOdds(S.day)?1:0;if(S.day>=S.mods.force)n=Math.max(n,1);if(S.day>=S.mods.dbl)n=2;
   for(let i=0;i<n&&S.rivals.length;i++){const who=S.rivals.splice(R()*S.rivals.length|0,1)[0];S.out.push(who);gone.push(who)}
+  if(wxNow()==='storm')S.storms=(S.storms||0)+1;
   S.day++;S.turn=0;S.site='camp';S.phase='day';if(S.ankle>0)S.ankle--;if(has('thermos')){S.warmth=Math.min(100,S.warmth+6);S.will=Math.min(100,S.will+2)}
   if(S.caught>0&&R()<N.thief+S.mods.thief){S.caught=Math.max(0,S.caught-1);S.flags.thief=true}else S.flags.thief=false;
   if(S.flags.lostMorning){S.turn=1;S.flags.lostMorning=false;S.flags.crew=true}else S.flags.crew=false;
@@ -763,7 +793,7 @@ function refresh(){if(!S)return;showHint();
   hud.innerHTML=bar('warmth','#D07A2C')+bar('food','#A7AC98')+bar('body','#7F9DAD')+bar('will','#E4E7E3')+
     `<div class="stock"><span>Wood <b>${S.wood}</b></span><span>Fish <b>${S.fish}</b></span>${S.hares?`<span>Hares <b>${S.hares}</b></span>`:''}<span>Fire <b>${S.fire>0?'lit, '+S.fire+(S.fire===1?' turn':' turns'):'out'}</b></span>${S.ankle?'<span>Ankle <b>hurt</b></span>':''}</div>`;
   const cold=turnCold();
-  acts.innerHTML=`<h3>${SCENES[S.site].name} · ${S.turn<3?`each turn: food −${N.foodTurn}, warmth −${S.site==='camp'?Math.max(1,cold-S.shelter*N.shelterDay)+' (none by a lit fire)':cold+(S.site==='shore'?N.shoreWind:0)}`:'night is coming'}</h3>`;
+  acts.innerHTML=`<h3>${SCENES[S.site].name} · ${S.turn<3?`each turn: food −${N.foodTurn}, warmth −${S.site==='camp'?warmCost()+' (none by a lit fire)':warmCost()}`:'night is coming'}</h3>`;
   Object.keys(ACTIONS).forEach(id=>{const a=ACTIONS[id];if(a.site!==S.site&&a.site!=='any')return;const av=avail(id);if(av===null)return;
     const b=document.createElement('button');b.type='button';b.className='act';b.dataset.id=id;
     b.innerHTML=`<b>${a.name()}</b><small>${av===true?a.say():av}</small>`;b.disabled=av!==true||(!a.free&&S.turn>=3);
