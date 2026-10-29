@@ -5,7 +5,12 @@ northern lake shore, nine unseen rivals, autumn sliding into a −20 °C winter 
 20–30 in-game days. You win by outlasting everyone. You lose by pressing the sat phone, by
 a medical pull, or by the North.
 
-`legacy/tap-out-v12.html` is the **behavioural authority**. The simulation is a faithful
+**Since D-114 (2026-10-29) the game is One Winter**: one page, `apps/desktop/one-winter/game.html`, which is
+also the Windows build's renderer and the browser link Sir plays. Its numbers live in the `N` object in that
+file. v12 is no longer the rulebook for it; the rules below still hold for the v12 port in `packages/`, which
+stays as reference. Keep One Winter calm and small: four bars, few actions, no mandatory goals.
+
+`legacy/tap-out-v12.html` is the **behavioural authority** for the port. The simulation is a faithful
 port of it, proven equivalent by differential tests. Everything the player touches is new.
 
 The full plan is `docs/plan/TAP_OUT_MASTER_PRODUCTION_PLAN.md`. Current state is

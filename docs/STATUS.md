@@ -1,5 +1,14 @@
 # Status
 
+**One Winter (D-114, 3.0.0-ow.1) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
+`apps/desktop/one-winter/game.html`, playable in the browser (https://claude.ai/artifact/Db6GhJvze7a9i4JKJdK31T) and,
+from this version, as the Windows build: the desktop app's renderer is that page with the fonts bundled
+(`apps/desktop/scripts/copy-renderer.cjs`). All numbers sit in one `N` object at the top of the rules section.
+Built and approved in four steps the same day: the look and music, three playable days, a full run, then seasons,
+unlocks and the Windows build. Everything below this section describes the v12 port and the first-person build,
+kept for reference.
+
+
 **First person (D-030). Sir approved the camp look on 0.0.3; build 0.0.4 has his fixes (D-032).** The screens are now small 3D
 areas you walk around in first person: Camp, Shore and Woods, built from code shapes. Looking at a
 station lights it, clicking opens its v12 actions in the same panel as before. Day, dusk, night,
