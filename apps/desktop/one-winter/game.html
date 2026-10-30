@@ -135,6 +135,15 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
   .clock .f,.clock .slots{display:none}.hud{gap:.2cqw;padding:.8cqw}
   .modal{position:fixed;padding:16px;z-index:20}
 }
+@media (orientation:landscape) and (max-height:560px){
+  body{overflow:hidden}
+  .wrap{max-width:none;padding:0;gap:0;height:100vh;height:100dvh;place-content:center}
+  .wrap>header,.controls,.cols{display:none}
+  .game{width:min(100vw,calc(100dvh*16/9));min-width:0}
+  .stage{border:0}
+  .modal{position:fixed;padding:10px;z-index:20}
+  .card{padding:14px 18px;gap:8px}
+}
 </style>
 
 <div class="wrap">
@@ -192,7 +201,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 <script>
 (function(){
 "use strict";
-const VERSION='3.0.0-ow.12';
+const VERSION='3.0.0-ow.13';
 const W=1600,H=900;
 const C={snow:[228,231,227],grass:[138,143,126],pine:[47,74,67],lake:[60,90,107],fire:[208,122,44],ink:[28,34,38]};
 const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -586,12 +595,12 @@ function passTurn(){S.food-=N.foodTurn;
   else S.warmth-=warmCost();
   if(S.fire>0)S.fire--;if(S.food<=0)S.body-=10;if(S.warmth<20)S.body-=6;S.turn++}
 function doAction(id){if(!S||S.over||!modalEl.hidden||FLY)return;const a=ACTIONS[id];if(a.open){walkTo(spotOf(id));a.open();return}if(avail(id)!==true||(!a.free&&S.turn>=3))return;
-  const s=a.spot?spotOf(id):null;if(s)walkTo(s);const before=snap();
+  const s=a.spot?spotOf(id):null;if(s){walkTo(s);P.work=1.3}const before=snap();
   log(a.run());popDiff(before,s?[s[0],s[1]-s[2]*.6]:[P.x,P.y-200]);if(!a.free)passTurn();after()}
 const POPK=[['warmth','warmth'],['food','food'],['body','body'],['will','will'],['wood','wood'],['fish','fish'],['hares','hare']];
 function snap(){const o={};POPK.forEach(([k])=>o[k]=S[k]);return o}
 const pops=[];
-function popDiff(b,at){const parts=POPK.map(([k,n])=>{const d=Math.round(Math.min(100,S[k])-b[k]);return d?`${d>0?'+':'−'}${Math.abs(d)} ${n}`:''}).filter(Boolean);
+function popDiff(b,at){const parts=POPK.map(([k,n])=>{const d=Math.round(Math.min(100,S[k])-b[k]);return d>0?`+${d} ${n}`:''}).filter(Boolean);
   parts.forEach((t,i)=>pops.push({x:at[0],y:at[1]-i*30,t,b:performance.now()/1000+i*.12,good:t[0]==='+'}))}
 // ---------- trees: in the woods you can fell any of them; at camp they stay for the wind ----------
 function treeAt(x,y){return sideTreeAt(x,y)}
@@ -888,6 +897,7 @@ function sideScene(kind){const ms=S?S.mapSeed|0:0;const key=kind+ms;if(sideTrees
 function spruce(g,x,b,h,col,snow,dust,rr){const w=h*.3,tiers=7;g.fillStyle=css(mix(col,C.ink,.35));g.fillRect(x-h*.018,b-h*.12,h*.036,h*.12);
   for(let i=0;i<tiers;i++){const t0=i/tiers,t1=(i+1)/tiers,y0=b-h+h*t0*.9,y1=b-h+h*t1*.9+h*.08,ww=w*(.25+t1*.85);
     g.fillStyle=css(mix(col,C.ink,i%2?.08:0));g.beginPath();g.moveTo(x,y0);g.lineTo(x+ww,y1);g.quadraticCurveTo(x,y1-h*.03,x-ww,y1);g.closePath();g.fill();
+    g.fillStyle=css(C.ink,.16);g.beginPath();g.moveTo(x,y0);g.lineTo(x+ww,y1);g.quadraticCurveTo(x+ww*.5,y1-h*.02,x,y1-h*.03);g.closePath();g.fill();
     if(snow&&rr()<dust){const yl=y0+(y1-y0)*.72,th=clamp(h*.016,2,5);g.fillStyle=css(C.snow,.8);g.beginPath();g.moveTo(x,y0+1);g.lineTo(x+ww*.72,yl);g.lineTo(x+ww*.6,yl+th);g.lineTo(x,y0+th*2.2);g.lineTo(x-ww*.6,yl+th);g.lineTo(x-ww*.72,yl);g.closePath();g.fill()}}}
 function sideStump(g,x,b,s){g.fillStyle=css(C.ink,.25);g.beginPath();g.ellipse(x+4,b+2,26*s,7*s,0,0,6.283);g.fill();
   g.fillStyle=css(WOOD);g.fillRect(x-14*s,b-22*s,28*s,22*s);g.fillStyle=css(mix(C.fire,C.snow,.45));g.beginPath();g.ellipse(x,b-22*s,14*s,5*s,0,0,6.283);g.fill();
@@ -1014,10 +1024,11 @@ function drawSidePerson(t){const k=S.site;if(P.site!==k){P.site=k;P.x=k==='camp'
   lc.fillStyle=css(C.ink);lc.beginPath();lc.arc(12,-157+bob,1.8,0,6.283);lc.fill();lc.fillStyle=css(mix(skin,C.ink,.25));lc.beginPath();lc.arc(-4,-153+bob,3,0,6.283);lc.fill();
   lc.fillStyle=css(hat);lc.beginPath();lc.arc(3,-160+bob,15,Math.PI,0);lc.fill();lc.fillStyle=css(mix(hat,C.ink,.3));lc.fillRect(-12,-162+bob,30,6);
   lc.fillStyle=css(mix(C.snow,[200,180,150],.4));lc.beginPath();lc.ellipse(0,-134+bob,20,7,0,0,6.283);lc.fill();
-  lc.save();lc.translate(0,-126+bob);lc.rotate(-leg/90);lc.fillStyle=css(coat);lc.beginPath();lc.roundRect(-7,0,14,54,6);lc.fill();lc.fillStyle=css([70,70,66]);lc.beginPath();lc.arc(0,56,7.5,0,6.283);lc.fill();lc.restore();
+  const working=P.work>0&&!moving;if(working)P.work-=reduce?2:.033;
+  lc.save();lc.translate(0,-126+bob);lc.rotate(working?-1.5+Math.sin(t*11)*.85:-leg/90);lc.fillStyle=css(coat);lc.beginPath();lc.roundRect(-7,0,14,54,6);lc.fill();lc.fillStyle=css([70,70,66]);lc.beginPath();lc.arc(0,56,7.5,0,6.283);lc.fill();lc.restore();
   lc.restore();
   if(temp()<=0&&!moving&&(t%3.2)<1.2){const a=(t%3.2)/1.2;lc.fillStyle=css(C.snow,.35*(1-a));lc.beginPath();lc.arc(P.x+P.face*(24+a*26)*s,P.y-150*s-a*10,(6+a*10)*s,0,6.283);lc.fill()}}
-function sideWalk(s){if(!s)return;P.tx=clamp(s[0]+(s[0]>P.x?-1:1)*Math.min(70,s[2]*.6),60,W-60);P.ty=clamp(Math.max(SP[S.site].ground-10,Math.min(s[1]+30,SP[S.site].ground+40)),600,860)}
+function sideWalk(s){if(!s)return;P.face=s[0]>P.x?1:-1;P.tx=clamp(s[0]+(s[0]>P.x?-1:1)*Math.min(70,s[2]*.6),60,W-60);P.ty=clamp(Math.max(SP[S.site].ground-10,Math.min(s[1]+30,SP[S.site].ground+40)),600,860)}
 // fire, smoke and life in side view
 function drawSideLive(t){const k=S.site;
   if(k==='camp'){const [fx,fy]=SP.camp.fire,lit=S.fire>0,fl=.85+.15*Math.sin(t*7.3)*Math.sin(t*3.1+1);
