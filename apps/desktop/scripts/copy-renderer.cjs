@@ -12,6 +12,11 @@ if (!fontLink.test(game)) {
   console.error('one-winter/game.html: the Google Fonts link was not found.');
   process.exit(1);
 }
+const version = require('../package.json').version;
+if (!game.includes(`const VERSION='${version}';`)) {
+  console.error(`one-winter/game.html: VERSION does not match ${version}.`);
+  process.exit(1);
+}
 const page = [
   '<!doctype html>',
   '<html lang="en"><head><meta charset="utf-8">',
