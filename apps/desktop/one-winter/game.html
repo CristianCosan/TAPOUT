@@ -184,7 +184,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 <script>
 (function(){
 "use strict";
-const VERSION='3.0.0-ow.9';
+const VERSION='3.0.0-ow.10';
 const W=1600,H=900;
 const C={snow:[228,231,227],grass:[138,143,126],pine:[47,74,67],lake:[60,90,107],fire:[208,122,44],ink:[28,34,38]};
 const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -445,8 +445,8 @@ const SEASONS=[
   {t:'Season 3 · Lean shore',d:'Also: fish bite less, fewer rose hips.'},
   {t:'Season 4 · Hungry woods',d:'Also: snares catch less, foxes steal more.'},
   {t:'Season 5 · The long dark',d:'Also: nights wear on Will more, rivals hang on longer.'},
-  {t:'Season 6 · The North',d:'Also: 5 °C colder in all, the lake freezes 2 days early, almost no rose hips, the last rivals are the toughest.'}];
-const seasonMods=n=>({temp:n>=6?-5:n>=2?-3:0,fish:n>=3?-.08:0,hips:n>=6?2:n>=3?4:N.hipsStart,snare:n>=4?-.06:0,thief:n>=4?.15:0,will:n>=6?3:n>=5?2:0,force:n>=6?18:n>=5?17:N.forceDay,dbl:n>=6?21:n>=5?20:N.doubleDay,ice:n>=6?-2:0});
+  {t:'Season 6 · The North',d:'Also: 5 °C colder in all, the lake freezes a day early, few rose hips, the last rivals are the toughest.'}];
+const seasonMods=n=>({temp:n>=6?-5:n>=2?-3:0,fish:n>=3?-.08:0,hips:n>=6?3:n>=3?4:N.hipsStart,snare:n>=4?-.06:0,thief:n>=4?.15:0,will:n>=6?3:n>=5?2:0,force:n>=6?18:n>=5?17:N.forceDay,dbl:n>=6?21:n>=5?20:N.doubleDay,ice:n>=6?-1:0});
 function loadMeta(){let m=null;try{m=JSON.parse(localStorage.getItem('oneWinter.meta')||'null')}catch(e){}
   if(!m){m={maxSeason:1,unlocked:BASE_KIT.slice(),best:null};try{m.best=JSON.parse(localStorage.getItem('oneWinter.best')||'null')}catch(e){}}return m}
 function saveMeta(m){try{localStorage.setItem('oneWinter.meta',JSON.stringify(m))}catch(e){}}
