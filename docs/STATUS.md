@@ -1,6 +1,6 @@
 # Status
 
-**One Winter (D-114 to D-125, 3.0.0-ow.12) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
+**One Winter (D-114 to D-126, 3.0.0-ow.13) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
 `apps/desktop/one-winter/game.html`, playable in the browser (https://claude.ai/artifact/Db6GhJvze7a9i4JKJdK31T) and,
 from this version, as the Windows build: the desktop app's renderer is that page with the fonts bundled
 (`apps/desktop/scripts/copy-renderer.cjs`). All numbers sit in one `N` object at the top of the rules section.
@@ -14,7 +14,7 @@ gets a warm light, and the music takes darker chords from day 12. Step 8 (D-118,
 run and tells up to eight of them on the end card, and lists your last ten runs on the start screen. Step 9 (D-119, 3.0.0-ow.6) adds four kit items to unlock (second
 tarp, salt and spices, snowshoes, a photo of your parents) and four rare night cards dealt into about one run in three. Step 10 (D-120, 3.0.0-ow.7) is a polish pass: the browser page
 lets the game fill the screen, the locked kit list folds away, and phones get the place buttons and tips out of the way. Step 11 (D-121, 3.0.0-ow.8) adds Season 6, The North, and
-eases the first week: you start with Food 80 and nights cost 11 food. Step 12 (D-122, 3.0.0-ow.9) adds a Settings panel inside the game (volume, bigger text, tips, keys, credits) and keyboard play: 1 to 9, C, S, W and M. Step 13 (D-123, 3.0.0-ow.10) softens Season 6 a little after a bot sweep of the seasons. Step 14 (D-124, 3.0.0-ow.11) answers Sir's first playtest: almost no rule text, no dock, every tree clickable (fell in the Woods, stumps stay), a shelter screen, a pack, whittling, named night lines, the player on screen and icon gear. Step 15 (D-125, 3.0.0-ow.12) is the side view Sir picked: one wide camera per place, a detailed person, gear at the top, and a top-down drone shot with only centred words at each new day and when you load. Everything below this section describes the v12 port and the first-person build,
+eases the first week: you start with Food 80 and nights cost 11 food. Step 12 (D-122, 3.0.0-ow.9) adds a Settings panel inside the game (volume, bigger text, tips, keys, credits) and keyboard play: 1 to 9, C, S, W and M. Step 13 (D-123, 3.0.0-ow.10) softens Season 6 a little after a bot sweep of the seasons. Step 14 (D-124, 3.0.0-ow.11) answers Sir's first playtest: almost no rule text, no dock, every tree clickable (fell in the Woods, stumps stay), a shelter screen, a pack, whittling, named night lines, the player on screen and icon gear. Step 15 (D-125, 3.0.0-ow.12) is the side view Sir picked: one wide camera per place, a detailed person, gear at the top, and a top-down drone shot with only centred words at each new day and when you load. Everything below this section describes the v12 port and the first-person build, Step 16 (D-126, 3.0.0-ow.13): a phone held sideways fills the screen, spruces get a shaded side, the person swings an arm when working, and the small numbers that float up after an action show only what you gained.
 kept for reference.
 
 
