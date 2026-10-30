@@ -385,9 +385,9 @@ function drawWoodsProps(g){
     if(i<S.caught)hare(g,x+4,y+16,.3)})}
 
 // ---------- the rules: every number lives here ----------
-const N={start:{warmth:80,food:70,body:90,will:70,wood:1},
+const N={start:{warmth:80,food:80,body:90,will:70,wood:1},
   tempStart:6,tempDrop:1.55,tempFloor:-21,coldBase:5,coldPerDeg:.58,shoreWind:2,shelterDay:2,fireWarm:3,foodTurn:4,
-  nightBase:10,nightPerDeg:1.35,nightFood:12,nightWill:6,nightWillPerDay:1/3,shelterNight:8,blanketNight:8,fireNight:12,fireWill:4,
+  nightBase:10,nightPerDeg:1.35,nightFood:11,nightWill:6,nightWillPerDay:1/3,shelterNight:8,blanketNight:8,fireNight:12,fireWill:4,
   fireTurns:4,fireWood:2,fireWoodCold:3,fireGain:20,woodGain:3,woodsWood:5,sawBonus:2,woodFood:4,woodsFood:6,
   shelterCost:[3,4,6],cookFish:30,cookHare:40,cookWill:5,hipsStart:7,forageFood:12,scrapFood:6,
   fishOdds:.45,fishDrop:.012,iceFishOdds:.3,netBonus:.2,iceDay:11,stormCold:5,snareOdds:.26,wireBonus:.14,snareBreak:.1,thief:.35,
@@ -430,8 +430,9 @@ const SEASONS=[
   {t:'Season 2 · Early winter',d:'Every day is 3 °C colder.'},
   {t:'Season 3 · Lean shore',d:'Also: fish bite less, fewer rose hips.'},
   {t:'Season 4 · Hungry woods',d:'Also: snares catch less, foxes steal more.'},
-  {t:'Season 5 · The long dark',d:'Also: nights wear on Will more, rivals hang on longer.'}];
-const seasonMods=n=>({temp:n>=2?-3:0,fish:n>=3?-.08:0,hips:n>=3?4:N.hipsStart,snare:n>=4?-.06:0,thief:n>=4?.15:0,will:n>=5?2:0,force:n>=5?17:N.forceDay,dbl:n>=5?20:N.doubleDay});
+  {t:'Season 5 · The long dark',d:'Also: nights wear on Will more, rivals hang on longer.'},
+  {t:'Season 6 · The North',d:'Also: 5 °C colder in all, the lake freezes 2 days early, almost no rose hips, the last rivals are the toughest.'}];
+const seasonMods=n=>({temp:n>=6?-5:n>=2?-3:0,fish:n>=3?-.08:0,hips:n>=6?2:n>=3?4:N.hipsStart,snare:n>=4?-.06:0,thief:n>=4?.15:0,will:n>=6?3:n>=5?2:0,force:n>=6?18:n>=5?17:N.forceDay,dbl:n>=6?21:n>=5?20:N.doubleDay,ice:n>=6?-2:0});
 function loadMeta(){let m=null;try{m=JSON.parse(localStorage.getItem('oneWinter.meta')||'null')}catch(e){}
   if(!m){m={maxSeason:1,unlocked:BASE_KIT.slice(),best:null};try{m.best=JSON.parse(localStorage.getItem('oneWinter.best')||'null')}catch(e){}}return m}
 function saveMeta(m){try{localStorage.setItem('oneWinter.meta',JSON.stringify(m))}catch(e){}}
@@ -453,7 +454,7 @@ function makeWeather(mods,wi){wi=wi||WINTERS[0];const sn=wi.snow||0,wd=wi.wind||
   t.push(Math.round(Math.max(N.tempFloor,N.tempStart-N.tempDrop*(d-1)+(R()*4-2))-(k==='storm'?3:0)+(k==='clear'&&d>6?-2:0)+mods.temp+(wi.temp?wi.temp(d):0)))}return {w,t}}
 function newRun(season,mapSeed,winter){season=season||pickSeason;const wi=WINTERS.find(w=>w.id===winter)||WINTERS[R()*WINTERS.length|0],mods=seasonMods(season);
   mods.fish+=wi.fish||0;mods.snare+=wi.snare||0;mods.hips*=wi.hips||1;const wx=makeWeather(mods,wi);
-  S={winter:wi.id,iceDay:wi.ice||N.iceDay,events:[],mapSeed:mapSeed||1+(R()*999983|0),day:1,turn:0,site:'camp',...N.start,fish:0,hares:0,caughtFish:0,caughtHares:0,shelter:0,fire:0,items:[],letter:false,pem:0,aid:0,hips:mods.hips,season,mods,iceFish:0,
+  S={winter:wi.id,iceDay:(wi.ice||N.iceDay)+mods.ice,events:[],mapSeed:mapSeed||1+(R()*999983|0),day:1,turn:0,site:'camp',...N.start,fish:0,hares:0,caughtFish:0,caughtHares:0,shelter:0,fire:0,items:[],letter:false,pem:0,aid:0,hips:mods.hips,season,mods,iceFish:0,
     snares:0,caught:0,ankle:0,hung:false,wx:wx.w,temps:wx.t,rivals:RIVALS.map(r=>r[0]),out:[],log:[],over:false,result:null,
     deck:shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw',...['lynx','plane','chocolate','silence'].filter(()=>R()<.35)]),used:[],flags:{},
     offer:shuffle(META.unlocked.slice()).slice(0,6)}}
@@ -711,14 +712,14 @@ const PLACE=k=>['1st','2nd','3rd'][k-1]||k+'th';
 function endRun(kind){S.over=true;S.result=kind;music.mood('night');
   const place=kind==='win'?1:S.rivals.length+1;S.place=place;
   note(5,{win:'The last rival is gone. You won.',tap:'You pressed the button.',will:'You pressed the button. The thought won.',cold:'The medics took you out, too cold to go on.',body:'The medics took you out. Your body had had enough.'}[kind]);
-  const T={win:['You won',`Day ${S.day}. The last rival tapped out in the night. The boat that comes is for you, with a cheque for $400,000 and Mara on the dock.`,S.season<5?'Each win opens a harder season.':'You beat the hardest winter there is.'],
+  const T={win:['You won',`Day ${S.day}. The last rival tapped out in the night. The boat that comes is for you, with a cheque for $400,000 and Mara on the dock.`,S.season<SEASONS.length?'Each win opens a harder season.':'You beat the hardest winter there is.'],
     tap:['You pressed the button',`Day ${S.day}. Forty minutes later you hear the boat.`,'No shame in it. The show goes on without you.'],
     will:['The thought wins',`Day ${S.day}. You sit with the phone for an hour, then press it.`,'Will ran out. Warm meals, the fire and small wins keep it up.'],
     cold:['Pulled by the medics',`Day ${S.day}. Your hands stop working. The medics take you out, wrapped in foil.`,'Warmth ran out. A fire lit at dusk carries you through the night, and the shelter matters more every week.'],
     body:['Pulled by the medics',`Day ${S.day}. Your body has had enough. The medics take you out.`,'Body ran out. It drops when you are starving or freezing.']}[kind];
   const best=META.best,isBest=!best||place<best.place||(place===best.place&&S.day>best.day);if(isBest)META.best={place,day:S.day};
   const fresh=UNLOCKS.filter(u=>!META.unlocked.includes(u.id)&&u.test(S));fresh.forEach(u=>META.unlocked.push(u.id));
-  let newSeason=false;if(kind==='win'&&S.season>=META.maxSeason&&META.maxSeason<5){META.maxSeason++;pickSeason=META.maxSeason;newSeason=true}
+  let newSeason=false;if(kind==='win'&&S.season>=META.maxSeason&&META.maxSeason<SEASONS.length){META.maxSeason++;pickSeason=META.maxSeason;newSeason=true}
   META.history=[{season:S.season,winter:S.winter,place,day:S.day,kind,items:S.items.slice()},...(META.history||[])].slice(0,10);
   saveMeta(META);try{localStorage.removeItem('oneWinter.run')}catch(e){}
   const unl=fresh.map(u=>`<p style="color:var(--fire)">New kit unlocked: <b>${ITEMS.find(i=>i.id===u.id).t}</b>. ${ITEMS.find(i=>i.id===u.id).d}</p>`).join('')+(newSeason?`<p style="color:var(--fire)">New season unlocked: <b>${SEASONS[META.maxSeason-1].t}</b>. ${SEASONS[META.maxSeason-1].d}</p>`:'');
