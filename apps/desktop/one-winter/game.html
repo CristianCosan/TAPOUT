@@ -201,7 +201,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 <script>
 (function(){
 "use strict";
-const VERSION='3.0.0-ow.13';
+const VERSION='3.0.0-ow.14';
 const W=1600,H=900;
 const C={snow:[228,231,227],grass:[138,143,126],pine:[47,74,67],lake:[60,90,107],fire:[208,122,44],ink:[28,34,38]};
 const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -439,7 +439,7 @@ const N={start:{warmth:80,food:80,body:90,will:70,wood:1},
   fireTurns:4,fireWood:2,fireWoodCold:3,fireGain:20,woodGain:3,woodsWood:5,sawBonus:2,woodFood:4,woodsFood:6,
   shelterCost:[3,4,6],cookFish:30,cookHare:40,cookWill:5,hipsStart:7,forageFood:12,scrapFood:6,
   fishOdds:.45,fishDrop:.012,iceFishOdds:.3,netBonus:.2,iceDay:11,stormCold:5,snareOdds:.26,wireBonus:.14,snareBreak:.1,thief:.35,
-  letterWill:20,pemmican:25,deadfall:10,fellWood:6,fellFood:2,lineOdds:.5,lineBreak:.12,stormLine:.3,restBody:5,restWill:2,earlyWarmth:6,whittleWill:6,firstAid:25,socks:1,harmonica:4,spices:5,snowshoes:2,photo:2,
+  letterWill:20,pemmican:25,deadfall:10,fellWood:6,fellFood:2,lineOdds:.5,lineBreak:.12,stormLine:.3,restBody:5,restWill:2,teaWarm:6,teaWill:4,sitWill:8,pitchMax:3,earlyWarmth:6,whittleWill:6,firstAid:25,socks:1,harmonica:4,spices:5,snowshoes:2,photo:2,
   rivalOdds:d=>d<5?.14:.2+.025*d,forceDay:15,doubleDay:18};
 const deg=v=>(v<0?'−'+(-v):v)+' °C';
 const TURN=['Morning','Midday','Dusk'];
@@ -503,7 +503,7 @@ function makeWeather(mods,wi){wi=wi||WINTERS[0];const sn=wi.snow||0,wd=wi.wind||
 function newRun(season,mapSeed,winter){season=season||pickSeason;const wi=WINTERS.find(w=>w.id===winter)||WINTERS[R()*WINTERS.length|0],mods=seasonMods(season);
   mods.fish+=wi.fish||0;mods.snare+=wi.snare||0;mods.hips*=wi.hips||1;const wx=makeWeather(mods,wi);
   S={winter:wi.id,iceDay:(wi.ice||N.iceDay)+mods.ice,events:[],mapSeed:mapSeed||1+(R()*999983|0),day:1,turn:0,site:'camp',...N.start,fish:0,hares:0,caughtFish:0,caughtHares:0,shelter:0,fire:0,items:[],letter:false,pem:0,aid:0,hips:mods.hips,season,mods,iceFish:0,
-    snares:0,caught:0,ankle:0,felled:[],deadfall:N.deadfall,lines:shuffle(LINE_NAMES.slice()).slice(0,2).map(n=>({n,set:false,fish:0})),hung:false,wx:wx.w,temps:wx.t,rivals:RIVALS.map(r=>r[0]),out:[],log:[],over:false,result:null,
+    snares:0,caught:0,ankle:0,felled:[],pitch:0,deadfall:N.deadfall,lines:shuffle(LINE_NAMES.slice()).slice(0,2).map(n=>({n,set:false,fish:0})),hung:false,wx:wx.w,temps:wx.t,rivals:RIVALS.map(r=>r[0]),out:[],log:[],over:false,result:null,
     deck:shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw',...['lynx','plane','chocolate','silence'].filter(()=>R()<.35)]),used:[],flags:{},
     offer:shuffle(META.unlocked.slice()).slice(0,6)}}
 const LINE_NAMES=['Old Hope','Pike Rock','Birch Point','The Elbow','Loon Bay','Second Chance','Mara\'s Spot','Cold Feet'];
@@ -515,7 +515,7 @@ const cookWill=()=>N.cookWill+(has('spices')?N.spices:0);
 const woodsFood=()=>N.woodsFood-(has('snowshoes')?N.snowshoes:0);
 const warmCost=()=>Math.max(1,turnCold()+(S.site==='shore'?N.shoreWind:0)-(S.site==='camp'?S.shelter*N.shelterDay:0)
   -(S.site==='camp'&&has('tarp')&&wxNow()==='storm'?N.stormCold:0)-(S.site==='woods'&&has('snowshoes')?N.snowshoes:0));
-const fireCost=()=>temp()<-8?N.fireWoodCold:N.fireWood;
+const fireCost=()=>(temp()<-8?N.fireWoodCold:N.fireWood)-((S.pitch||0)>0?1:0);
 const fishChance=()=>{if(wxNow()==='storm')return 0;const b=iced()?N.iceFishOdds:N.fishOdds-N.fishDrop*(S.day-1);return clamp(b+S.mods.fish+(has('net')?N.netBonus*(iced()?.5:1):0)+(iced()&&has('auger')?.2:0),.05,.9)};
 const snareChance=()=>N.snareOdds+S.mods.snare+(has('wire')?N.wireBonus:0);
 const tens=p=>Math.round(p*10);
@@ -527,7 +527,7 @@ const ACTIONS={
   fire:{site:'camp',name:()=>S.fire>0?'Build the fire up':'Light the fire',spot:'fire',
     can:()=>S.wood>=fireCost()||`Needs ${fireCost()} wood.`,
     say:()=>`Uses ${fireCost()} wood. Warmth +${N.fireGain}. Burns ${N.fireTurns} turns; the night counts as one.`,
-    run(){S.wood-=fireCost();S.warmth+=N.fireGain;S.will+=3;S.fire=N.fireTurns;sfx('fire');return S.day<4?'The ferro rod throws a fat spark. Flames climb the birch bark.':'You feed it split wood until it roars.'}},
+    run(){S.wood-=fireCost();if(S.pitch>0)S.pitch--;S.warmth+=N.fireGain;S.will+=3;S.fire=N.fireTurns;sfx('fire');return S.day<4?'The ferro rod throws a fat spark. Flames climb the birch bark.':'You feed it split wood until it roars.'}},
   cook:{site:'camp',name:()=>S.hares>0?'Cook a hare':'Cook a fish',spot:'rack',
     can:()=>(S.fish<1&&S.hares<1)?'Needs a fish or a hare.':S.fire<1?'Needs a lit fire.':true,
     say:()=>S.hares>0?`Uses 1 hare. Food +${N.cookHare}, Will +${cookWill()}.`:`Uses 1 fish. Food +${N.cookFish}, Will +${cookWill()}.`,
@@ -536,6 +536,8 @@ const ACTIONS={
   pack:{site:'camp',name:()=>'Your pack',spot:'pack',open:()=>packCard(),say:()=>''},
   whittle:{site:'camp',name:()=>'Whittle by the fire',spot:'stump',can:()=>S.fire>0||'Needs a lit fire.',say:()=>'',
     run(){S.will+=N.whittleWill;S.whittled=(S.whittled||0)+1;return ['You carve a spoon. It is a bad spoon. You love it.','A little loon, out of birch. It sits on the woodpile now.','Tent pegs, a hook, a handle for the pot. Small jobs, calm hands.'][(S.whittled-1)%3]}},
+  tea:{site:'camp',name:()=>'Brew spruce tea',spot:'pot',can:()=>S.fire<=0?'Needs a lit fire.':S.flags.teaDay===S.day?'One pot a day.':true,say:()=>'',
+    run(){S.flags.teaDay=S.day;S.warmth+=N.teaWarm;S.will+=N.teaWill;return ['Needles in the pot, a little snow. It tastes like a Christmas tree and it is the best thing all day.','You hold the cup in both hands until it goes cold.','Steam, pine, quiet. The camera gets a long shot of you doing nothing at all.'][(S.day-1)%3]}},
   rest:{site:'camp',hidden:true,name:()=>'Rest inside',spot:null,say:()=>'',
     run(){S.body+=N.restBody;S.will+=N.restWill;return S.shelter>=2?'You lie in the boughs and listen to the wind go over the wall.':'You lie under the tarp and let your legs stop aching.'}},
   early:{site:'camp',hidden:true,name:()=>'Turn in early',spot:null,say:()=>'',
@@ -557,6 +559,8 @@ const ACTIONS={
     run(){sfx('splash');if(iced())S.warmth-=3;if(R()<fishChance()){const n=R()<.25?2:1;S.fish+=n;S.caughtFish+=n;if(iced())S.iceFish=(S.iceFish||0)+n;S.will+=6;
       return n===2?'Two whitefish, one after the other. You grin at the camera.':iced()?'A lake trout through a hole no wider than your boot.':'A fat whitefish, cold and heavy in your hands.'}
       S.will-=3;return R()<.5?'Nothing. The line just hangs there.':'One bite, then gone. You curse at the lake.'}},
+  sit:{site:'shore',name:()=>'Sit by the water',spot:'drift',can:()=>S.flags.sitDay!==S.day||'You did that today.',say:()=>'',
+    run(){S.flags.sitDay=S.day;S.will+=N.sitWill;return ['You sit on the driftwood and watch the light move on the lake. Nobody needs anything from you.','A loon calls twice. You answer it, badly.','You think about Mara at the landing, and it does not hurt. It helps.','Wind on the water, grey on grey. You breathe until your shoulders drop.'][(S.day-1)%4]}},
   forage:{site:'shore',name:()=>S.hips>0&&S.day<12?'Pick rose hips':'Scrape the shore for food',spot:'bush',
     say:()=>S.hips>0&&S.day<12?`Food +${N.forageFood} now (${S.hips} pickings left). Maybe some driftwood.`:`Food +${N.scrapFood}. The good stuff is gone. Maybe some driftwood.`,
     run(){const good=S.hips>0&&S.day<12;if(good){S.hips--;S.food+=N.forageFood}else S.food+=N.scrapFood;
@@ -570,6 +574,8 @@ const ACTIONS={
   fell:{site:'woods',name:()=>'Fell a spruce',spot:'tree',can:()=>standing().length?true:'Nothing left to fell nearby.',say:()=>'',
     run(){const i=S.target!=null&&!S.felled.includes(S.target)?S.target:standing()[0];S.target=null;S.felled.push(i);const n=N.fellWood+(has('saw')?N.sawBonus:0);S.wood+=n;S.food-=woodsFood()+N.fellFood;S.cuts=(S.cuts||0)+1;sfx('chop');
       return S.felled.length===1?`Axe, wedge, a long crack, and it comes down. +${n} wood.`:`Another spruce down. You limb it and drag it back. +${n} wood.`}},
+  pitch:{site:'woods',name:()=>'Scrape spruce pitch',spot:'snag',can:()=>(S.pitch||0)<N.pitchMax||'Your tin is full.',say:()=>'',
+    run(){S.pitch=(S.pitch||0)+1;return 'Amber pitch off the old snag, into the tin. It will light a fire with one less piece of wood.'}},
   deadwood:{site:'woods',name:()=>S.deadfall>0?'Cut the deadfall':'The deadfall is used up',spot:'deadfall',can:()=>S.deadfall>0||'All cut up. Fell a tree instead.',
     say:()=>`+${N.woodsWood+(has('saw')?N.sawBonus:0)} wood. Hard work: Food −${woodsFood()} more.`,
     run(){const n=N.woodsWood+(has('saw')?N.sawBonus:0);S.deadfall--;S.wood+=n;S.food-=woodsFood();S.cuts=(S.cuts||0)+1;sfx('chop');return `You buck the fallen spruce into rounds and haul them back. +${n} wood.`}},
@@ -873,9 +879,9 @@ function btn(html,fn,cls){const b=document.createElement('button');b.type='butto
 // ---------- side view: one wide camera per place, the way the show films it ----------
 const HZ=430;
 const SP={
-  camp:{ground:728,fire:[1000,722],shelter:[640,700],pile:[420,720],rack:[1330,690],pack:[818,726],stump:[1150,738],exits:[['woods',70,718],['shore',1530,724]]},
-  shore:{ground:736,rock:[1010,745],lines:[[700,730],[840,748]],bush:[420,690],exits:[['camp',70,722]]},
-  woods:{ground:730,deadfall:[640,726],snares:[[1060,738],[1170,734],[1280,740]],exits:[['camp',70,720]]}};
+  camp:{ground:728,fire:[1000,722],pot:[1082,726],shelter:[640,700],pile:[420,720],rack:[1330,690],pack:[818,726],stump:[1150,738],exits:[['woods',70,718],['shore',1530,724]]},
+  shore:{ground:736,rock:[1010,745],lines:[[700,730],[840,748]],bush:[420,690],drift:[465,768],exits:[['camp',70,722]]},
+  woods:{ground:730,deadfall:[640,726],snag:[880,722],snares:[[1060,738],[1170,734],[1280,740]],exits:[['camp',70,720]]}};
 const sideTrees={};
 function sideScene(kind){const ms=S?S.mapSeed|0:0;const key=kind+ms;if(sideTrees[key])return sideTrees[key];
   const r=mulberry(9000+ms*7+kind.length*131),o={kind,far:[],mid:[],front:[],fell:[],hills:[]};
@@ -963,6 +969,10 @@ function drawSideProps(g){const k=S.site,p=SP[k];
     [[-.35],[.35]].forEach(([a])=>{g.save();g.translate(fx,fy-4);g.rotate(a);g.fillStyle=css(WOOD);g.fillRect(-44,-5,88,10);g.restore()});
     for(let i=0;i<8;i++){const a=i/8*Math.PI;g.fillStyle=css(mix(C.snow,C.ink,.35));g.beginPath();g.ellipse(fx+Math.cos(a)*62,fy+10+Math.sin(a)*8,14,9,0,0,6.283);g.fill()}
     if(S.shelter>=3){log2(g,fx-110,fy+40,90,9);log2(g,fx-100,fy+24,80,9)}
+    // the pot on its stone
+    const [ox,oy]=p.pot;g.fillStyle=css(mix(C.snow,C.ink,.45));g.beginPath();g.ellipse(ox,oy+2,20,8,0,0,6.283);g.fill();
+    g.fillStyle=css([52,56,58]);g.beginPath();g.moveTo(ox-15,oy-26);g.lineTo(ox+15,oy-26);g.lineTo(ox+12,oy-4);g.quadraticCurveTo(ox,oy+1,ox-12,oy-4);g.closePath();g.fill();
+    g.fillStyle=css([80,86,88]);g.fillRect(ox-17,oy-29,34,4);g.strokeStyle=css([40,42,44]);g.lineWidth=1.5;g.beginPath();g.arc(ox,oy-29,13,Math.PI,0);g.stroke();
     // pack and chopping stump with the axe
     const [px,py]=p.pack;g.fillStyle=css(mix(C.pine,C.grass,.3));g.beginPath();g.roundRect(px-20,py-48,40,50,9);g.fill();g.strokeStyle=css(C.ink,.7);g.lineWidth=1.6;g.stroke();g.fillStyle=css(mix(C.pine,C.ink,.25));g.beginPath();g.roundRect(px-16,py-46,32,16,6);g.fill();
     const [kx,ky]=p.stump;sideStump(g,kx,ky,1.4);g.strokeStyle=css(mix(C.grass,C.ink,.6));g.lineWidth=5;g.beginPath();g.moveTo(kx-4,ky-31);g.lineTo(kx+30,ky-70);g.stroke();g.fillStyle=css(mix(C.snow,C.ink,.55));g.save();g.translate(kx-2,ky-33);g.rotate(-.85);g.fillRect(-6,-12,14,20);g.restore()}
@@ -987,6 +997,12 @@ function drawSideProps(g){const k=S.site,p=SP[k];
     const [dx,dy]=p.deadfall,len=Math.max(0,300*S.deadfall/N.deadfall);if(len>0){g.fillStyle=css(C.ink,.22);g.beginPath();g.ellipse(dx+len/2-150,dy+14,len/2+20,10,0,0,6.283);g.fill();log2(g,dx-150,dy-6,len,16,mix(WOOD,C.grass,.18));
       g.strokeStyle=css(mix(WOOD,C.grass,.2));g.lineWidth=5;for(let i=0;i<6;i++){const x=dx-140+i*len/6;g.beginPath();g.moveTo(x,dy-16);g.lineTo(x+(i%2?18:-14),dy-44);g.stroke()}}
     for(let i=0;i<N.deadfall-S.deadfall&&i<6;i++)sideStump(g,dx-170+i*30,dy+30,.6);
+    // the old snag where the pitch runs
+    {const [nx,ny]=p.snag;g.fillStyle=css(C.ink,.22);g.beginPath();g.ellipse(nx+6,ny+4,30,7,0,0,6.283);g.fill();
+      g.fillStyle=css(mix(WOOD,C.ink,.3));g.beginPath();g.moveTo(nx-16,ny);g.lineTo(nx-11,ny-150);g.lineTo(nx-2,ny-138);g.lineTo(nx+4,ny-160);g.lineTo(nx+11,ny-146);g.lineTo(nx+16,ny);g.closePath();g.fill();
+      g.strokeStyle=css(mix(WOOD,C.ink,.3));g.lineWidth=4;g.beginPath();g.moveTo(nx-10,ny-96);g.lineTo(nx-34,ny-116);g.moveTo(nx+10,ny-70);g.lineTo(nx+30,ny-84);g.stroke();
+      g.fillStyle=css(mix(C.fire,C.snow,.15));const left=N.pitchMax-(S.pitch||0)+1;for(let i=0;i<left;i++){g.beginPath();g.ellipse(nx-4+(i%2)*8,ny-60-i*18,3,6,0,0,6.283);g.fill()}
+      g.fillStyle=css(C.snow,.85);g.beginPath();g.moveTo(nx-11,ny-150);g.lineTo(nx-2,ny-138);g.lineTo(nx+4,ny-160);g.lineTo(nx+2,ny-150);g.lineTo(nx-2,ny-144);g.closePath();g.fill()}
     // snares on the game trail
     p.snares.forEach(([x,y],i)=>{const set=i<S.snares;g.strokeStyle=css(C.ink,set?.85:.25);g.lineWidth=3;g.beginPath();g.moveTo(x-14,y);g.lineTo(x-14,y-34);g.moveTo(x+14,y);g.lineTo(x+14,y-34);g.moveTo(x-16,y-32);g.lineTo(x+16,y-32);g.stroke();
       if(set){g.strokeStyle=css(C.snow,.9);g.lineWidth=1.5;g.beginPath();g.arc(x,y-16,9,0,6.283);g.stroke()}
@@ -998,7 +1014,8 @@ function sideSpot(name){const p=SP[S.site];switch(name){
   case 'pile':return[p.pile[0],p.pile[1]-30,70];case 'fire':return[p.fire[0],p.fire[1]-20,60];case 'rack':return[p.rack[0],p.rack[1]-30,70];
   case 'shelter':return[p.shelter[0],p.shelter[1]-40,120];case 'pack':return[p.pack[0],p.pack[1]-24,34];case 'stump':return[p.stump[0],p.stump[1]-30,40];
   case 'rock':return[p.rock[0],p.rock[1]-20,70];case 'bush':return[p.bush[0],p.bush[1],80];
-  case 'deadfall':return[p.deadfall[0],p.deadfall[1]-10,140];case 'snares':return[p.snares[1][0],p.snares[1][1]-20,150];case 'catch':return[p.snares[2][0],p.snares[2][1]-20,60]}
+  case 'deadfall':return[p.deadfall[0],p.deadfall[1]-10,140];case 'snares':return[p.snares[1][0],p.snares[1][1]-20,150];case 'catch':return[p.snares[2][0],p.snares[2][1]-20,60];
+  case 'pot':return[p.pot[0],p.pot[1]-14,28];case 'drift':return[p.drift[0],p.drift[1]-6,70];case 'snag':return[p.snag[0],p.snag[1]-70,46]}
   return null}
 const sideTreeOf=i=>sideScene('woods').fell[i];
 function sideTreeAt(x,y){const sc=sideScene(S.site);if(S.site==='woods'){let best=null;sc.fell.forEach((t,i)=>{if(S.felled.includes(i))return;const w=t.h*.3*(y-(t.b-t.h))/t.h;if(y>t.b-t.h&&y<t.b&&Math.abs(x-t.x)<Math.max(14,w)&&(!best||t.b>best.b))best={i,b:t.b}});return best&&best.i}
@@ -1089,7 +1106,7 @@ function refresh(){if(!S)return;showHint();
   const bar=(k,c)=>`<div class="row${S[k]<25?' low':''}"><span>${k}</span><div class="bar"><span style="width:${S[k]}%;--c:${c}"></span></div><b>${S[k]}</b></div>`;
   const ic=(k,n,title,off)=>`<span class="${off?'off':''}" title="${title}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${n?`<i>${n}</i>`:''}</span>`;
   hud.innerHTML=bar('warmth','#D07A2C')+bar('food','#A7AC98')+bar('body','#7F9DAD')+bar('will','#E4E7E3')+
-    '';$('gear').innerHTML=`<div class="inv">${ic('wood',S.wood,'Wood: '+S.wood,!S.wood)}${S.fish?ic('fish',S.fish,'Fish: '+S.fish):''}${S.hares?ic('hare',S.hares,'Hares: '+S.hares):''}${ic('fire',S.fire,S.fire>0?`Fire: ${S.fire} more turns`:'Fire: out',!S.fire)}${S.ankle?ic('ankle',0,'Hurt ankle: walking takes a turn'):''}</div>`;
+    '';$('gear').innerHTML=`<div class="inv">${ic('wood',S.wood,'Wood: '+S.wood,!S.wood)}${S.fish?ic('fish',S.fish,'Fish: '+S.fish):''}${S.hares?ic('hare',S.hares,'Hares: '+S.hares):''}${ic('fire',S.fire,S.fire>0?`Fire: ${S.fire} more turns`:'Fire: out',!S.fire)}${S.pitch?ic('pitch',S.pitch,'Spruce pitch: next fire takes one less wood'):''}${S.ankle?ic('ankle',0,'Hurt ankle: walking takes a turn'):''}</div>`;
   const cold=turnCold();
   acts.innerHTML=`<h3>${SCENES[S.site].name} · ${S.turn<3?TURN[S.turn]:'night is coming'}</h3>`;
   Object.keys(ACTIONS).forEach(id=>{const a=ACTIONS[id];if(a.hidden||a.site!==S.site&&a.site!=='any')return;const av=avail(id);if(av===null)return;
@@ -1102,6 +1119,7 @@ const ICONS={wood:'<rect x="3" y="12" width="17" height="6" rx="3" fill="#7a5532
   fish:'<path d="M2 12c3-5 11-6 15 0-4 6-12 5-15 0z" fill="#8fa7b0"/><path d="M4 12c3 2 9 3 13 0" stroke="#c9d6da" stroke-width="1.4" fill="none"/><path d="M17 12l5-4v8z" fill="#6f8a94"/><circle cx="6" cy="10.8" r="1" fill="#22303a"/>',
   hare:'<ellipse cx="13" cy="16" rx="7" ry="5" fill="#e6e2d6"/><circle cx="7" cy="13" r="3.4" fill="#ece8dc"/><ellipse cx="6" cy="6.5" rx="1.6" ry="4.6" fill="#ece8dc" transform="rotate(-12 6 6.5)"/><ellipse cx="9" cy="6.8" rx="1.6" ry="4.6" fill="#ddd8ca" transform="rotate(10 9 6.8)"/><circle cx="6" cy="12.5" r=".8" fill="#22303a"/><circle cx="20" cy="15" r="1.6" fill="#fff"/>',
   fire:'<path d="M12 3c2 3 5 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-8z" fill="#f0a040"/><path d="M12 8c1 2 2 3 2 5a2 2 0 0 1-4 0c0-1 1-2 2-5z" fill="#ffd27a"/><rect x="3" y="17" width="18" height="3" rx="1.5" fill="#7a5532" transform="rotate(-12 12 18.5)"/><rect x="3" y="17" width="18" height="3" rx="1.5" fill="#8a6038" transform="rotate(12 12 18.5)"/>',
+  pitch:'<rect x="6" y="9" width="12" height="11" rx="2" fill="#8a9294"/><rect x="5" y="7" width="14" height="3" rx="1" fill="#a9b0b2"/><path d="M9 12c1 3 0 5 3 6 3-1 2-3 3-6z" fill="#e0a040"/><circle cx="12" cy="5" r="1.6" fill="#e0a040"/>',
   ankle:'<path d="M8 3h6v10l5 4v3H7l1-7z" fill="#5a4a3e"/><rect x="7" y="8" width="8" height="5" rx="1" fill="#e8e2d2"/><path d="M8 10.5h6" stroke="#c9a" stroke-width="1"/>'};
 const live=$('live'),lc=live.getContext('2d');
 function toCanvas(e){const r=live.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]}
