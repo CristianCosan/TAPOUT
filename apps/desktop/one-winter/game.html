@@ -22,6 +22,9 @@ p{margin:0}
 .game{position:relative;container-type:inline-size;width:min(100%,calc((100vh - 120px)*16/9),1700px);min-width:min(100%,640px);margin:0 auto}
 .stage{position:relative;width:100%;aspect-ratio:16/9;max-width:100%;background:#8A8F7E;overflow:hidden;border:1px solid var(--line)}
 .stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#fly{z-index:9;cursor:pointer}
+.game.flying .pan:not(.mute){visibility:hidden}
+.gear{position:absolute;left:18cqw;top:1.4cqw;padding:.55cqw .8cqw}
 .pan{background:var(--panel);color:var(--fg);border:1px solid rgba(228,231,227,.12);font-family:var(--display)}
 .clock{position:absolute;left:1.4cqw;top:1.4cqw;padding:.9cqw 1.3cqw;display:grid;gap:.2cqw;max-width:30cqw}
 .clock .d{font-size:clamp(14px,2cqw,30px);font-weight:700;letter-spacing:.06em;line-height:1}
@@ -53,15 +56,15 @@ body.app .stage{border:0}
 .hud .bar{height:max(4px,.45cqw);background:rgba(228,231,227,.16);position:relative;overflow:hidden}
 .hud .bar span{position:absolute;inset:0 auto 0 0;background:var(--c);transition:width .6s ease}
 .hud .row.low b{color:var(--fire)}
-.inv{display:flex;gap:.5cqw;margin-top:.4cqw;min-height:2.6cqw}
+.inv{display:flex;gap:.9cqw;min-height:2.6cqw}
 .inv span{position:relative;width:2.6cqw;height:2.6cqw;min-width:24px;min-height:24px;display:grid;place-items:center;color:var(--fg)}
 .inv span.off{opacity:.35}
-.inv svg{width:80%;height:80%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.inv svg{width:88%;height:88%}
 .inv i{position:absolute;right:-.3cqw;bottom:-.3cqw;min-width:1.3cqw;padding:0 .2cqw;border-radius:99px;background:var(--fire);color:var(--ink);font:700 clamp(9px,.85cqw,13px)/1.35 var(--display);font-style:normal;text-align:center}
 .log{position:absolute;left:50%;transform:translateX(-50%);bottom:1.4cqw;width:36cqw;padding:.8cqw 1.2cqw;font-family:var(--body);font-size:clamp(11px,1.05cqw,16px);line-height:1.4;display:grid;gap:.25cqw}
 .log p{opacity:.55} .log p:last-child{opacity:1}
 .log:empty{display:none}
-.acts{position:absolute;right:1.4cqw;bottom:1.4cqw;width:25cqw;padding:1cqw;display:grid;gap:.5cqw}
+.acts{position:absolute;right:1.4cqw;top:12cqw;width:21cqw;padding:.8cqw;display:grid;gap:.4cqw;background:rgba(28,34,38,.72)}
 .acts h3{font-size:clamp(11px,1cqw,16px);letter-spacing:.12em;text-transform:uppercase;color:#B9BEB0;font-weight:500;padding:0 .3cqw}
 .act{display:grid;gap:.1cqw;text-align:left;background:rgba(228,231,227,.06);border:1px solid rgba(228,231,227,.14);color:var(--fg);padding:.6cqw .8cqw;cursor:pointer;font:inherit}
 .act b{font-size:clamp(12px,1.3cqw,20px);letter-spacing:.04em}
@@ -144,6 +147,8 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
     <div class="stage" id="stage">
       <canvas id="ground" width="1600" height="900" aria-label="Top-down view of your current place"></canvas>
       <canvas id="live" width="1600" height="900"></canvas>
+      <canvas id="fly" width="1600" height="900" hidden></canvas>
+      <div class="pan gear" id="gear"></div>
       <div class="pan clock"><div class="d" id="cDay">DAY 1 · MORNING</div><div class="w" id="cWx"></div><div class="f" id="cFc"></div><div class="slots" id="cSlots"><i></i><i></i><i></i></div></div>
       <nav class="pan map" id="map" aria-label="Places"></nav>
       <div class="pan rivals" id="rivals"></div>
@@ -187,7 +192,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 <script>
 (function(){
 "use strict";
-const VERSION='3.0.0-ow.11';
+const VERSION='3.0.0-ow.12';
 const W=1600,H=900;
 const C={snow:[228,231,227],grass:[138,143,126],pine:[47,74,67],lake:[60,90,107],fire:[208,122,44],ink:[28,34,38]};
 const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -314,7 +319,9 @@ function compass(g,x,y){g.save();g.translate(x,y);const c=css(mix(C.lake,C.snow,
 const snowThr=d=>Math.max(.34,.62-(d-1)*.02);
 const iceDay=()=>(S&&S.iceDay)||N.iceDay;
 const iceW=d=>d<iceDay()?0:Math.min(.22,.07+(d-iceDay())*.03);
-const felled=(sc,i)=>sc.kind==='woods'&&S&&S.felled&&S.felled.includes(i);
+const felled=(sc,i)=>{if(sc.kind!=='woods'||!S||!S.felled||!S.felled.length)return false;
+  if(!sc.fellRank){const T=sc.trees,ord=T.map((t,j)=>j).filter(j=>T[j].x>30&&T[j].x<W-30&&T[j].y>30&&T[j].y<H-30).sort((a,b)=>Math.hypot(T[a].x-GLADE.x,T[a].y-GLADE.y)-Math.hypot(T[b].x-GLADE.x,T[b].y-GLADE.y));sc.fellRank=new Map(ord.map((j,r)=>[j,r]))}
+  const r=sc.fellRank.get(i);return r!=null&&r<S.felled.length};
 function dayCanvas(sc,day){const key=day+'-'+(sc.kind==='shore'&&S?S.hips:'')+'-'+(sc.kind==='woods'&&S&&S.felled?S.felled.length:'');if(sc.cv&&sc.cvDay===key)return sc.cv;
   const cfg=sc.cfg,thr=snowThr(day),iw=iceW(day),cv=sc.cv||document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
   SEED=sc.seed;const img=g.createImageData(W,H),px=img.data,cls=new Uint8Array(W*H),{L,SN,B}=sc;
@@ -375,7 +382,7 @@ function drawShoreStatic(g,sc,day){
   g.strokeStyle=css(C.ink,.9);g.lineWidth=2.5;g.beginPath();g.moveTo(ex-40,ey-6);g.lineTo(ex+30,ey-40);g.stroke();
   g.strokeStyle=css(C.snow,.6);g.lineWidth=1;g.beginPath();g.moveTo(ex+30,ey-40);g.quadraticCurveTo(ex+70,ey-20,ex+72,ey+18);g.stroke()}
 // night lines: a stake, a line into the water and a little flag with its name
-function drawShoreProps(g){const sc=current;if(!sc.lineSpots)return;
+function drawShoreProps(g,sc){sc=sc||current;if(!sc.lineSpots)return;
   S.lines.forEach((ln,i)=>{const [x,y]=sc.lineSpots[i],a=sc.dockAng;
     if(ln.set){g.strokeStyle=css(C.ink,.3);g.lineWidth=5;g.beginPath();g.moveTo(x+4,y+6);g.lineTo(x+Math.cos(a)*36+4,y+Math.sin(a)*36-14);g.stroke();
       g.strokeStyle=css(WOOD);g.lineWidth=4;g.lineCap='round';g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*36,y+Math.sin(a)*36-20);g.stroke();
@@ -505,20 +512,20 @@ const snareChance=()=>N.snareOdds+S.mods.snare+(has('wire')?N.wireBonus:0);
 const tens=p=>Math.round(p*10);
 const SHELTER=['Lay a bough bed','Build a log wall','Close in the sides'];
 const ACTIONS={
-  wood:{site:'camp',name:()=>'Gather deadfall',spot:[522,548,40],
+  wood:{site:'camp',name:()=>'Gather deadfall',spot:'pile',
     say:()=>`+${N.woodGain} wood from the deadfall nearby. Food −${N.woodFood} more.`,
     run(){S.wood+=N.woodGain;S.food-=N.woodFood;sfx('chop');return `You drag in deadfall and split it on the stump. +${N.woodGain} wood.`}},
-  fire:{site:'camp',name:()=>S.fire>0?'Build the fire up':'Light the fire',spot:[FIRE.x,FIRE.y,38],
+  fire:{site:'camp',name:()=>S.fire>0?'Build the fire up':'Light the fire',spot:'fire',
     can:()=>S.wood>=fireCost()||`Needs ${fireCost()} wood.`,
     say:()=>`Uses ${fireCost()} wood. Warmth +${N.fireGain}. Burns ${N.fireTurns} turns; the night counts as one.`,
     run(){S.wood-=fireCost();S.warmth+=N.fireGain;S.will+=3;S.fire=N.fireTurns;sfx('fire');return S.day<4?'The ferro rod throws a fat spark. Flames climb the birch bark.':'You feed it split wood until it roars.'}},
-  cook:{site:'camp',name:()=>S.hares>0?'Cook a hare':'Cook a fish',spot:[780,412,36],
+  cook:{site:'camp',name:()=>S.hares>0?'Cook a hare':'Cook a fish',spot:'rack',
     can:()=>(S.fish<1&&S.hares<1)?'Needs a fish or a hare.':S.fire<1?'Needs a lit fire.':true,
     say:()=>S.hares>0?`Uses 1 hare. Food +${N.cookHare}, Will +${cookWill()}.`:`Uses 1 fish. Food +${N.cookFish}, Will +${cookWill()}.`,
     run(){S.will+=cookWill();S.meals=(S.meals||0)+1;if(S.hares>0){S.hares--;S.food+=N.cookHare;return 'Hare on a spit. Fat drips and spits in the coals. The best meal in days.'}S.fish--;S.food+=N.cookFish;return 'Skin crackling on a green stick. You eat it all, bones picked clean.'}},
-  tent:{site:'camp',name:()=>'Your shelter',spot:[585,425,62],open:()=>shelterCard(),say:()=>''},
-  pack:{site:'camp',name:()=>'Your pack',spot:[520,488,24],open:()=>packCard(),say:()=>''},
-  whittle:{site:'camp',name:()=>'Whittle by the fire',spot:[574,600,24],can:()=>S.fire>0||'Needs a lit fire.',say:()=>'',
+  tent:{site:'camp',name:()=>'Your shelter',spot:'shelter',open:()=>shelterCard(),say:()=>''},
+  pack:{site:'camp',name:()=>'Your pack',spot:'pack',open:()=>packCard(),say:()=>''},
+  whittle:{site:'camp',name:()=>'Whittle by the fire',spot:'stump',can:()=>S.fire>0||'Needs a lit fire.',say:()=>'',
     run(){S.will+=N.whittleWill;S.whittled=(S.whittled||0)+1;return ['You carve a spoon. It is a bad spoon. You love it.','A little loon, out of birch. It sits on the woodpile now.','Tent pegs, a hook, a handle for the pot. Small jobs, calm hands.'][(S.whittled-1)%3]}},
   rest:{site:'camp',hidden:true,name:()=>'Rest inside',spot:null,say:()=>'',
     run(){S.body+=N.restBody;S.will+=N.restWill;return S.shelter>=2?'You lie in the boughs and listen to the wind go over the wall.':'You lie under the tarp and let your legs stop aching.'}},
@@ -535,7 +542,7 @@ const ACTIONS={
   letter:{site:'camp',hidden:true,free:true,name:()=>"Read Mara's letter",spot:null,when:()=>has('letter')&&!S.letter,
     say:()=>`Free, once. Will +${N.letterWill}.`,
     run(){S.letter=true;S.will+=N.letterWill;return '"Come home with stories, not frostbite. I love you, idiot." You read it twice.'}},
-  fish:{site:'shore',name:()=>iced()?'Fish through the ice':'Fish from the rocks',spot:'dock',
+  fish:{site:'shore',name:()=>iced()?'Fish through the ice':'Fish from the rocks',spot:'rock',
     can:()=>wxNow()==='storm'?'Too rough to fish in a storm.':true,
     say:()=>`About ${tens(fishChance())} in 10 chance of a fish.${iced()?' Cold work: Warmth −3 more.':''}`,
     run(){sfx('splash');if(iced())S.warmth-=3;if(R()<fishChance()){const n=R()<.25?2:1;S.fish+=n;S.caughtFish+=n;if(iced())S.iceFish=(S.iceFish||0)+n;S.will+=6;
@@ -548,53 +555,56 @@ const ACTIONS={
   setLine:{site:'shore',name:()=>`Set a night line at ${(S.lines.find(l=>!l.set)||S.lines[0]).n}`,spot:'line',when:()=>S.lines.some(l=>!l.set),
     can:()=>wxNow()==='storm'?'Too rough today.':true,say:()=>'',
     run(){const ln=S.lines.find(l=>!l.set);ln.set=true;return `A baited hook on a long line, tied off to a stake. That is ${ln.n} now.`}},
-  pullLines:{site:'shore',free:true,name:()=>'Pull in '+S.lines.filter(l=>l.fish).map(l=>l.n).join(' and '),spot:'catch',when:()=>S.lines.some(l=>l.fish),say:()=>'',
+  pullLines:{site:'shore',free:true,name:()=>'Pull in '+S.lines.filter(l=>l.fish).map(l=>l.n).join(' and '),spot:'linefish',when:()=>S.lines.some(l=>l.fish),say:()=>'',
     run(){let n=0;const names=[];S.lines.forEach(l=>{if(l.fish){n+=l.fish;names.push(l.n);l.fish=0}});S.fish+=n;S.caughtFish+=n;if(iced())S.iceFish=(S.iceFish||0)+n;S.will+=5;
       return n>1?`${names.join(' and ')} both have fish on. Good lines.`:`A fish on ${names[0]}. You knew that spot was good.`}},
   fell:{site:'woods',name:()=>'Fell a spruce',spot:'tree',can:()=>standing().length?true:'Nothing left to fell nearby.',say:()=>'',
     run(){const i=S.target!=null&&!S.felled.includes(S.target)?S.target:standing()[0];S.target=null;S.felled.push(i);const n=N.fellWood+(has('saw')?N.sawBonus:0);S.wood+=n;S.food-=woodsFood()+N.fellFood;S.cuts=(S.cuts||0)+1;sfx('chop');
       return S.felled.length===1?`Axe, wedge, a long crack, and it comes down. +${n} wood.`:`Another spruce down. You limb it and drag it back. +${n} wood.`}},
-  deadwood:{site:'woods',name:()=>S.deadfall>0?'Cut the deadfall':'The deadfall is used up',spot:[700,470,80],can:()=>S.deadfall>0||'All cut up. Fell a tree instead.',
+  deadwood:{site:'woods',name:()=>S.deadfall>0?'Cut the deadfall':'The deadfall is used up',spot:'deadfall',can:()=>S.deadfall>0||'All cut up. Fell a tree instead.',
     say:()=>`+${N.woodsWood+(has('saw')?N.sawBonus:0)} wood. Hard work: Food −${woodsFood()} more.`,
     run(){const n=N.woodsWood+(has('saw')?N.sawBonus:0);S.deadfall--;S.wood+=n;S.food-=woodsFood();S.cuts=(S.cuts||0)+1;sfx('chop');return `You buck the fallen spruce into rounds and haul them back. +${n} wood.`}},
-  setSnares:{site:'woods',name:()=>S.snares<3?'Set snares on the trail':'Snares are set',spot:[1150,300,70],
+  setSnares:{site:'woods',name:()=>S.snares<3?'Set snares on the trail':'Snares are set',spot:'snares',
     can:()=>S.snares>=3?'All three snares are out.':true,
     say:()=>`Set all three. Each night each one has about ${tens(snareChance())} in 10 chance of a hare.`,
     run(){S.snares=3;return 'Three loops of wire on the hare run, low and open. Now you wait.'}},
-  checkSnares:{site:'woods',name:()=>`Collect ${S.caught} ${S.caught===1?'hare':'hares'}`,spot:[1310,236,60],when:()=>S.caught>0,free:true,
+  checkSnares:{site:'woods',name:()=>`Collect ${S.caught} ${S.caught===1?'hare':'hares'}`,spot:'catch',when:()=>S.caught>0,free:true,
     say:()=>'Free. Bring them back before a fox does.',
     run(){S.hares+=S.caught;S.caughtHares+=S.caught;S.will+=6;const n=S.caught;S.caught=0;return n>1?'Two snowshoe hares. You say thank you out loud.':'A snowshoe hare, already white for winter.'}}
 };
 function avail(id){const a=ACTIONS[id];if(a.when&&!a.when())return null;const c=a.can?a.can():true;return c===true?true:c}
-function standing(){const sc=ensureScene('woods');return sc.trees.map((t,i)=>i).filter(i=>{const t=sc.trees[i];return !S.felled.includes(i)&&t.x>30&&t.x<W-30&&t.y>30&&t.y<H-30}).sort((a,b)=>Math.hypot(sc.trees[a].x-GLADE.x,sc.trees[a].y-GLADE.y)-Math.hypot(sc.trees[b].x-GLADE.x,sc.trees[b].y-GLADE.y))}
-function spotOf(id){const a=ACTIONS[id];if(Array.isArray(a.spot))return a.spot;const sc=ensureScene('shore');if(a.spot==='dock')return[sc.dock[0]+10,sc.dock[1]+6,55];
-  if(a.spot==='tree'){const sw=ensureScene('woods'),i=S.target!=null?S.target:standing()[0];if(i==null)return null;const t=sw.trees[i];return[t.x,t.y,t.r]}
-  if(a.spot==='line'){const i=S.lines.findIndex(l=>!l.set);return i<0?null:[...sc.lineSpots[i],40]}
-  if(a.spot==='catch'){const i=S.lines.findIndex(l=>l.fish);return i<0?null:[...sc.lineSpots[i],40]}if(a.spot==='bush')return[sc.bush[0],sc.bush[1],60];return null}
+function standing(){const f=sideScene('woods').fell;return f.map((t,i)=>i).filter(i=>!S.felled.includes(i)).sort((a,b)=>Math.abs(f[a].x-640)-Math.abs(f[b].x-640))}
+function spotOf(id){const a=ACTIONS[id];if(!a.spot||!S)return null;
+  if(a.spot==='tree'){if(S.site!=='woods')return null;const i=S.target!=null?S.target:standing()[0];if(i==null)return null;const t=sideTreeOf(i);return[t.x,t.b-t.h*.35,Math.max(40,t.h*.25)]}
+  if(a.spot==='line'){const i=S.lines.findIndex(l=>!l.set);return i<0?null:[SP.shore.lines[i][0],SP.shore.lines[i][1]-30,55]}
+  if(a.spot==='linefish'){const i=S.lines.findIndex(l=>l.fish);return i<0?null:[SP.shore.lines[i][0],SP.shore.lines[i][1]-30,55]}
+  if(a.site!==S.site)return null;return sideSpot(a.spot)}
 
 function clampAll(){['warmth','food','body','will'].forEach(k=>S[k]=clamp(Math.round(S[k]),0,100))}
 function passTurn(){S.food-=N.foodTurn;
   if(S.site==='camp'&&S.fire>0)S.warmth+=N.fireWarm;
   else S.warmth-=warmCost();
   if(S.fire>0)S.fire--;if(S.food<=0)S.body-=10;if(S.warmth<20)S.body-=6;S.turn++}
-function doAction(id){if(!S||S.over||!modalEl.hidden)return;const a=ACTIONS[id];if(a.open){walkTo(spotOf(id));a.open();return}if(avail(id)!==true||(!a.free&&S.turn>=3))return;
+function doAction(id){if(!S||S.over||!modalEl.hidden||FLY)return;const a=ACTIONS[id];if(a.open){walkTo(spotOf(id));a.open();return}if(avail(id)!==true||(!a.free&&S.turn>=3))return;
   const s=a.spot?spotOf(id):null;if(s)walkTo(s);const before=snap();
-  log(a.run());popDiff(before,s||[P.x,P.y-40]);if(!a.free)passTurn();after()}
+  log(a.run());popDiff(before,s?[s[0],s[1]-s[2]*.6]:[P.x,P.y-200]);if(!a.free)passTurn();after()}
 const POPK=[['warmth','warmth'],['food','food'],['body','body'],['will','will'],['wood','wood'],['fish','fish'],['hares','hare']];
 function snap(){const o={};POPK.forEach(([k])=>o[k]=S[k]);return o}
 const pops=[];
 function popDiff(b,at){const parts=POPK.map(([k,n])=>{const d=Math.round(Math.min(100,S[k])-b[k]);return d?`${d>0?'+':'−'}${Math.abs(d)} ${n}`:''}).filter(Boolean);
   parts.forEach((t,i)=>pops.push({x:at[0],y:at[1]-i*30,t,b:performance.now()/1000+i*.12,good:t[0]==='+'}))}
 // ---------- trees: in the woods you can fell any of them; at camp they stay for the wind ----------
-function treeAt(x,y){if(!current)return null;let best=null;current.trees.forEach((t,i)=>{if(felled(current,i))return;const d=Math.hypot(x-t.x,y-t.y);if(d<t.r*.85&&(!best||d<best.d))best={i,d}});return best&&best.i}
-function treeClick(i){if(!S||S.over||!modalEl.hidden)return;const t=current.trees[i];
-  if(S.site==='woods'){if(S.turn>=3)return;S.target=i;walkTo([t.x,t.y,t.r]);doAction('fell');return}
-  walkTo([t.x,t.y,t.r]);
+function treeAt(x,y){return sideTreeAt(x,y)}
+function treeAtTop(x,y){if(!current)return null;let best=null;current.trees.forEach((t,i)=>{if(felled(current,i))return;const d=Math.hypot(x-t.x,y-t.y);if(d<t.r*.85&&(!best||d<best.d))best={i,d}});return best&&best.i}
+function treeClick(i){if(!S||S.over||!modalEl.hidden||FLY)return;
+  if(S.site==='woods'){if(S.turn>=3)return;S.target=i;doAction('fell');return}
+  const t=sideScene(S.site).mid[i];walkTo([t.x,t.b,40]);
   log(S.site==='camp'?'You leave it standing. The trees around camp keep the wind off you.':'Too far to drag green logs back to camp. There is driftwood here.')}
 // ---------- the person on screen ----------
 const ENTRY={camp:[705,560],shore:[470,380],woods:[640,560]};
-const P={x:705,y:560,tx:705,ty:560,site:'camp',a:-1.2,steps:[]};
-function walkTo(s){if(!s)return;const dx=s[0]-P.x,dy=s[1]-P.y,d=Math.hypot(dx,dy)||1,stop=Math.max(0,d-(s[2]||30)*.75);P.tx=P.x+dx/d*stop;P.ty=P.y+dy/d*stop}
+const P={x:705,y:560,tx:705,ty:560,site:'',a:-1.2,steps:[],face:1};
+function walkTo(s){sideWalk(s)}
+function walkToTop(s){if(!s)return;const dx=s[0]-P.x,dy=s[1]-P.y,d=Math.hypot(dx,dy)||1,stop=Math.max(0,d-(s[2]||30)*.75);P.tx=P.x+dx/d*stop;P.ty=P.y+dy/d*stop}
 function drawPerson(t){if(P.site!==S.site){P.site=S.site;[P.x,P.y]=ENTRY[S.site];P.tx=P.x;P.ty=P.y;P.steps=[]}
   const dx=P.tx-P.x,dy=P.ty-P.y,d=Math.hypot(dx,dy),moving=d>2;
   if(moving){const v=Math.min(d,reduce?d:5);P.x+=dx/d*v;P.y+=dy/d*v;P.a=Math.atan2(dy,dx);const last=P.steps[P.steps.length-1];if(!last||Math.hypot(last[0]-P.x,last[1]-P.y)>16)P.steps.push([P.x,P.y,P.a,t,P.steps.length%2]);if(P.steps.length>40)P.steps.shift()}
@@ -608,7 +618,7 @@ function drawPerson(t){if(P.site!==S.site){P.site=S.site;[P.x,P.y]=ENTRY[S.site]
 function drawPops(){const now=performance.now()/1000;for(let i=pops.length-1;i>=0;i--){const p=pops[i],age=now-p.b;if(age>2.2){pops.splice(i,1);continue}if(age<0)continue;
   const a=age<.2?age/.2:1-Math.max(0,age-1.4)/.8;lc.save();lc.font='700 30px "Barlow Condensed",sans-serif';lc.textAlign='center';lc.lineJoin='round';lc.lineWidth=5;lc.strokeStyle=css(C.ink,.7*a);
   lc.strokeText(p.t.toUpperCase(),p.x,p.y-age*26);lc.fillStyle=p.good?css(C.snow,a):css(mix(C.fire,C.snow,.25),a);lc.fillText(p.t.toUpperCase(),p.x,p.y-age*26);lc.restore()}}
-function travel(site){if(!S||S.over||!modalEl.hidden||S.site===site)return;
+function travel(site){if(!S||S.over||!modalEl.hidden||S.site===site||FLY)return;
   if(S.ankle>0){if(S.turn>=3)return;S.site=site;log(`You limp to the ${SCENES[site].name}. It takes all morning.`);passTurn()}
   else{S.site=site;sfx('step');log(['You walk down to the water.','You climb back up to camp.','You follow the trail into the trees.'][['shore','camp','woods'].indexOf(site)])}
   after();if(!S.over&&modalEl.hidden&&S.turn<3)maybeEvent()}
@@ -784,14 +794,15 @@ function morning(){
   if(gone.length&&S.rivals.length<=2&&S.rivals.length>0)note(2,`${gone.join(' and ')} tapped out. ${S.rivals.length===1?'One rival':'Two rivals'} left.`);
   if(S.day===iceDay())note(2,'The lake froze over in the night.');
   if(S.rivals.length===0){endRun('win');return}
-  const pron=who=>(RIVALS.find(r=>r[0]===who)||[0,'they'])[1];
-  const news=gone.length===0?'<p>No boats in the night. Everyone is still out there.</p>':gone.map(w=>`<p><b>${w}</b> tapped out. ${pron(w)==='they'?'They':pron(w)==='she'?'She':'He'} ${WHY[R()*WHY.length|0]}.</p>`).join('');
-  cardEl.innerHTML=`<p class="k">Day ${S.day} · ${deg(temp())} · ${WX[wxNow()]}</p><h2>${gone.length?'A boat in the night':'Morning'}</h2>${news}<p>${S.rivals.length} ${S.rivals.length===1?'rival':'rivals'} left.</p>
-    ${S.day===iceDay()?'<p class="muted">Ice has grown out from the shore overnight. You will have to fish through it now.</p>':''}
-    ${wxNow()==='storm'?'<p class="muted">A storm today. Every turn away from the fire costs a lot more warmth, and the lake is too rough to fish.</p>':''}
-    ${S.flags.crew?'<p class="muted">The crew is here all morning, filming you. You lose the morning turn.</p>':''}
-    ${S.caught>0?`<p class="muted">Something is caught in your snares.</p>`:''}${S.lines.some(l=>l.fish)?`<p class="muted">A line is pulled tight at ${S.lines.filter(l=>l.fish).map(l=>l.n).join(' and ')}.</p>`:''}${S.lines.some(l=>l.lost)?`<p class="muted">The line at ${S.lines.filter(l=>l.lost).map(l=>l.n).join(' and ')} is gone. Set it again.</p>`:''}${S.flags.thief?'<p class="muted">Fox tracks around the snares. Something got eaten before you came.</p>':''}`;
-  const b=btn('Start the day',()=>{closeModal();music.mood('day');refresh()});cardEl.appendChild(b);refresh();openModal();b.focus()}
+  const lines=[[`Day ${S.day}`,`${TURN[S.turn]} · ${remaining()}`]];
+  gone.forEach(w=>lines.push([w,'tapped out']));
+  if(gone.length)lines.push([`${S.rivals.length+1} remaining`,`−${gone.length}`]);
+  if(S.day===iceDay())lines.push(['The lake froze','in the night']);
+  if(wxNow()==='storm')lines.push(['A storm today','']);
+  if(S.flags.crew)lines.push(['The crew is here','filming all morning']);
+  if(S.caught>0)lines.push(['Something in the snares','']);
+  if(S.lines.some(l=>l.fish))lines.push([`A fish on ${S.lines.filter(l=>l.fish).map(l=>l.n).join(' and ')}`,'']);
+  closeModal();refresh();flyover(lines,()=>{music.mood('day');refresh()})}
 const PLACE=k=>['1st','2nd','3rd'][k-1]||k+'th';
 function endRun(kind){S.over=true;S.result=kind;music.mood('night');
   const place=kind==='win'?1:S.rivals.length+1;S.place=place;
@@ -824,7 +835,7 @@ function intro(){current=ensureScene('camp');refresh();
   if(META.maxSeason>1){const row=document.createElement('div');row.className='seasons';SEASONS.slice(0,META.maxSeason).forEach((se,i)=>{const b=btn(`<b>${i+1}</b>`,()=>{pickSeason=i+1;newRun(i+1,S.mapSeed,S.winter);intro()},'choice'+(S.season===i+1?' on':''));b.title=se.t+': '+se.d;row.appendChild(b)});
     cardEl.appendChild(row);const sd=document.createElement('p');sd.className='locked';sd.textContent=SEASONS[S.season-1].t+': '+SEASONS[S.season-1].d;cardEl.appendChild(sd)}
   const grid=document.createElement('div');grid.className='kit';cardEl.appendChild(grid);
-  const go=btn('Start the run',()=>{S.items=[...pick];startSound();closeModal();log('The boat is gone. Just you, the lake and the cameras.');save();refresh()},'go');go.disabled=true;
+  const go=btn('Start the run',()=>{S.items=[...pick];startSound();closeModal();log('The boat is gone. Just you, the lake and the cameras.');save();refresh();flyover([['Day 1',`Morning · ${remaining()}`],[`${S.lines[0].n} and ${S.lines[1].n}`,'good spots for a night line']].slice(0,1),()=>refresh())},'go');go.disabled=true;
   S.offer.forEach(id=>{const it=ITEMS.find(i=>i.id===id);const b=btn(`<b>${it.t}</b><small>${it.d}</small>`,()=>{if(pick.has(id))pick.delete(id);else if(pick.size<3)pick.add(id);b.classList.toggle('on',pick.has(id));go.disabled=pick.size!==3;go.textContent=pick.size===3?'Start the run':`Pick ${3-pick.size} more`},'choice');grid.appendChild(b)});
   go.textContent='Pick 3 more';cardEl.appendChild(go);
   if(META.tipsOff){const tb=btn('Turn tips back on',()=>{META.tipsOff=false;META.tipsSeen=[];saveMeta(META);tb.remove()},'choice');cardEl.appendChild(tb)}
@@ -844,10 +855,183 @@ function shelterCard(){const lv=S.shelter,lit=S.fire>0,day=S.turn<3;
 function packCard(){cardEl.innerHTML=`<p class="k">Your pack</p><h2>What you brought</h2><ul class="story">${['Tarp, axe, ferro rod, pot, fishing line, snare wire',...S.items.map(id=>ITEMS.find(i=>i.id===id).t)].map(t=>`<li>${t}</li>`).join('')}</ul>`;
   ['pemmican','aid','letter'].forEach(id=>{if(avail(id)===null)return;cardEl.appendChild(btn(`<b>${ACTIONS[id].name()}</b>`,()=>{closeModal();doAction(id)},'choice'))});
   cardEl.appendChild(btn('Close the pack',closeModal,'go'));openModal()}
-function resume(){if(!S.mods){S.season=1;S.mods=seasonMods(1)}if(!S.lines)S.lines=shuffle(LINE_NAMES.slice()).slice(0,2).map(n=>({n,set:false,fish:0}));if(!S.felled)S.felled=[];if(S.deadfall==null)S.deadfall=N.deadfall;closeModal();logEl.innerHTML=(S.log||[]).map(l=>`<p>${l}</p>`).join('');refresh();
-  if(S.phase==='night'&&S.card)showCard();else if(S.phase==='night')nightfall();else if(S.phase==='slept')morning();else if(S.turn>=3)nightfall()}
+function resume(){if(!S.mods){S.season=1;S.mods=seasonMods(1)}if(!S.lines)S.lines=shuffle(LINE_NAMES.slice()).slice(0,2).map(n=>({n,set:false,fish:0}));if(!S.felled)S.felled=[];if(S.felled.some(i=>i>=16))S.felled=[...Array(Math.min(S.felled.length,16)).keys()];if(S.deadfall==null)S.deadfall=N.deadfall;closeModal();logEl.innerHTML=(S.log||[]).map(l=>`<p>${l}</p>`).join('');refresh();
+  if(S.phase==='night'&&S.card)showCard();else if(S.phase==='night')nightfall();else if(S.phase==='slept')morning();else if(S.turn>=3)nightfall();
+  else flyover([[`Day ${S.day}`,`${TURN[S.turn]} · ${remaining()}`]],()=>refresh())}
 function save(){try{if(S&&!S.over)localStorage.setItem('oneWinter.run',JSON.stringify(S))}catch(e){}}
 function btn(html,fn,cls){const b=document.createElement('button');b.type='button';b.className=cls||'choice';b.innerHTML=html.startsWith('<')?html:`<b>${html}</b>`;if(cls==='go')b.innerHTML=html;b.onclick=fn;return b}
+
+// ---------- side view: one wide camera per place, the way the show films it ----------
+const HZ=430;
+const SP={
+  camp:{ground:728,fire:[1000,722],shelter:[640,700],pile:[420,720],rack:[1330,690],pack:[818,726],stump:[1150,738],exits:[['woods',70,718],['shore',1530,724]]},
+  shore:{ground:736,rock:[1010,745],lines:[[700,730],[840,748]],bush:[420,690],exits:[['camp',70,722]]},
+  woods:{ground:730,deadfall:[640,726],snares:[[1060,738],[1170,734],[1280,740]],exits:[['camp',70,720]]}};
+const sideTrees={};
+function sideScene(kind){const ms=S?S.mapSeed|0:0;const key=kind+ms;if(sideTrees[key])return sideTrees[key];
+  const r=mulberry(9000+ms*7+kind.length*131),o={kind,far:[],mid:[],front:[],fell:[],hills:[]};
+  for(let x=-40;x<W+60;x+=50+r()*40)o.hills.push([x,HZ-30-r()*70]);
+  for(let i=0;i<90;i++)o.far.push({x:r()*W,b:HZ+18+r()*14,h:34+r()*34});
+  if(kind==='camp'){
+    for(let i=0;i<34;i++){const x=r()*W;if(x>930&&x<1080)continue;o.mid.push({x,b:600+r()*40,h:170+r()*120,click:true})}
+    o.front=[{x:120,b:930,h:860},{x:250,b:960,h:640},{x:1460,b:950,h:900},{x:1590,b:930,h:700}]}
+  else if(kind==='shore'){
+    for(let i=0;i<24;i++){const x=r()*560;o.mid.push({x,b:560+x*.15+r()*40,h:150+r()*120,click:true})}
+    o.front=[{x:40,b:960,h:880}]}
+  else{
+    for(let i=0;i<40;i++)o.mid.push({x:r()*W,b:560+r()*40,h:200+r()*140});
+    const xs=[];for(let i=0;i<16;i++){let x;for(let k=0;k<30;k++){x=180+r()*1240;if(Math.abs(x-640)>170&&Math.abs(x-1170)>170&&xs.every(q=>Math.abs(q-x)>62))break}xs.push(x)}
+    xs.sort((a,b)=>a-b).forEach(x=>o.fell.push({x,b:640+r()*60,h:230+r()*90}));
+    o.fell.sort((a,b)=>a.b-b.b);
+    o.front=[{x:90,b:950,h:900},{x:1520,b:940,h:860}]}
+  o.mid.sort((a,b)=>a.b-b.b);return sideTrees[key]=o}
+function spruce(g,x,b,h,col,snow,dust,rr){const w=h*.3,tiers=7;g.fillStyle=css(mix(col,C.ink,.35));g.fillRect(x-h*.018,b-h*.12,h*.036,h*.12);
+  for(let i=0;i<tiers;i++){const t0=i/tiers,t1=(i+1)/tiers,y0=b-h+h*t0*.9,y1=b-h+h*t1*.9+h*.08,ww=w*(.25+t1*.85);
+    g.fillStyle=css(mix(col,C.ink,i%2?.08:0));g.beginPath();g.moveTo(x,y0);g.lineTo(x+ww,y1);g.quadraticCurveTo(x,y1-h*.03,x-ww,y1);g.closePath();g.fill();
+    if(snow&&rr()<dust){const yl=y0+(y1-y0)*.72,th=clamp(h*.016,2,5);g.fillStyle=css(C.snow,.8);g.beginPath();g.moveTo(x,y0+1);g.lineTo(x+ww*.72,yl);g.lineTo(x+ww*.6,yl+th);g.lineTo(x,y0+th*2.2);g.lineTo(x-ww*.6,yl+th);g.lineTo(x-ww*.72,yl);g.closePath();g.fill()}}}
+function sideStump(g,x,b,s){g.fillStyle=css(C.ink,.25);g.beginPath();g.ellipse(x+4,b+2,26*s,7*s,0,0,6.283);g.fill();
+  g.fillStyle=css(WOOD);g.fillRect(x-14*s,b-22*s,28*s,22*s);g.fillStyle=css(mix(C.fire,C.snow,.45));g.beginPath();g.ellipse(x,b-22*s,14*s,5*s,0,0,6.283);g.fill();
+  g.strokeStyle=css(mix(C.fire,C.ink,.4),.7);g.lineWidth=1;g.beginPath();g.ellipse(x,b-22*s,7*s,2.5*s,0,0,6.283);g.stroke()}
+const sideBg={};
+function skyCols(){const w=wxNow();return w==='clear'?['#20364a','#6d8aa0','#c9cfc8']:w==='storm'?['#2a3238','#59656b','#8e9894']:['#3e4b55','#7c8a92','#b9c0bc']}
+function drawSideBg(kind){const day=S.day,sc=sideScene(kind),key=[kind,day,wxNow(),S.felled.length,S.mapSeed].join();
+  if(sideBg[kind]&&sideBg[kind].key===key)return sideBg[kind].cv;
+  const cv=(sideBg[kind]&&sideBg[kind].cv)||document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d'),rr=mulberry(day*31+kind.length);
+  const dust=Math.min(.95,.25+(day-1)*.06),sk=skyCols();
+  const sky=g.createLinearGradient(0,0,0,HZ+40);sky.addColorStop(0,sk[0]);sky.addColorStop(.7,sk[1]);sky.addColorStop(1,sk[2]);g.fillStyle=sky;g.fillRect(0,0,W,HZ+60);
+  g.fillStyle=css(mix(C.lake,C.ink,.25));g.beginPath();g.moveTo(0,HZ+30);sc.hills.forEach(([x,y])=>g.lineTo(x,y));g.lineTo(W,HZ+30);g.closePath();g.fill();
+  g.fillStyle=css(C.snow,.35*dust);g.beginPath();g.moveTo(0,HZ+30);sc.hills.forEach(([x,y])=>g.lineTo(x,y+4));g.lineTo(W,HZ+30);g.closePath();g.fill();
+  const iw=iceW(day);
+  if(kind!=='woods'){const top=kind==='shore'?HZ+18:HZ+22;g.fillStyle=css(mix(C.lake,C.ink,.1));g.fillRect(0,top,W,H-top);
+    g.fillStyle=css(mix(C.lake,C.snow,.25),.6);for(let i=0;i<40;i++)g.fillRect(rr()*W,top+rr()*(H-top),40+rr()*90,2);
+    if(iw>0){const f=Math.min(1,iw/.16);g.fillStyle=css(ICE);g.fillRect(0,top,W,(H-top)*f);g.fillStyle=css(ICE2,.7);for(let i=0;i<30;i++)g.fillRect(rr()*W,top+rr()*(H-top)*f,60+rr()*120,3)}}
+  sc.far.forEach(t=>spruce(g,t.x,t.b,t.h,mix(C.pine,C.lake,.55),true,dust,rr));
+  const gnd=SP[kind].ground,snowC=mix(C.snow,C.grass,Math.max(0,.45-(day-1)*.05)),ground=g.createLinearGradient(0,560,0,H);ground.addColorStop(0,css(mix(snowC,C.lake,.12)));ground.addColorStop(1,css(snowC));
+  g.fillStyle=ground;g.beginPath();
+  if(kind==='shore'){g.moveTo(0,560);g.lineTo(560,610);g.quadraticCurveTo(800,700,1060,760);g.lineTo(1250,H);g.lineTo(0,H)}
+  else{g.moveTo(0,600);g.quadraticCurveTo(W*.5,560,W,600);g.lineTo(W,H);g.lineTo(0,H)}
+  g.closePath();g.fill();
+  if(kind==='camp'){g.fillStyle=css(mix(C.lake,C.snow,iw>0?.6:.15));g.beginPath();g.moveTo(930,585);g.quadraticCurveTo(1005,575,1080,588);g.lineTo(1080,600);g.lineTo(930,600);g.fill()}
+  sc.mid.forEach((t,i)=>spruce(g,t.x,t.b,t.h,mix(C.pine,C.lake,.15),true,dust,rr));
+  // ground in front of the trees, with drifts that grow
+  g.fillStyle=ground;g.beginPath();
+  if(kind==='shore'){g.moveTo(0,650);g.quadraticCurveTo(400,660,700,700);g.quadraticCurveTo(900,735,1060,770);g.lineTo(1250,H);g.lineTo(0,H)}
+  else{g.moveTo(0,660);g.quadraticCurveTo(W*.5,640,W,660);g.lineTo(W,H);g.lineTo(0,H)}
+  g.closePath();g.fill();
+  g.fillStyle=css(C.snow,.5);for(let i=0;i<14;i++){const x=rr()*W,y=gnd-20+rr()*150;if(kind==='shore'&&x>1000)continue;g.beginPath();g.ellipse(x,y,60+rr()*120,6+rr()*8,0,0,6.283);g.fill()}
+  if(day<6){g.fillStyle=css(C.grass,.45-(day-1)*.08);for(let i=0;i<120;i++){const x=rr()*W,y=gnd-30+rr()*170;if(kind==='shore'&&x>950)continue;g.fillRect(x,y,2,-6-rr()*8)}}
+  // paths out of each place
+  g.strokeStyle=css(mix(snowC,C.ink,.18));g.lineWidth=26;g.lineCap='round';
+  SP[kind].exits.forEach(([s,x,y])=>{g.beginPath();g.moveTo(x<W/2?-20:W+20,y-10);g.quadraticCurveTo(x<W/2?x+120:x-120,y+10,x<W/2?x+260:x-260,y+24);g.stroke()});
+  if(kind==='shore'){g.fillStyle=css(BEACH);g.beginPath();g.moveTo(600,684);g.quadraticCurveTo(900,738,1060,770);g.lineTo(1250,H);g.lineTo(1140,H);g.quadraticCurveTo(1000,800,820,752);g.quadraticCurveTo(700,722,600,700);g.closePath();g.fill()}
+  if(kind==='woods')sc.fell.forEach((t,i)=>S.felled.includes(i)?sideStump(g,t.x,t.b,t.h/300):spruce(g,t.x,t.b,t.h,C.pine,true,dust,rr));
+  sideBg[kind]={cv,key};return cv}
+function drawSideFront(g,kind){const sc=sideScene(kind),rr=mulberry(5+S.day),dust=Math.min(.95,.25+(S.day-1)*.06);sc.front.forEach(t=>spruce(g,t.x,t.b,t.h,mix(C.pine,C.ink,.55),true,dust*.8,rr))}
+// the things in each place, drawn fresh on every change
+function log2(g,x,y,len,r,col){g.fillStyle=css(col||WOOD);g.beginPath();g.roundRect(x,y-r,len,r*2,r);g.fill();g.fillStyle=css(mix(C.fire,C.snow,.5));g.beginPath();g.ellipse(x+len,y,r*.55,r,0,0,6.283);g.fill();g.strokeStyle=css(C.ink,.5);g.lineWidth=1;g.stroke()}
+function drawSideProps(g){const k=S.site,p=SP[k];
+  if(k==='camp'){
+    // shelter: a tarp lean-to that grows into a log hut
+    const [sx,sy]=p.shelter;g.fillStyle=css(C.ink,.22);g.beginPath();g.ellipse(sx+20,sy+30,170,18,0,0,6.283);g.fill();
+    if(S.shelter>=2)for(let i=0;i<5;i++)log2(g,sx-150,sy+18-i*17,250,8.5,mix(WOOD,C.grass,i%2?.1:.25));
+    if(S.shelter>=1){g.fillStyle=css(C.pine);for(let i=0;i<9;i++){g.beginPath();g.ellipse(sx-60+i*22,sy+22,16,6,0,0,6.283);g.fill()}}
+    g.fillStyle=css(mix(C.lake,C.snow,.3));g.beginPath();g.moveTo(sx-140,sy+26);g.lineTo(sx+40,sy-120);g.lineTo(sx+150,sy+26);g.closePath();g.fill();
+    g.fillStyle=css(mix(C.lake,C.ink,.15));g.beginPath();g.moveTo(sx+40,sy-120);g.lineTo(sx+150,sy+26);g.lineTo(sx+95,sy+26);g.closePath();g.fill();
+    g.strokeStyle=css(WOOD);g.lineWidth=7;g.beginPath();g.moveTo(sx+20,sy-140);g.lineTo(sx+60,sy+30);g.stroke();
+    g.strokeStyle=css(C.ink,.6);g.lineWidth=1.3;g.beginPath();g.moveTo(sx-140,sy+26);g.lineTo(sx-180,sy+36);g.moveTo(sx+150,sy+26);g.lineTo(sx+190,sy+36);g.stroke();
+    if(S.shelter>=3){g.fillStyle=css(C.snow,.92);g.beginPath();g.moveTo(sx-130,sy+20);g.lineTo(sx+40,sy-118);g.lineTo(sx+60,sy-104);g.lineTo(sx-100,sy+22);g.closePath();g.fill();
+      for(let i=0;i<4;i++)log2(g,sx+150,sy+18-i*16,70,8,mix(WOOD,C.grass,i%2?.1:.22))}
+    // woodpile: as tall as your wood
+    const n=Math.min(S.wood,15);let c=0;for(let r=0;r<5&&c<n;r++)for(let i=0;i<4-(r>>1)&&c<n;i++,c++)log2(g,p.pile[0]-60+i*8+r*6,p.pile[1]-r*15,95,7.5,mix(WOOD,C.grass,(i+r)%2?.1:.25));
+    // drying rack with fish and hares
+    const [rx,ry]=p.rack;g.strokeStyle=css(WOOD);g.lineWidth=6;g.lineCap='round';g.beginPath();g.moveTo(rx-70,ry+36);g.lineTo(rx-55,ry-60);g.moveTo(rx+70,ry+36);g.lineTo(rx+55,ry-60);g.moveTo(rx-66,ry-56);g.lineTo(rx+66,ry-56);g.stroke();
+    for(let i=0;i<Math.min(S.fish,4);i++){const x=rx-45+i*28;g.strokeStyle=css(C.ink,.7);g.lineWidth=1;g.beginPath();g.moveTo(x,ry-56);g.lineTo(x,ry-44);g.stroke();g.fillStyle=css(mix(C.lake,C.snow,.55));g.beginPath();g.ellipse(x,ry-24,6,20,0,0,6.283);g.fill();g.beginPath();g.moveTo(x,ry-6);g.lineTo(x-7,ry+4);g.lineTo(x+7,ry+4);g.fill()}
+    for(let i=0;i<Math.min(S.hares,2);i++){const x=rx+30-i*26;g.fillStyle=css(FUR);g.beginPath();g.ellipse(x,ry-18,9,22,0,0,6.283);g.fill();g.beginPath();g.ellipse(x-4,ry-46,3,9,-.2,0,6.283);g.ellipse(x+4,ry-46,3,9,.2,0,6.283);g.fill()}
+    // fire pit
+    const [fx,fy]=p.fire;g.fillStyle=css(mix(C.ink,C.grass,.3));g.beginPath();g.ellipse(fx,fy+4,62,14,0,0,6.283);g.fill();
+    for(let i=0;i<9;i++){const a=Math.PI+i/8*Math.PI;g.fillStyle=css(mix(C.snow,C.ink,.45+(i%2)*.1));g.beginPath();g.ellipse(fx+Math.cos(a)*62,fy+6+Math.sin(a)*-6,13,9,0,0,6.283);g.fill()}
+    [[-.35],[.35]].forEach(([a])=>{g.save();g.translate(fx,fy-4);g.rotate(a);g.fillStyle=css(WOOD);g.fillRect(-44,-5,88,10);g.restore()});
+    for(let i=0;i<8;i++){const a=i/8*Math.PI;g.fillStyle=css(mix(C.snow,C.ink,.35));g.beginPath();g.ellipse(fx+Math.cos(a)*62,fy+10+Math.sin(a)*8,14,9,0,0,6.283);g.fill()}
+    if(S.shelter>=3){log2(g,fx-110,fy+40,90,9);log2(g,fx-100,fy+24,80,9)}
+    // pack and chopping stump with the axe
+    const [px,py]=p.pack;g.fillStyle=css(mix(C.pine,C.grass,.3));g.beginPath();g.roundRect(px-20,py-48,40,50,9);g.fill();g.strokeStyle=css(C.ink,.7);g.lineWidth=1.6;g.stroke();g.fillStyle=css(mix(C.pine,C.ink,.25));g.beginPath();g.roundRect(px-16,py-46,32,16,6);g.fill();
+    const [kx,ky]=p.stump;sideStump(g,kx,ky,1.4);g.strokeStyle=css(mix(C.grass,C.ink,.6));g.lineWidth=5;g.beginPath();g.moveTo(kx-4,ky-31);g.lineTo(kx+30,ky-70);g.stroke();g.fillStyle=css(mix(C.snow,C.ink,.55));g.save();g.translate(kx-2,ky-33);g.rotate(-.85);g.fillRect(-6,-12,14,20);g.restore()}
+  if(k==='shore'){
+    // rose hips at the forest edge
+    const [bx,by]=p.bush,br=mulberry(5),berries=Math.min(14,Math.ceil(S.hips*2));for(let i=0;i<4;i++){const x=bx-60+i*40,y=by+br()*10;g.fillStyle=css(mix(C.pine,C.grass,.45));g.beginPath();g.ellipse(x,y,34,24,0,0,6.283);g.fill()}
+    g.fillStyle=css(C.fire);for(let i=0;i<berries;i++){g.beginPath();g.arc(bx-80+br()*170,by-14+br()*28,3.5,0,6.283);g.fill()}
+    // driftwood
+    log2(g,380,770,170,10,DRIFT);log2(g,430,752,90,7,DRIFT);
+    // the rocky point and your rod
+    const [rx,ry]=p.rock,pr=mulberry(13);[[-60,6,36],[0,-8,46],[50,10,30]].forEach(([dx,dy,r])=>{g.fillStyle=css(mix(C.snow,C.ink,.42));g.beginPath();g.ellipse(rx+dx,ry+dy,r*1.2,r*.6,0,0,6.283);g.fill();g.fillStyle=css(C.snow,.6);g.beginPath();g.ellipse(rx+dx-6,ry+dy-r*.35,r*.7,r*.18,0,0,6.283);g.fill()});
+    g.strokeStyle=css(WOOD);g.lineWidth=4;g.beginPath();g.moveTo(rx+20,ry-24);g.lineTo(rx+150,ry-160);g.stroke();g.strokeStyle=css(C.snow,.55);g.lineWidth=1;g.beginPath();g.moveTo(rx+150,ry-160);g.quadraticCurveTo(rx+230,ry-110,rx+250,ry+40);g.stroke();
+    if(iced()){g.fillStyle=css(DEEP2);g.beginPath();g.ellipse(rx+250,ry+46,20,6,0,0,6.283);g.fill()}
+    // night lines with their names
+    S.lines.forEach((ln,i)=>{const [x,y]=p.lines[i];g.textAlign='center';
+      if(ln.set){g.strokeStyle=css(WOOD);g.lineWidth=5;g.beginPath();g.moveTo(x,y);g.lineTo(x+30,y-70);g.stroke();g.strokeStyle=css(C.snow,.55);g.lineWidth=1;g.beginPath();g.moveTo(x+30,y-70);g.quadraticCurveTo(x+120,y-40,x+170,y+20);g.stroke();
+        g.fillStyle=css(C.fire);g.fillRect(x+30,y-70,22,12);if(ln.fish){g.fillStyle=css(C.snow);g.beginPath();g.arc(x+170,y+20,6,0,6.283);g.fill()}}
+      else{g.fillStyle=css(C.ink,.35);g.beginPath();g.ellipse(x,y,8,3,0,0,6.283);g.fill()}
+      g.font='700 17px "Barlow Condensed",sans-serif';try{g.letterSpacing='2px'}catch(e){}g.fillStyle=css(C.ink,.8);g.fillText(ln.n.toUpperCase(),x,y+26);try{g.letterSpacing='0px'}catch(e){}g.textAlign='left'})}
+  if(k==='woods'){
+    // the deadfall, shorter with every cut
+    const [dx,dy]=p.deadfall,len=Math.max(0,300*S.deadfall/N.deadfall);if(len>0){g.fillStyle=css(C.ink,.22);g.beginPath();g.ellipse(dx+len/2-150,dy+14,len/2+20,10,0,0,6.283);g.fill();log2(g,dx-150,dy-6,len,16,mix(WOOD,C.grass,.18));
+      g.strokeStyle=css(mix(WOOD,C.grass,.2));g.lineWidth=5;for(let i=0;i<6;i++){const x=dx-140+i*len/6;g.beginPath();g.moveTo(x,dy-16);g.lineTo(x+(i%2?18:-14),dy-44);g.stroke()}}
+    for(let i=0;i<N.deadfall-S.deadfall&&i<6;i++)sideStump(g,dx-170+i*30,dy+30,.6);
+    // snares on the game trail
+    p.snares.forEach(([x,y],i)=>{const set=i<S.snares;g.strokeStyle=css(C.ink,set?.85:.25);g.lineWidth=3;g.beginPath();g.moveTo(x-14,y);g.lineTo(x-14,y-34);g.moveTo(x+14,y);g.lineTo(x+14,y-34);g.moveTo(x-16,y-32);g.lineTo(x+16,y-32);g.stroke();
+      if(set){g.strokeStyle=css(C.snow,.9);g.lineWidth=1.5;g.beginPath();g.arc(x,y-16,9,0,6.283);g.stroke()}
+      if(i<S.caught){g.fillStyle=css(FUR);g.beginPath();g.ellipse(x+30,y-6,18,10,0,0,6.283);g.fill();g.beginPath();g.ellipse(x+44,y-18,3,9,.5,0,6.283);g.fill()}});
+    g.fillStyle=css(C.ink,.4);for(let i=0;i<10;i++){g.beginPath();g.ellipse(980+i*40,742+(i%2)*6,4,2.5,0,0,6.283);g.fill()}}
+  drawSideFront(g,k)}
+// spots for clicking, in side-view coordinates
+function sideSpot(name){const p=SP[S.site];switch(name){
+  case 'pile':return[p.pile[0],p.pile[1]-30,70];case 'fire':return[p.fire[0],p.fire[1]-20,60];case 'rack':return[p.rack[0],p.rack[1]-30,70];
+  case 'shelter':return[p.shelter[0],p.shelter[1]-40,120];case 'pack':return[p.pack[0],p.pack[1]-24,34];case 'stump':return[p.stump[0],p.stump[1]-30,40];
+  case 'rock':return[p.rock[0],p.rock[1]-20,70];case 'bush':return[p.bush[0],p.bush[1],80];
+  case 'deadfall':return[p.deadfall[0],p.deadfall[1]-10,140];case 'snares':return[p.snares[1][0],p.snares[1][1]-20,150];case 'catch':return[p.snares[2][0],p.snares[2][1]-20,60]}
+  return null}
+const sideTreeOf=i=>sideScene('woods').fell[i];
+function sideTreeAt(x,y){const sc=sideScene(S.site);if(S.site==='woods'){let best=null;sc.fell.forEach((t,i)=>{if(S.felled.includes(i))return;const w=t.h*.3*(y-(t.b-t.h))/t.h;if(y>t.b-t.h&&y<t.b&&Math.abs(x-t.x)<Math.max(14,w)&&(!best||t.b>best.b))best={i,b:t.b}});return best&&best.i}
+  let best=null;sc.mid.forEach((t,i)=>{if(!t.click)return;const w=t.h*.3*(y-(t.b-t.h))/t.h;if(y>t.b-t.h&&y<t.b-10&&Math.abs(x-t.x)<Math.max(12,w))best={i,b:t.b}});return best&&best.i}
+function exitAt(x,y){const e=SP[S.site].exits.find(([s,ex,ey])=>Math.hypot(x-ex,y-ey)<70);return e&&e[0]}
+// ---------- the person: boots, wool trousers, a red parka with a fur hood, a beanie, a beard ----------
+function drawSidePerson(t){const k=S.site;if(P.site!==k){P.site=k;P.x=k==='camp'?800:k==='shore'?330:330;P.y=SP[k].ground;P.tx=P.x;P.ty=P.y;P.face=1}
+  const dx=P.tx-P.x,dy=P.ty-P.y,d=Math.hypot(dx,dy),moving=d>2;if(moving){const v=Math.min(d,reduce?d:5.5);P.x+=dx/d*v;P.y+=dy/d*v;if(Math.abs(dx)>1)P.face=dx>0?1:-1}
+  const s=.9+(P.y-680)/260,ph=moving?t*9:0,leg=Math.sin(ph)*16*(moving?1:0),bob=moving?Math.abs(Math.sin(ph))*-3:Math.sin(t*1.6)*1.2;
+  lc.save();lc.translate(P.x,P.y);lc.scale(s*P.face,s);
+  lc.fillStyle=css(C.ink,.28);lc.beginPath();lc.ellipse(0,2,34,7,0,0,6.283);lc.fill();
+  const coat=[150,62,42],coatD=mix(coat,C.ink,.35),pants=[58,64,66],boot=[66,46,34],skin=[214,176,142],hat=[46,86,88];
+  const legDraw=(sw,shade)=>{lc.save();lc.translate(sw>0?6:-6,-62+bob);lc.rotate(sw/60);lc.fillStyle=css(mix(pants,C.ink,shade));lc.beginPath();lc.roundRect(-7,0,14,52,5);lc.fill();lc.fillStyle=css(mix(boot,C.ink,shade));lc.beginPath();lc.roundRect(-8,46,22,14,5);lc.fill();lc.restore()};
+  legDraw(-leg,.25);
+  lc.save();lc.translate(0,-128+bob);lc.rotate(leg/90);lc.fillStyle=css(coatD);lc.beginPath();lc.roundRect(-7,0,13,52,6);lc.fill();lc.fillStyle=css([60,60,58]);lc.beginPath();lc.arc(0,54,7,0,6.283);lc.fill();lc.restore();
+  legDraw(leg,0);
+  lc.fillStyle=css(coat);lc.beginPath();lc.moveTo(-20,-62+bob);lc.lineTo(-22,-128+bob);lc.quadraticCurveTo(0,-142+bob,22,-128+bob);lc.lineTo(21,-62+bob);lc.closePath();lc.fill();
+  lc.fillStyle=css(coatD);lc.fillRect(-21,-70+bob,42,8);lc.fillStyle=css(mix(coat,C.snow,.12));lc.fillRect(2,-126+bob,3,60);
+  lc.fillStyle=css([30,30,30]);lc.fillRect(-21,-90+bob,42,5);
+  lc.fillStyle=css(skin);lc.beginPath();lc.arc(4,-152+bob,14,0,6.283);lc.fill();
+  lc.fillStyle=css(skin);lc.beginPath();lc.moveTo(16,-156+bob);lc.lineTo(22,-150+bob);lc.lineTo(16,-148+bob);lc.fill();
+  lc.fillStyle=css([96,66,44]);lc.beginPath();lc.arc(4,-152+bob,14.5,.15,Math.PI*.95);lc.quadraticCurveTo(4,-147+bob,17,-148+bob);lc.closePath();lc.fill();
+  lc.fillStyle=css(C.ink);lc.beginPath();lc.arc(12,-157+bob,1.8,0,6.283);lc.fill();lc.fillStyle=css(mix(skin,C.ink,.25));lc.beginPath();lc.arc(-4,-153+bob,3,0,6.283);lc.fill();
+  lc.fillStyle=css(hat);lc.beginPath();lc.arc(3,-160+bob,15,Math.PI,0);lc.fill();lc.fillStyle=css(mix(hat,C.ink,.3));lc.fillRect(-12,-162+bob,30,6);
+  lc.fillStyle=css(mix(C.snow,[200,180,150],.4));lc.beginPath();lc.ellipse(0,-134+bob,20,7,0,0,6.283);lc.fill();
+  lc.save();lc.translate(0,-126+bob);lc.rotate(-leg/90);lc.fillStyle=css(coat);lc.beginPath();lc.roundRect(-7,0,14,54,6);lc.fill();lc.fillStyle=css([70,70,66]);lc.beginPath();lc.arc(0,56,7.5,0,6.283);lc.fill();lc.restore();
+  lc.restore();
+  if(temp()<=0&&!moving&&(t%3.2)<1.2){const a=(t%3.2)/1.2;lc.fillStyle=css(C.snow,.35*(1-a));lc.beginPath();lc.arc(P.x+P.face*(24+a*26)*s,P.y-150*s-a*10,(6+a*10)*s,0,6.283);lc.fill()}}
+function sideWalk(s){if(!s)return;P.tx=clamp(s[0]+(s[0]>P.x?-1:1)*Math.min(70,s[2]*.6),60,W-60);P.ty=clamp(Math.max(SP[S.site].ground-10,Math.min(s[1]+30,SP[S.site].ground+40)),600,860)}
+// fire, smoke and life in side view
+function drawSideLive(t){const k=S.site;
+  if(k==='camp'){const [fx,fy]=SP.camp.fire,lit=S.fire>0,fl=.85+.15*Math.sin(t*7.3)*Math.sin(t*3.1+1);
+    const gr=lc.createRadialGradient(fx,fy-20,6,fx,fy-20,(lit?320:70)*fl);gr.addColorStop(0,css(C.fire,lit?.38:.15));gr.addColorStop(.4,css(C.fire,lit?.12:.04));gr.addColorStop(1,css(C.fire,0));lc.fillStyle=gr;lc.fillRect(fx-340,fy-360,680,560);
+    if(lit){const fh=(62+Math.sin(t*5)*8)*fl;[[C.fire,1,28],[mix(C.fire,C.snow,.45),.6,16],[mix(C.fire,C.snow,.8),.3,7]].forEach(([c,hs,w],j)=>{lc.fillStyle=css(c);lc.beginPath();lc.moveTo(fx-w,fy-6);lc.quadraticCurveTo(fx-w*.6+Math.sin(t*8+j)*4,fy-fh*hs*.6,fx+Math.sin(t*6+j)*6,fy-fh*hs);lc.quadraticCurveTo(fx+w*.6,fy-fh*hs*.5,fx+w,fy-6);lc.closePath();lc.fill()})}
+    else for(let i=0;i<5;i++){lc.fillStyle=css(C.fire,.35+.25*Math.sin(t*2+i));lc.beginPath();lc.arc(fx-14+i*7,fy-6+(i%2)*3,3,0,6.283);lc.fill()}
+    if(t-lastPuff>(lit?.3:1.2)){lastPuff=t;smoke.push({x:fx,y:fy-40,b:t,w:R()*6.28,big:lit})}}
+  // the loon on open water, far out
+  if(k!=='woods'&&!iced()){const x=((t*14)%(W+200))-100,y=k==='shore'?560:HZ+40,dive=(t%40)>34;if(!dive){lc.fillStyle=css(C.ink,.8);lc.beginPath();lc.ellipse(x,y,14,4,0,0,6.283);lc.fill();lc.beginPath();lc.arc(x+12,y-6,4,0,6.283);lc.fill();lc.fillRect(x+10,y-6,3,6)}}
+  // a fox crossing the woods
+  if(k==='woods'){const per=95,a=(t%per)/per;if(a<.35){const x=-60+(a/.35)*(W+120),y=760,b=Math.sin(t*14)*2;lc.save();lc.translate(x,y+b);const fur=mix(C.fire,C.ink,.15);lc.fillStyle=css(C.ink,.2);lc.beginPath();lc.ellipse(0,18,40,6,0,0,6.283);lc.fill();
+    lc.fillStyle=css(fur);lc.beginPath();lc.ellipse(0,0,30,12,0,0,6.283);lc.fill();lc.beginPath();lc.moveTo(-28,-2);lc.quadraticCurveTo(-60,-14,-66,2);lc.quadraticCurveTo(-50,6,-28,4);lc.fill();lc.fillStyle=css(C.snow);lc.beginPath();lc.arc(-64,0,4,0,6.283);lc.fill();
+    lc.fillStyle=css(fur);lc.beginPath();lc.moveTo(24,-6);lc.lineTo(48,-2);lc.lineTo(30,8);lc.closePath();lc.fill();lc.beginPath();lc.moveTo(26,-8);lc.lineTo(30,-22);lc.lineTo(36,-8);lc.fill();
+    lc.strokeStyle=css(C.ink,.8);lc.lineWidth=4;const sw=Math.sin(t*14)*8;[[-16,sw],[-8,-sw],[14,-sw],[22,sw]].forEach(([lx,o])=>{lc.beginPath();lc.moveTo(lx,6);lc.lineTo(lx+o*.5,18);lc.stroke()});lc.restore()}}}
 
 // ---------- screen ----------
 const $=id=>document.getElementById(id);
@@ -883,7 +1067,7 @@ $('hintOk').onclick=()=>{hideHint();showHint()};
 $('hintOff').onclick=()=>{META.tipsOff=true;saveMeta(META);hideHint()};
 function refresh(){if(!S)return;showHint();
   current=ensureScene(S.site);
-  const gctx=$('ground').getContext('2d');gctx.drawImage(dayCanvas(current,S.day),0,0);if(S.site==='camp')drawCampProps(gctx);if(S.site==='woods')drawWoodsProps(gctx);if(S.site==='shore')drawShoreProps(gctx);
+  const gctx=$('ground').getContext('2d');gctx.drawImage(drawSideBg(S.site),0,0);drawSideProps(gctx);
   $('cDay').textContent=`DAY ${S.day} · ${TURN[Math.min(S.turn,2)].toUpperCase()}`;
   $('cWx').textContent=`${deg(temp())} · ${WX[wxNow()]}`;
   const nw=S.wx[S.day],nt=S.temps[S.day];$('cFc').textContent=nw?`Tomorrow: ${WX[nw]}, ${deg(nt)}`:'';
@@ -894,7 +1078,7 @@ function refresh(){if(!S)return;showHint();
   const bar=(k,c)=>`<div class="row${S[k]<25?' low':''}"><span>${k}</span><div class="bar"><span style="width:${S[k]}%;--c:${c}"></span></div><b>${S[k]}</b></div>`;
   const ic=(k,n,title,off)=>`<span class="${off?'off':''}" title="${title}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${n?`<i>${n}</i>`:''}</span>`;
   hud.innerHTML=bar('warmth','#D07A2C')+bar('food','#A7AC98')+bar('body','#7F9DAD')+bar('will','#E4E7E3')+
-    `<div class="inv">${ic('wood',S.wood,'Wood: '+S.wood,!S.wood)}${S.fish?ic('fish',S.fish,'Fish: '+S.fish):''}${S.hares?ic('hare',S.hares,'Hares: '+S.hares):''}${ic('fire',S.fire,S.fire>0?`Fire: ${S.fire} more turns`:'Fire: out',!S.fire)}${S.ankle?ic('ankle',0,'Hurt ankle: walking takes a turn'):''}</div>`;
+    '';$('gear').innerHTML=`<div class="inv">${ic('wood',S.wood,'Wood: '+S.wood,!S.wood)}${S.fish?ic('fish',S.fish,'Fish: '+S.fish):''}${S.hares?ic('hare',S.hares,'Hares: '+S.hares):''}${ic('fire',S.fire,S.fire>0?`Fire: ${S.fire} more turns`:'Fire: out',!S.fire)}${S.ankle?ic('ankle',0,'Hurt ankle: walking takes a turn'):''}</div>`;
   const cold=turnCold();
   acts.innerHTML=`<h3>${SCENES[S.site].name} · ${S.turn<3?TURN[S.turn]:'night is coming'}</h3>`;
   Object.keys(ACTIONS).forEach(id=>{const a=ACTIONS[id];if(a.hidden||a.site!==S.site&&a.site!=='any')return;const av=avail(id);if(av===null)return;
@@ -903,11 +1087,11 @@ function refresh(){if(!S)return;showHint();
     b.onclick=()=>doAction(id);b.onmouseenter=()=>{hover=id};b.onmouseleave=()=>{hover=null};acts.appendChild(b)});
   [...acts.querySelectorAll('.act')].slice(0,9).forEach((b,i)=>b.dataset.k=i+1)}
 
-const ICONS={wood:'<ellipse cx="8" cy="15" rx="6" ry="3"/><ellipse cx="16" cy="15" rx="6" ry="3"/><ellipse cx="12" cy="9" rx="6" ry="3"/>',
-  fish:'<path d="M3 12c3-5 10-5 13 0-3 5-10 5-13 0z"/><path d="M16 12l5-4v8z"/><circle cx="7" cy="11" r=".8"/>',
-  hare:'<ellipse cx="12" cy="16" rx="6" ry="5"/><ellipse cx="9.5" cy="6" rx="1.8" ry="5"/><ellipse cx="14.5" cy="6" rx="1.8" ry="5"/>',
-  fire:'<path d="M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4 3-6 1 2 2 2 3 3 0-3-1-5 0-8z"/>',
-  ankle:'<path d="M9 3v9l-4 5h10l2-3V3"/><path d="M8 8h6M8 11h6"/>'};
+const ICONS={wood:'<rect x="3" y="12" width="17" height="6" rx="3" fill="#7a5532"/><rect x="5" y="6" width="17" height="6" rx="3" fill="#8a6038"/><circle cx="6" cy="15" r="3" fill="#d9b483" stroke="#7a5532"/><circle cx="8" cy="9" r="3" fill="#e2bf8e" stroke="#8a6038"/><circle cx="8" cy="9" r="1" fill="#b08858"/>',
+  fish:'<path d="M2 12c3-5 11-6 15 0-4 6-12 5-15 0z" fill="#8fa7b0"/><path d="M4 12c3 2 9 3 13 0" stroke="#c9d6da" stroke-width="1.4" fill="none"/><path d="M17 12l5-4v8z" fill="#6f8a94"/><circle cx="6" cy="10.8" r="1" fill="#22303a"/>',
+  hare:'<ellipse cx="13" cy="16" rx="7" ry="5" fill="#e6e2d6"/><circle cx="7" cy="13" r="3.4" fill="#ece8dc"/><ellipse cx="6" cy="6.5" rx="1.6" ry="4.6" fill="#ece8dc" transform="rotate(-12 6 6.5)"/><ellipse cx="9" cy="6.8" rx="1.6" ry="4.6" fill="#ddd8ca" transform="rotate(10 9 6.8)"/><circle cx="6" cy="12.5" r=".8" fill="#22303a"/><circle cx="20" cy="15" r="1.6" fill="#fff"/>',
+  fire:'<path d="M12 3c2 3 5 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-8z" fill="#f0a040"/><path d="M12 8c1 2 2 3 2 5a2 2 0 0 1-4 0c0-1 1-2 2-5z" fill="#ffd27a"/><rect x="3" y="17" width="18" height="3" rx="1.5" fill="#7a5532" transform="rotate(-12 12 18.5)"/><rect x="3" y="17" width="18" height="3" rx="1.5" fill="#8a6038" transform="rotate(12 12 18.5)"/>',
+  ankle:'<path d="M8 3h6v10l5 4v3H7l1-7z" fill="#5a4a3e"/><rect x="7" y="8" width="8" height="5" rx="1" fill="#e8e2d2"/><path d="M8 10.5h6" stroke="#c9a" stroke-width="1"/>'};
 const live=$('live'),lc=live.getContext('2d');
 function toCanvas(e){const r=live.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]}
 function hitTest(x,y){let best=null;if(!S)return null;Object.keys(ACTIONS).forEach(id=>{const a=ACTIONS[id];if(a.site!==S.site||!a.spot||a.spot==='tree'||avail(id)===null)return;const s=spotOf(id);if(!s)return;const d=Math.hypot(x-s[0],y-s[1]);if(d<s[2]&&(!best||d<best.d))best={id,d}});return best&&best.id}
@@ -916,16 +1100,16 @@ live.addEventListener('mousemove',e=>{if(!modalEl.hidden||!S){tip.hidden=true;re
   [...acts.querySelectorAll('.act')].forEach(b=>b.classList.toggle('hl',b.dataset.id===id||(hoverTree!=null&&b.dataset.id==='fell')));
   live.style.cursor=id?(ACTIONS[id].open||avail(id)===true&&(ACTIONS[id].free||S.turn<3)?'pointer':'not-allowed'):hoverTree!=null?'pointer':'default';
   if(id){const s=spotOf(id);tip.hidden=false;tip.textContent=ACTIONS[id].name();tip.style.left=(s[0]/W*100)+'%';tip.style.top=((s[1]-s[2]*.6)/H*100)+'%'}
-  else if(hoverTree!=null){const t=current.trees[hoverTree];tip.hidden=false;tip.textContent=S.site==='woods'?'Fell this spruce':S.site==='camp'?'Spruce, shelter from the wind':'Spruce';tip.style.left=(t.x/W*100)+'%';tip.style.top=((t.y-t.r)/H*100)+'%'}
-  else tip.hidden=true});
+  else if(hoverTree!=null){const t=S.site==='woods'?sideTreeOf(hoverTree):sideScene(S.site).mid[hoverTree];tip.hidden=false;tip.textContent=S.site==='woods'?'Fell this spruce':S.site==='camp'?'Spruce, shelter from the wind':'Spruce';tip.style.left=(t.x/W*100)+'%';tip.style.top=((t.b-t.h)/H*100+6)+'%'}
+  else{const ex=exitAt(x,y);if(ex){tip.hidden=false;tip.textContent='To the '+SCENES[ex].name.toLowerCase();tip.style.left=(x/W*100)+'%';tip.style.top=(y/H*100)+'%';live.style.cursor='pointer'}else tip.hidden=true}});
 live.addEventListener('mouseleave',()=>{hover=null;hoverTree=null;tip.hidden=true});
-live.addEventListener('click',e=>{if(!S)return;const [x,y]=toCanvas(e),id=hitTest(x,y);if(id){doAction(id);return}const tr=treeAt(x,y);if(tr!=null){treeClick(tr);return}
+live.addEventListener('click',e=>{if(!S||FLY)return;const [x,y]=toCanvas(e),id=hitTest(x,y);if(id){doAction(id);return}const ex=exitAt(x,y);if(ex){travel(ex);return}const tr=treeAt(x,y);if(tr!=null){treeClick(tr);return}
   if(modalEl.hidden&&!S.over)walkTo([x,y,0])});
 
 const grain=document.createElement('canvas');grain.width=W;grain.height=H;
 (function(){const gc=grain.getContext('2d'),d=gc.createImageData(W,H),p=d.data,gr=mulberry(99);for(let i=0;i<p.length;i+=4){const v=gr();p[i]=p[i+1]=p[i+2]=v>.5?235:20;p[i+3]=gr()*34}gc.putImageData(d,0,0)})();
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const smoke=[],flakes=[];let lastPuff=0;for(let i=0;i<90;i++)flakes.push({x:R()*W,y:R()*H,s:.4+R()*.8,r:1+R()*2.2,p:R()*6});
+let FLY=null;const smoke=[],flakes=[];let lastPuff=0;for(let i=0;i<90;i++)flakes.push({x:R()*W,y:R()*H,s:.4+R()*.8,r:1+R()*2.2,p:R()*6});
 // ---------- life: scenery only, never touches the run ----------
 const life={birds:null,nextBird:6,loon:null,fox:null,nextFox:8,scene:null};
 function drawLife(t){if(reduce)return;const sc=current;
@@ -935,10 +1119,10 @@ function drawLife(t){if(reduce)return;const sc=current;
   if(life.birds){const B=life.birds,age=t-B.b,x0=B.dir>0?-80+age*150:W+80-age*150,y0=B.y+age*B.vy;
     if(x0<-160||x0>W+160){life.birds=null;life.nextBird=t+25+R()*45}
     else B.off.forEach(([dx,dy,p])=>{const x=x0+dx*B.dir,y=y0+dy,f=Math.sin(t*7+p)*10;
-      [[x+60,y+80,css(C.ink,.16),2.4],[x,y,css(C.ink,.9),2.2]].forEach(([bx,by,col,lw])=>{lc.strokeStyle=col;lc.lineWidth=lw;lc.lineCap='round';lc.beginPath();
+      [[x,y,css(C.ink,.9),2.2]].forEach(([bx,by,col,lw])=>{lc.strokeStyle=col;lc.lineWidth=lw;lc.lineCap='round';lc.beginPath();
         lc.moveTo(bx-20,by-f);lc.quadraticCurveTo(bx-9,by-6-f*.3,bx,by);lc.quadraticCurveTo(bx+9,by-6-f*.3,bx+20,by-f);lc.stroke()})})}
   // a loon on the open lake, diving now and then
-  if(sc.kind!=='woods'&&!iced()&&sc.ripples.length){
+  if(false){
     if(!life.loon){const r=sc.ripples[R()*sc.ripples.length|0];life.loon={x:r.x,y:r.y,a:R()*6.28,dive:t+12+R()*20}}
     const L=life.loon;let under=false;
     if(t>L.dive){under=t<L.dive+4;if(!under){L.dive=t+15+R()*25;L.x+=Math.cos(L.a)*60;L.y+=Math.sin(L.a)*60;L.a+=(R()-.5)*2}}
@@ -950,7 +1134,7 @@ function drawLife(t){if(reduce)return;const sc=current;
       lc.beginPath();lc.arc(13,0,4.5,0,6.283);lc.fill();lc.fillStyle=css(C.snow,.85);[[-6,-2],[-2,2],[2,-2],[6,1.5]].forEach(([p,q])=>{lc.fillRect(p,q,1.6,1.6)});lc.restore()}
     else if(t<L.dive+.8){lc.strokeStyle=css(C.snow,.5*(1-(t-L.dive)/.8));lc.lineWidth=1.5;lc.beginPath();lc.arc(L.x,L.y,8+(t-L.dive)*20,0,6.283);lc.stroke()}}
   // a fox trotting out of the woods along the trail
-  if(sc.kind==='woods'){
+  if(false){
     if(!life.fox&&t>life.nextFox){life.fox={b:t,path:sc.paths[0].slice().reverse()}}
     if(life.fox){const F=life.fox,d=(t-F.b)*70;let acc=0,pos=null,ang=0;
       for(let i=0;i<F.path.length-1;i++){const [ax,ay]=F.path[i],[bx,by]=F.path[i+1],seg=Math.hypot(bx-ax,by-ay);if(d<=acc+seg){const k=(d-acc)/seg;pos=[ax+(bx-ax)*k,ay+(by-ay)*k];ang=Math.atan2(by-ay,bx-ax);break}acc+=seg}
@@ -963,25 +1147,16 @@ function drawLife(t){if(reduce)return;const sc=current;
         lc.fillStyle=css(fur);lc.beginPath();lc.ellipse(0,0,14,5.5,0,0,6.283);lc.fill();lc.stroke();
         lc.beginPath();lc.moveTo(12,-4);lc.lineTo(22,0);lc.lineTo(12,4);lc.closePath();lc.fill();lc.stroke();
         lc.fillStyle=css(C.ink);[[13,-5],[13,5]].forEach(([p,q])=>{lc.beginPath();lc.arc(p,q,1.8,0,6.283);lc.fill()});lc.restore()}}}}
-function frame(ms){const t=reduce?0:ms/1000;lc.clearRect(0,0,W,H);
+function frame(ms){const t=reduce?0:ms/1000;lc.clearRect(0,0,W,H);if(FLY)drawFly();
   if(current&&S){const iw=iceW(S.day);
-    current.ripples.forEach(r=>{if(r.L<current.cfg.shallow+iw+.01)return;const a=.5+.5*Math.sin(t*r.s+r.p),dx=Math.sin(t*.15+r.p)*6;lc.strokeStyle=css(mix(C.lake,C.snow,.45),.15+.45*a);lc.lineWidth=2;lc.lineCap='round';
-      lc.beginPath();lc.moveTo(r.x+dx-r.l/2,r.y);lc.quadraticCurveTo(r.x+dx,r.y-4,r.x+dx+r.l/2,r.y);lc.stroke()});
-    if(S.site==='camp'){const lit=S.fire>0,fl=.85+.15*Math.sin(t*7.3)*Math.sin(t*3.1+1);
-      const gr=lc.createRadialGradient(FIRE.x,FIRE.y,4,FIRE.x,FIRE.y,(lit?170:50)*fl);gr.addColorStop(0,css(C.fire,lit?.34:.18));gr.addColorStop(.35,css(C.fire,lit?.12:.05));gr.addColorStop(1,css(C.fire,0));lc.fillStyle=gr;lc.fillRect(FIRE.x-200,FIRE.y-200,400,400);
-      const j=k=>Math.sin(t*(9+k)+k*2)*2.2;
-      if(lit){lc.fillStyle=css(C.fire);lc.beginPath();lc.arc(FIRE.x+j(1),FIRE.y+j(2),14*fl,0,6.283);lc.fill();
-        lc.fillStyle=css(mix(C.fire,C.snow,.45));lc.beginPath();lc.arc(FIRE.x+j(3)-1,FIRE.y+j(4)-1,8.5*fl,0,6.283);lc.fill();
-        lc.fillStyle=css(mix(C.fire,C.snow,.8));lc.beginPath();lc.arc(FIRE.x+j(5)-2,FIRE.y+j(6)-2,3.8,0,6.283);lc.fill()}
-      else{for(let i=0;i<5;i++){lc.fillStyle=css(C.fire,.35+.25*Math.sin(t*2+i));lc.beginPath();lc.arc(FIRE.x-8+i*4,FIRE.y-3+(i%2)*6,2.2,0,6.283);lc.fill()}}
-      if(t-lastPuff>(lit?.32:1.2)){lastPuff=t;smoke.push({x:FIRE.x,y:FIRE.y,b:t,w:R()*6.28,big:lit})}}
+    drawSideLive(t);
     const w=wxNow(),wind=w==='storm'?3:w==='wind'?1.8:1;
     for(let i=smoke.length-1;i>=0;i--){const s=smoke[i],age=t-s.b;if(age>9||S.site!=='camp'){smoke.splice(i,1);continue}
       const k=age/9,x=s.x+age*26*wind+Math.sin(age*.8+s.w)*8,y=s.y-age*17;lc.fillStyle=css(C.snow,(s.big?.2:.08)*(1-k)*(age<.6?age/.6:1));lc.beginPath();lc.arc(x,y,6+age*4.2,0,6.283);lc.fill()}
     if(w==='snow'||w==='storm'){const n=w==='storm'?90:45;for(let i=0;i<n;i++){const f=flakes[i],y=(f.y+t*28*f.s*(w==='storm'?1.8:1))%H,x=((f.x+Math.sin(t*.5+f.p)*14+t*8*wind*(w==='storm'?6:1))%W+W)%W;lc.fillStyle=css(C.snow,.8);lc.beginPath();lc.arc(x,y,f.r,0,6.283);lc.fill()}}
     if(hover&&modalEl.hidden){const s=spotOf(hover);if(s&&ACTIONS[hover].site===S.site){lc.save();lc.setLineDash([8,7]);lc.lineDashOffset=-t*20;lc.strokeStyle=css(C.snow,.95);lc.lineWidth=2.5;lc.beginPath();lc.arc(s[0],s[1],s[2],0,6.283);lc.stroke();lc.restore()}}
-    if(hoverTree!=null&&modalEl.hidden&&current.trees[hoverTree]){const tr=current.trees[hoverTree];lc.save();lc.setLineDash([8,7]);lc.lineDashOffset=-t*20;lc.strokeStyle=css(C.snow,.95);lc.lineWidth=2.5;lc.beginPath();lc.arc(tr.x,tr.y,tr.r+6,0,6.283);lc.stroke();lc.restore()}
-    drawPerson(t);drawLife(t);drawPops();
+    if(hoverTree!=null&&modalEl.hidden){const tr=S.site==='woods'?sideTreeOf(hoverTree):sideScene(S.site).mid[hoverTree];if(tr){lc.save();lc.setLineDash([8,7]);lc.lineDashOffset=-t*20;lc.strokeStyle=css(C.snow,.95);lc.lineWidth=2.5;lc.beginPath();lc.moveTo(tr.x,tr.b-tr.h-8);lc.lineTo(tr.x+tr.h*.36,tr.b+4);lc.lineTo(tr.x-tr.h*.36,tr.b+4);lc.closePath();lc.stroke();lc.restore()}}
+    drawSidePerson(t);drawLife(t);drawPops();
     const tod=!modalEl.hidden&&(S.phase==='night'||S.phase==='slept'||S.over)?3:Math.min(S.turn,2);const tint=[[C.lake,.12],[C.snow,0],[C.ink,.24],[C.ink,.5]][tod];if(tint[1]>0){lc.fillStyle=css(tint[0],tint[1]);lc.fillRect(0,0,W,H)}
     if(tod===2){const g=lc.createLinearGradient(W,0,0,H);g.addColorStop(0,css(C.fire,.16));g.addColorStop(1,css(C.fire,0));lc.fillStyle=g;lc.fillRect(0,0,W,H)}
     if(w==='storm'||w==='over'||w==='snow'){lc.fillStyle=css(C.lake,w==='storm'?.16:.06);lc.fillRect(0,0,W,H)}
@@ -989,6 +1164,33 @@ function frame(ms){const t=reduce?0:ms/1000;lc.clearRect(0,0,W,H);
   const v=lc.createRadialGradient(W/2,H/2,H*.45,W/2,H/2,H*1.05);v.addColorStop(0,css(C.ink,0));v.addColorStop(1,css(C.ink,.42));lc.fillStyle=v;lc.fillRect(0,0,W,H);
   lc.globalAlpha=.5;lc.drawImage(grain,0,0);lc.globalAlpha=1;
   setTimeout(()=>requestAnimationFrame(frame),reduce?500:33)}
+
+// ---------- the drone shot: over camp, shore and woods as they are right now, only a few words ----------
+const flyEl=$('fly'),fgx=flyEl.getContext('2d');
+function topShot(kind){const sc=ensureScene(kind),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(dayCanvas(sc,S.day),0,0);
+  if(kind==='camp')drawCampProps(g);else if(kind==='woods')drawWoodsProps(g);else drawShoreProps(g,sc);
+  if(kind==='camp'&&S.fire>0){const gr=g.createRadialGradient(FIRE.x,FIRE.y,4,FIRE.x,FIRE.y,140);gr.addColorStop(0,css(C.fire,.45));gr.addColorStop(1,css(C.fire,0));g.fillStyle=gr;g.fillRect(FIRE.x-150,FIRE.y-150,300,300)}
+  return c}
+function flyover(lines,done){if(FLY)return;const shots=['camp','shore','woods'].map(topShot);
+  FLY={b:performance.now()/1000,shots,lines,done,dur:Math.max(8,lines.length*2.4+1.6)};flyEl.hidden=false;$('game').classList.add('flying');tip.hidden=true}
+function endFly(){if(!FLY)return;const d=FLY.done;FLY=null;flyEl.hidden=true;$('game').classList.remove('flying');fgx.clearRect(0,0,W,H);if(d)d()}
+flyEl.addEventListener('click',endFly);
+function drawFly(){const t=performance.now()/1000-FLY.b,{dur,shots,lines}=FLY;if(t>dur){endFly();return}
+  const per=dur/3,w=wxNow(),g=fgx;g.fillStyle='#000';g.fillRect(0,0,W,H);
+  for(let i=0;i<3;i++){const a=t-i*per;if(a<-.8||a>per+.8)continue;const k=clamp(a/per,0,1),z=1.32-.16*k,ox=[-90,80,-60][i]*(k-.5)*2,oy=[50,-40,30][i]*(k-.5)*2;
+    g.globalAlpha=clamp(Math.min((a+.8)/.8,(per+.8-a)/.8),0,1);g.save();g.translate(W/2+ox,H/2+oy);g.scale(z,z);g.drawImage(shots[i],-W/2,-H/2);g.restore()}
+  g.globalAlpha=1;
+  if(w==='snow'||w==='storm'){const n=w==='storm'?160:80;for(let i=0;i<n;i++){const f=flakes[i%flakes.length],x=((f.x*1.7+t*(w==='storm'?320:60)*f.s)%W+W)%W,y=((f.y*1.3+t*90*f.s)%H+H)%H;g.fillStyle=css(C.snow,.75);g.beginPath();g.arc(x,y,f.r*1.4,0,6.283);g.fill()}}
+  if(w==='wind'||w==='storm'){g.strokeStyle=css(C.snow,.18);g.lineWidth=2;for(let i=0;i<24;i++){const f=flakes[i],x=((f.x+t*700*f.s)%(W+300))-150,y=f.y;g.beginPath();g.moveTo(x,y);g.lineTo(x+120,y+8);g.stroke()}}
+  if(w!=='clear'){const sh=t*30;g.fillStyle=css(C.ink,w==='storm'?.22:.1);for(let i=0;i<4;i++){g.beginPath();g.ellipse(((i*520+sh)%(W+600))-300,200+i*180,320,140,0,0,6.283);g.fill()}
+    g.fillStyle=css(C.lake,w==='storm'?.25:.1);g.fillRect(0,0,W,H)}
+  const v=g.createRadialGradient(W/2,H/2,H*.4,W/2,H/2,H*1.05);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.55)');g.fillStyle=v;g.fillRect(0,0,W,H);
+  // the words: one at a time in the middle
+  const seg=(dur-1)/lines.length;lines.forEach((ln,i)=>{const a=t-.5-i*seg;if(a<0||a>seg)return;const al=Math.min(1,a/.5,(seg-a)/.5);
+    g.save();g.textAlign='center';g.textBaseline='middle';g.shadowColor='rgba(0,0,0,.6)';g.shadowBlur=18;g.fillStyle=css(C.snow,al);
+    const [big,small]=Array.isArray(ln)?ln:[ln,''];g.font=`700 ${i===0?84:56}px "Barlow Condensed",sans-serif`;try{g.letterSpacing=(i===0?10:4)+'px'}catch(e){}g.fillText(big.toUpperCase(),W/2,H/2-(small?24:0));
+    if(small){g.font='500 34px "Barlow Condensed",sans-serif';try{g.letterSpacing='5px'}catch(e){}g.fillStyle=css(C.snow,al*.85);g.fillText(small.toUpperCase(),W/2,H/2+46)}g.restore()})}
+const remaining=()=>`${S.rivals.length+1} remaining`;
 
 // ---------- sound ----------
 let A=null,soundOn=true;
@@ -1024,6 +1226,7 @@ function openOpts(){const slider=(lab,src)=>{const l=document.createElement('lab
 function closeOpts(){optsM.hidden=true}
 optsM.onclick=e=>{if(e.target===optsM)closeOpts()};$('optBtn').onclick=openOpts;
 addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||e.repeat||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;const key=e.key.toLowerCase();
+  if(FLY){e.preventDefault();endFly();return}
   if(!optsM.hidden){if(key==='escape'||key==='o'){e.preventDefault();closeOpts()}return}
   if(key==='o'||key==='escape'&&modalEl.hidden){e.preventDefault();openOpts();return}
   if(key==='m'){sndBtn.onclick();return}
@@ -1087,6 +1290,6 @@ const scenes={};
 function boot(){newRun();intro();requestAnimationFrame(frame);prefetch()}
 const fontsReady=document.fonts&&document.fonts.load?Promise.race([document.fonts.load('700 24px "Barlow Condensed"'),new Promise(r=>setTimeout(r,1500))]):Promise.resolve();
 fontsReady.then(boot,boot);
-window.__ow={get S(){return S},doAction,travel,ACTIONS,endRun,get META(){return META}};
+window.__ow={endFly:()=>endFly(),get FLY(){return FLY},get S(){return S},doAction,travel,ACTIONS,endRun,get META(){return META}};
 })();
 </script>
