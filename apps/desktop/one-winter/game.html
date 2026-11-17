@@ -1339,7 +1339,7 @@ function startCine(done){S.flags.introStage=0;P.site='camp';if(TOP){P.x=1010;P.y
 function nextCine(){if(!CINE)return;CINE.i++;const st=INTRO[CINE.i];if(!st){endCine();return}CINE.b=performance.now()/1000;
   if(TOP)walkToTop([st.at[0],st.at[1],10]);else{P.face=st.sx>P.x?1:-1;P.tx=st.sx;P.ty=SP.camp.ground+10}if(st.stage!=null){S.flags.introStage=st.stage;sfx(st.stage===2||st.stage===4?'chop':'step');refresh()}
   $('cineK').textContent=st.k||'';$('cineT').textContent=st.t()}
-function endCine(){if(!CINE)return;const d=CINE.done;CINE=null;S.flags.introStage=null;delete S.flags.introStage;META.introSeen=true;saveMeta(META);cineEl.hidden=true;$('game').classList.remove('cine');refresh();save();if(d)d()}
+function endCine(){if(!CINE)return;const d=CINE.done;CINE=null;S.flags.introStage=null;delete S.flags.introStage;META.introSeen=true;saveMeta(META);cineEl.hidden=true;$('game').classList.remove('cine');if(!TOP){P.site='camp';P.x=P.tx=760;P.y=P.ty=SP.camp.ground+10;P.face=1}refresh();save();if(d)d()}
 cineEl.addEventListener('click',e=>{if(e.target.id==='cineSkip'){endCine();return}nextCine()});
 function tickCine(){if(!CINE)return;const st=INTRO[CINE.i];if(st&&performance.now()/1000-CINE.b>st.dur)nextCine()}
 // ---------- the drone shot: over camp, shore and woods as they are right now, only a few words ----------
