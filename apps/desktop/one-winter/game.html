@@ -1127,7 +1127,7 @@ function sideTreeAt(x,y){const sc=sideScene(S.site);if(S.site==='woods'){let bes
   let best=null;sc.mid.forEach((t,i)=>{if(!t.click)return;const w=t.h*.3*(y-(t.b-t.h))/t.h;if(y>t.b-t.h&&y<t.b-10&&Math.abs(x-t.x)<Math.max(12,w))best={i,b:t.b}});return best&&best.i}
 function exitAt(x,y){const e=SP[S.site].exits.find(([s,ex,ey])=>Math.hypot(x-ex,y-ey)<70);return e&&e[0]}
 // ---------- the person: boots, wool trousers, a red parka with a fur hood, a beanie, a beard ----------
-function drawSidePerson(t){const k=S.site;if(P.site!==k){P.site=k;P.x=k==='camp'?800:k==='shore'?330:330;P.y=SP[k].ground;P.tx=P.x;P.ty=P.y;P.face=1}
+function drawSidePerson(t){const k=S.site;if(P.site!==k){P.site=k;P.x=k==='camp'?800:k==='shore'?470:470;P.y=SP[k].ground;P.tx=P.x;P.ty=P.y;P.face=1}
   const dx=P.tx-P.x,dy=P.ty-P.y,d=Math.hypot(dx,dy),moving=d>2;if(moving){const v=Math.min(d,reduce?d:5.5);P.x+=dx/d*v;P.y+=dy/d*v;if(Math.abs(dx)>1)P.face=dx>0?1:-1}
   const s=.9+(P.y-680)/260,ph=moving?t*9:0,leg=Math.sin(ph)*16*(moving?1:0),bob=moving?Math.abs(Math.sin(ph))*-3:Math.sin(t*1.6)*1.2;
   lc.save();lc.translate(P.x,P.y);lc.scale(s*P.face,s);
