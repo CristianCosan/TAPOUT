@@ -332,6 +332,10 @@ paged journal. Placeholder shapes stand in for the art. The three layout guides
 - Tests: save suite (round trip, truncation, bad checksum, all-backups-bad, clear), desktop file
   store, 0.0.2 migration. The settings screen moved to M20 (D-028).
 
+## One Winter ow.17 (2026-11-17), Sir's rules restored
+
+Kit back to Sir's 10 out of 16 (all offered; belt knife added as the 16th). Undid D-132 (Claude's own cold rule). Mara can never drain Will. Bedtime no longer sticks when a card is open at 22:00 (found by a random-click soak). See D-134. Bots with 10 items: casual players win Season 1 at about day 18-19; a random clicker lasts about 9 days. `npm run check` green.
+
 ## One Winter ow.16 (2026-11-17), test build for Sir
 
 Side view kept (Sir picked A). On top of ow.15: Haul driftwood (Shore) and Climb the ridge (Woods), tips that name the goal, the 22:00 bedtime and the hypothermia rule, hut-aware night cards, Dan placed clear of the bars panel, actions only run at their own place (D-133). Checked: mid-day and night save/reload resume correctly; bots: careful and casual players win Season 1 at about day 18, about 13 jobs a day; a random clicker lasts about a week. `npm run check` green.

@@ -193,7 +193,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
     <section>
       <h2>How to play</h2>
       <ol>
-        <li>Pick 4 things for your pack. Playing well unlocks more.</li>
+        <li>Pick 10 of the 16 things for your pack.</li>
         <li>Click things in the picture, or use the list in the corner. Use the names at the top to walk between Camp, Shore and Woods.</li>
         <li>Every job takes time. Outside work stops at dark; the evening is for the fire. Every day is colder. Last one in wins.</li>
         <li>Each win opens a harder season. Playing well unlocks new kit.</li>
@@ -210,7 +210,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 <script>
 (function(){
 "use strict";
-const VERSION='3.0.0-ow.16';
+const VERSION='3.0.0-ow.17';
 const W=1600,H=900;
 const C={snow:[228,231,227],grass:[138,143,126],pine:[47,74,67],lake:[60,90,107],fire:[208,122,44],ink:[28,34,38]};
 const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -464,7 +464,7 @@ function drawWoodsProps(g){
 // ---------- the rules: every number lives here ----------
 const N={start:{warmth:80,food:80,body:90,will:70,wood:1},
   // the clock: a day runs from dawn to bed; dusk comes earlier every day; outside work stops at dark
-  dawn:7,dusk0:18,duskDrop:.12,bed:22,foodHour:1.05,coldDiv:3.4,fireWarmHour:3.5,fireHours:5,fireMax:12,fireNight:8,starveBody:3,coldBody:2,
+  dawn:7,dusk0:18,duskDrop:.12,bed:22,foodHour:1.05,coldDiv:4,fireWarmHour:3.5,fireHours:5,fireMax:12,fireNight:8,starveBody:3,coldBody:2,
   walk:{shore:.25,woods:.4},limp:1.5,
   hours:{wood:1,fire:.5,cook:1,whittle:1,tea:.5,rest:2,shelter:[3,4,5],fish:1.5,sit:1,forage:1.5,setLine:.5,pullLines:.5,fell:2.5,pitch:.5,deadwood:1.5,setSnares:1,checkSnares:.5,confess:.5,drift:1.5,ridge:1.5},
   tempStart:6,tempDrop:1.55,tempFloor:-21,coldBase:5,coldPerDeg:.58,shoreWind:2,shelterDay:2,fireWarm:3,foodTurn:4,
@@ -482,7 +482,7 @@ const partOfDay=()=>dark()?'Evening':S.hour<11?'Morning':S.hour<14?'Midday':S.ho
 const hhmm=h=>{const m=Math.round(h*60)%1440;return `${m/60|0}:${String(m%60).padStart(2,'0')}`};
 const clockStr=()=>`${hhmm(S.hour)} · ${partOfDay()}`;
 const durStr=h=>h<1?`${Math.round(h*60)} min`:`${h%1?(h|0)+'½':h} h`;
-function hrs(id){const v=N.hours[id];return Array.isArray(v)?v[Math.min(S.shelter,v.length-1)]:v||0}
+function hrs(id){const v=N.hours[id];const h=Array.isArray(v)?v[Math.min(S.shelter,v.length-1)]:v||0;return id==='cook'&&has('knife')?h/2:h}
 // after dark you can still work at camp by the fire, but not out at the shore or in the woods
 function canNow(a){if(a.free)return true;if(S.hour>=N.bed)return false;return !dark()||(a.site==='camp'&&a.night)}
 const RIVALS=[['Doug Harlan','he'],['Birch Calloway','he'],['Willem Strand','he'],['Ronald Pike','he'],['Jordie Lavelle','they'],['Cassie Moreau','she'],['Cole Brenner','he'],['Luke Ostrander','he'],['Bree Halvorsen','she']];
@@ -503,9 +503,11 @@ const ITEMS=[
   {id:'tarp',t:'Second tarp',d:'Storm days at camp cost no extra warmth.'},
   {id:'spices',t:'Salt and spices',d:'Every cooked meal gives Will +5 more.'},
   {id:'snowshoes',t:'Snowshoes',d:'Turns in the Woods cost 2 less warmth, and woods work 2 less food.'},
-  {id:'photo',t:'Photo of your parents',d:'Tomas and Ilse at the lake cabin. Will +2 every night.'}];
-const BASE_KIT=['net','blanket','letter','wire','socks','saw','pemmican','firstaid'];
-const PICK=4;
+  {id:'photo',t:'Photo of your parents',d:'Tomas and Ilse at the lake cabin. Will +2 every night.'},
+  {id:'knife',t:'Belt knife',d:'Cooking takes half the time. Whittling gives Will +2 more.'}];
+// Sir's rule: choose 10 out of 16 items, all 16 offered every run
+const BASE_KIT=['net','blanket','letter','wire','socks','saw','harmonica','pemmican','firstaid','thermos','auger','tarp','spices','snowshoes','photo','knife'];
+const PICK=10;
 // small drawings for the pack screen (24x24)
 const W1='#e4e7e3',WD='#8a6038',WL='#d9b483',ST='#8a9294',RD='#b5452f',IK='#22303a';
 const KIT_ICONS={
@@ -524,6 +526,7 @@ const KIT_ICONS={
   snowshoes:`<ellipse cx="8" cy="12" rx="4" ry="8" fill="none" stroke="${WD}" stroke-width="1.5"/><ellipse cx="17" cy="12" rx="4" ry="8" fill="none" stroke="${WD}" stroke-width="1.5"/><path d="M5 9l6 6M5 15l6-6M14 9l6 6M14 15l6-6" stroke="${WL}" stroke-width=".8"/>`,
   harmonica:`<rect x="2" y="9" width="20" height="7" rx="1.5" fill="${ST}"/><rect x="2" y="9" width="20" height="2.5" rx="1" fill="#b9c0c2"/><path d="M5 13.5h1.3M8 13.5h1.3M11 13.5h1.3M14 13.5h1.3M17 13.5h1.3" stroke="${IK}" stroke-width="1.6"/>`,
   photo:`<rect x="3" y="4" width="18" height="16" rx="1" fill="#e8e0cc"/><rect x="5" y="6" width="14" height="10" fill="#6d8aa0"/><circle cx="10" cy="10" r="1.6" fill="${IK}"/><circle cx="14.5" cy="10" r="1.6" fill="${IK}"/><path d="M7.5 16c0-3 5-3 5 0M12 16c0-3 5-3 5 0" fill="${IK}"/>`,
+  knife:`<path d="M4 19l9-9" stroke="${WD}" stroke-width="3" stroke-linecap="round"/><path d="M12 11l7-7c1 2 0 5-3 7l-2 2z" fill="${ST}"/><path d="M12 11l2 2" stroke="${IK}" stroke-width="1"/>`,
   // the kit every contestant brings
   k_tarp:`<path d="M2 19L12 5l10 14z" fill="#3e6f8a"/><path d="M2 19h20" stroke="${WD}" stroke-width="1.6"/>`,
   k_axe:`<path d="M6 21L16 5" stroke="${WD}" stroke-width="2.2" stroke-linecap="round"/><path d="M13 4c3-1 6 1 7 4l-5 2z" fill="${ST}"/>`,
@@ -605,7 +608,7 @@ const ACTIONS={
   tent:{site:'camp',name:()=>'Your shelter',spot:'shelter',open:()=>shelterCard(),say:()=>''},
   pack:{site:'camp',name:()=>'Your pack',spot:'pack',open:()=>packCard(),say:()=>''},
   whittle:{site:'camp',name:()=>'Whittle by the fire',spot:'stump',can:()=>S.fire>0||'Needs a lit fire.',say:()=>'',night:true,
-    run(){S.will+=N.whittleWill;S.whittled=(S.whittled||0)+1;return ['You carve a spoon. It is a bad spoon. You love it.','A little loon, out of birch. It sits on the woodpile now.','Tent pegs, a hook, a handle for the pot. Small jobs, calm hands.'][(S.whittled-1)%3]}},
+    run(){S.will+=N.whittleWill+(has('knife')?2:0);S.whittled=(S.whittled||0)+1;return ['You carve a spoon. It is a bad spoon. You love it.','A little loon, out of birch. It sits on the woodpile now.','Tent pegs, a hook, a handle for the pot. Small jobs, calm hands.'][(S.whittled-1)%3]}},
   tea:{site:'camp',name:()=>'Brew spruce tea',spot:'pot',can:()=>S.fire<=0?'Needs a lit fire.':S.flags.teaDay===S.day?'One pot a day.':true,say:()=>'',night:true,
     run(){S.flags.teaDay=S.day;S.warmth+=N.teaWarm;S.will+=N.teaWill;return ['Needles in the pot, a little snow. It tastes like a Christmas tree and it is the best thing all day.','You hold the cup in both hands until it goes cold.','Steam, pine, quiet. The camera gets a long shot of you doing nothing at all.'][(S.day-1)%3]}},
   rest:{site:'camp',hidden:true,name:()=>'Rest inside',spot:null,say:()=>'',night:true,
@@ -684,7 +687,7 @@ function spotOf(id){const a=ACTIONS[id];if(!a.spot||!S)return null;
   if(a.spot==='linefish'){const i=S.lines.findIndex(l=>l.fish);return i<0?null:[SP.shore.lines[i][0],SP.shore.lines[i][1]-30,55]}
   if(a.site!==S.site)return null;return sideSpot(a.spot)}
 
-function clampAll(){if(S&&!S.over&&S.warmth<=0){S.body+=S.warmth*1.5-6;S.warmth=2;S.hypo=S.day;S.flags.hypoNote=1}['warmth','food','body','will'].forEach(k=>S[k]=clamp(Math.round(S[k]*10)/10,0,100))}
+function clampAll(){['warmth','food','body','will'].forEach(k=>S[k]=clamp(Math.round(S[k]*10)/10,0,100))}
 // time passes: every hour costs food, and warmth unless you sit by a lit fire at camp
 function passTime(h){if(!(h>0))return;S.food-=N.foodHour*h;
   const burn=S.site==='camp'?Math.min(h,Math.max(0,S.fire)):0;
@@ -747,7 +750,7 @@ function after(){clampAll();milestones();
   if(!S.over&&dark()&&S.site!=='camp'&&!S.flags.bed){const from=S.site;S.site='camp';passTime(N.walk[from]||.3);clampAll();log('It is getting dark. You head back to camp.')}
   if(S.hour>=N.bed&&!S.flags.bed){S.flags.bed=true;log('You can barely keep your eyes open. You crawl into the bag.')}
   save();refresh();if(checkEnd())return;if(S.flags.bed)setTimeout(nightfall,700)}
-function checkEnd(){if(S.over)return true;if(S.will<=0){endRun('will');return true}if(S.body<=0){endRun(S.hypo>=S.day-1?'cold':'body');return true}if(S.flags.hypoNote){delete S.flags.hypoNote;log('You can\'t stop shaking. The cold is in your body now. Get to a fire, fast.')}return false}
+function checkEnd(){if(S.over)return true;if(S.will<=0){endRun('will');return true}if(S.warmth<=0||S.body<=0){endRun(S.warmth<=0?'cold':'body');return true}return false}
 
 // ---------- night ----------
 const CARDS={
@@ -757,7 +760,7 @@ const CARDS={
       {t:'Get up and hang the food high',d:'Cold work, but nothing gets your food after this.',run(){S.warmth-=8;S.hung=true;S.will+=3;return 'Numb fingers, a rope over a branch. Done.'}}]},
   phone:{title:'The green light',text:()=>S.day<5?'The sat phone blinks in its pouch. One press and a boat comes. A warm truck, hot coffee, Mara by tomorrow night.':`Day ${S.day}. The sat phone blinks. Everyone would understand. Nobody would blame you.`,
     choices:[{t:'Hold it, then put it away',d:'You choose to stay.',run(){S.will+=8;return 'You zip the pouch shut. That felt like something.'}},
-      {t:'Talk to the camera about Mara',d:'Saying it out loud might help. Or not.',run(){if(R()<.7){S.will+=14;return 'You talk for ten minutes. You feel lighter after.'}S.will-=2;return 'Your voice cracks halfway. You switch the camera off.'}},
+      {t:'Talk to the camera about Mara',d:'Saying it out loud might help. Or not.',run(){if(R()<.7){S.will+=14;return 'You talk for ten minutes. You feel lighter after.'}return 'Your voice cracks halfway. You switch the camera off, but you said it.'}},
       {t:'Press the button',d:'Ends the run. You go home.',danger:true,tap:true}]},
   snow:{title:'First snow',text:()=>`Snow starts after dark. It hisses in the fire and settles on the ${S.shelter>=3?'roof':'tarp'}.`,
     choices:[{t:'Feed the fire all night',d:()=>S.wood>=2?'Uses 2 wood. Warm, but you barely sleep.':'Needs 2 wood.',can:()=>S.wood>=2,run(){S.wood-=2;S.warmth+=15;S.will-=3;S.body-=2;return 'You doze in bits. The fire never goes out.'}},
@@ -872,7 +875,7 @@ function pickCard(){
   for(let tries=0;tries<2;tries++){for(let i=0;i<S.deck.length;i++){const id=S.deck[i];const c=CARDS[id];if(!c.when||c.when()){S.deck.splice(i,1);S.used.push(id);return id}}
     S.deck=shuffle(S.used.filter(id=>!['snow'].includes(id)));S.used=[]}
   return 'owl'}
-function nightfall(){if(S.over||!modalEl.hidden||!S.flags.bed||S.phase==='night')return;S.flags.bed=false;S.site='camp';
+function nightfall(){if(S.over||!S.flags.bed||S.phase==='night')return;if(!modalEl.hidden||FLY||CINE){setTimeout(nightfall,700);return}S.flags.bed=false;S.site='camp';
   const w0=S.warmth,f0=S.food,v0=S.will,b0=S.body,lit=S.fire>0,t=temp()-6;
   S.warmth+=-Math.round(N.nightBase+(N.tempStart-t)*N.nightPerDeg)+S.shelter*N.shelterNight+(has('blanket')?N.blanketNight:0)+(lit?N.fireNight:0);
   S.food-=N.nightFood;S.will-=Math.round(N.nightWill+S.mods.will+S.day*N.nightWillPerDay)-(lit?N.fireWill:0)-(lit&&has('harmonica')?N.harmonica:0)-(has('photo')?N.photo:0);
@@ -943,7 +946,7 @@ function intro(){current=ensureScene('camp');refresh();
     cardEl.appendChild(btn(`Continue day ${saved.day}`,()=>{S=saved;startSound();resume()},'go'));
     cardEl.appendChild(btn('Start a new run',()=>{intro.skipSaved=true;try{localStorage.removeItem('oneWinter.run')}catch(e){}newRun();intro();prefetch()},'choice'));openModal();return}
   const pick=new Set();best=META.best;
-  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · Day 1 · ${deg(S.temps[0])}${best?` · your best: ${PLACE(best.place)} of 10`:''}</p><h2>The boat leaves at dawn</h2><p class="night">This run: ${winterOf().t}. ${winterOf().d}</p><p>Ten people on ten stretches of shore, nobody in sight of anyone. Last one in wins $400,000. </p><p class="k">Every contestant brings</p><div class="bring">${BRING.map(([k,t])=>`<span>${kitIcon(k)}${t}</span>`).join('')}</div><p><b>Pick ${PICK} more things for your pack.</b></p>`;cardEl.classList.add('wide');
+  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · Day 1 · ${deg(S.temps[0])}${best?` · your best: ${PLACE(best.place)} of 10`:''}</p><h2>The boat leaves at dawn</h2><p class="night">This run: ${winterOf().t}. ${winterOf().d}</p><p>Ten people on ten stretches of shore, nobody in sight of anyone. Last one in wins $400,000. </p><p class="k">Every contestant brings</p><div class="bring">${BRING.map(([k,t])=>`<span>${kitIcon(k)}${t}</span>`).join('')}</div><p><b>Pick ${PICK} of these ${S.offer.length} for your pack.</b></p>`;cardEl.classList.add('wide');
   if(META.maxSeason>1){const row=document.createElement('div');row.className='seasons';SEASONS.slice(0,META.maxSeason).forEach((se,i)=>{const b=btn(`<b>${i+1}</b>`,()=>{pickSeason=i+1;newRun(i+1,S.mapSeed,S.winter);intro()},'choice'+(S.season===i+1?' on':''));b.title=se.t+': '+se.d;row.appendChild(b)});
     cardEl.appendChild(row);const sd=document.createElement('p');sd.className='locked';sd.textContent=SEASONS[S.season-1].t+': '+SEASONS[S.season-1].d;cardEl.appendChild(sd)}
   const grid=document.createElement('div');grid.className='kit';cardEl.appendChild(grid);
@@ -1205,7 +1208,7 @@ const TIPS={
   shore:'Fish bite less as the water gets colder. A night line fishes while you sleep.',
   woods:'Snares catch hares overnight. Foxes find a catch that sits too long. Click any tree to fell it.',
   night:'Every night is colder than the one before. Shelter, a blanket and a lit fire each take some of the cold off.',
-  low:'Body drops while Food is empty or Warmth is under 20, and fast once Warmth hits zero. If Body or Will runs out, the run ends.',
+  low:'When any bar reaches zero, the run ends. Body drops while Food is empty or Warmth is under 20.',
   build:'You have enough wood to improve your shelter. Click the tarp. A better shelter makes every night warmer.',
   glow:'Anything you can do right now glows softly on the map. Click it, or use the list on the right.'};
 const hintEl=$('hint');let hintKey=null;
