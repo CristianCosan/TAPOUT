@@ -466,7 +466,7 @@ const N={start:{warmth:80,food:80,body:90,will:70,wood:1},
   // the clock: a day runs from dawn to bed; dusk comes earlier every day; outside work stops at dark
   dawn:7,dusk0:18,duskDrop:.12,bed:22,foodHour:1.05,coldDiv:3.4,fireWarmHour:3.5,fireHours:5,fireMax:12,fireNight:8,starveBody:3,coldBody:2,
   walk:{shore:.25,woods:.4},limp:1.5,
-  hours:{wood:1,fire:.5,cook:1,whittle:1,tea:.5,rest:2,shelter:[3,4,5],fish:1.5,sit:1,forage:1.5,setLine:.5,pullLines:.5,fell:2.5,pitch:.5,deadwood:1.5,setSnares:1,checkSnares:.5,confess:.5},
+  hours:{wood:1,fire:.5,cook:1,whittle:1,tea:.5,rest:2,shelter:[3,4,5],fish:1.5,sit:1,forage:1.5,setLine:.5,pullLines:.5,fell:2.5,pitch:.5,deadwood:1.5,setSnares:1,checkSnares:.5,confess:.5,drift:1.5,ridge:1.5},
   tempStart:6,tempDrop:1.55,tempFloor:-21,coldBase:5,coldPerDeg:.58,shoreWind:2,shelterDay:2,fireWarm:3,foodTurn:4,
   nightBase:10,nightPerDeg:1.35,nightFood:7,nightWill:6,nightWillPerDay:1/3,shelterNight:8,blanketNight:8,fireNight:12,fireWill:4,
   fireWood:2,fireWoodCold:3,fireGain:15,woodGain:2,woodsWood:4,sawBonus:2,woodFood:1.5,woodsFood:2.5,
@@ -633,6 +633,9 @@ const ACTIONS={
       S.will-=3;return R()<.5?'Nothing. The line just hangs there.':'One bite, then gone. You curse at the lake.'}},
   sit:{site:'shore',name:()=>'Sit by the water',spot:'drift',can:()=>S.flags.sitDay!==S.day||'You did that today.',say:()=>'',
     run(){S.flags.sitDay=S.day;S.will+=N.sitWill;return ['You sit on the driftwood and watch the light move on the lake. Nobody needs anything from you.','A loon calls twice. You answer it, badly.','You think about Mara at the landing, and it does not hurt. It helps.','Wind on the water, grey on grey. You breathe until your shoulders drop.'][(S.day-1)%4]}},
+  drift:{site:'shore',name:()=>'Haul driftwood',spot:'drift',can:()=>S.flags.driftDay!==S.day||'You picked the shore clean today.',
+    say:()=>'+3 wood, once a day. Wet work: Warmth −3 more.',
+    run(){S.flags.driftDay=S.day;S.wood+=3;S.warmth-=3;sfx('chop');return 'Grey, sun-bleached logs from the tideline, dragged up above the ice. +3 wood.'}},
   forage:{site:'shore',name:()=>S.hips>0&&S.day<12?'Pick rose hips':'Scrape the shore for food',spot:'bush',
     say:()=>S.hips>0&&S.day<12?`Food +${N.forageFood} now (${S.hips} pickings left). Maybe some driftwood.`:`Food +${N.scrapFood}. The good stuff is gone. Maybe some driftwood.`,
     run(){const good=S.hips>0&&S.day<12;if(good){S.hips--;S.food+=N.forageFood}else S.food+=N.scrapFood;
@@ -655,6 +658,9 @@ const ACTIONS={
     can:()=>S.snares>=3?'All three snares are out.':true,
     say:()=>`Set all three. Each night each one has about ${tens(snareChance())} in 10 chance of a hare.`,
     run(){S.snares=3;return 'Three loops of wire on the hare run, low and open. Now you wait.'}},
+  ridge:{site:'woods',name:()=>'Climb the ridge',spot:'snag',can:()=>!S.flags.ridgeDay||S.day-S.flags.ridgeDay>=3||'You were up there lately.',
+    say:()=>'Look down the lake and count the other camps. Will +5.',
+    run(){S.flags.ridgeDay=S.day;S.will+=5;const n=S.rivals.length;return n>1?`From the top you count ${n} thin lines of smoke down the shore. ${n} people, just as cold as you.`:n===1?'One line of smoke left down the shore. One other person, just as stubborn as you.':'No smoke anywhere but yours.'}},
   checkSnares:{site:'woods',name:()=>`Collect ${S.caught} ${S.caught===1?'hare':'hares'}`,spot:'catch',when:()=>S.caught>0,free:true,
     say:()=>'Free. Bring them back before a fox does.',
     run(){S.hares+=S.caught;S.caughtHares+=S.caught;S.will+=6;const n=S.caught;S.caught=0;return n>1?'Two snowshoe hares. You say thank you out loud.':'A snowshoe hare, already white for winter.'}}
@@ -685,7 +691,7 @@ function passTime(h){if(!(h>0))return;S.food-=N.foodHour*h;
   S.warmth+=N.fireWarmHour*burn-warmCost()/N.coldDiv*(h-burn);
   S.fire=Math.max(0,S.fire-h);if(S.food<=0)S.body-=N.starveBody*h;if(S.warmth<20)S.body-=N.coldBody*h;S.hour+=h;setTurn()}
 function passTurn(){passTime(3)}
-function doAction(id){if(!S||S.over||!modalEl.hidden||FLY||CINE)return;const a=ACTIONS[id];if(a.open){walkTo(spotOf(id));a.open();return}if(avail(id)!==true||!canNow(a))return;
+function doAction(id){if(!S||S.over||!modalEl.hidden||FLY||CINE)return;const a=ACTIONS[id];if(!a||(a.site&&a.site!==S.site))return;if(a.open){walkTo(spotOf(id));a.open();return}if(avail(id)!==true||!canNow(a))return;
   const s=a.spot?spotOf(id):null;if(s){walkTo(s);P.work=1.3}const before=snap();
   log(a.run());popDiff(before,s?[s[0],s[1]-s[2]*.6]:[P.x,P.y-200]);passTime(hrs(id));after()}
 const POPK=[['warmth','warmth'],['food','food'],['body','body'],['will','will'],['wood','wood'],['fish','fish'],['hares','hare']];
@@ -745,7 +751,7 @@ function checkEnd(){if(S.over)return true;if(S.will<=0){endRun('will');return tr
 
 // ---------- night ----------
 const CARDS={
-  cache:{title:'Scratching in the dark',text:()=>S.hung?'Something sniffs around the woodpile. Your food hangs high in a tree. It can sniff all it wants.':(S.fish+S.hares)>0?'Something small and quick is at your food. You can hear it chewing.':'Something sniffs along the tarp, then the woodpile. Small, quick, curious.',
+  cache:{title:'Scratching in the dark',text:()=>S.hung?'Something sniffs around the woodpile. Your food hangs high in a tree. It can sniff all it wants.':(S.fish+S.hares)>0?'Something small and quick is at your food. You can hear it chewing.':`Something sniffs along the ${S.shelter>=3?'hut wall':'tarp'}, then the woodpile. Small, quick, curious.`,
     choices:[{t:'Shout and shine the light',d:'It will probably run. Your heart will race.',run(){if(R()<.75){S.will-=2;return 'It bolts. A marten, tail like a bottle brush. You laugh, shaking.'}if(loseFood())return 'It runs, and takes some of your food with it.';S.will-=4;return 'It hisses at you from the dark before it goes.'}},
       {t:'Stay in the sleeping bag',d:'Stay warm. Lose whatever it finds.',run(){if(loseFood()){S.will-=4;return 'In the morning some food is gone. Tiny tracks everywhere.'}S.warmth+=4;return 'You stay warm. By morning it has moved on.'}},
       {t:'Get up and hang the food high',d:'Cold work, but nothing gets your food after this.',run(){S.warmth-=8;S.hung=true;S.will+=3;return 'Numb fingers, a rope over a branch. Done.'}}]},
@@ -753,10 +759,10 @@ const CARDS={
     choices:[{t:'Hold it, then put it away',d:'You choose to stay.',run(){S.will+=8;return 'You zip the pouch shut. That felt like something.'}},
       {t:'Talk to the camera about Mara',d:'Saying it out loud might help. Or not.',run(){if(R()<.7){S.will+=14;return 'You talk for ten minutes. You feel lighter after.'}S.will-=2;return 'Your voice cracks halfway. You switch the camera off.'}},
       {t:'Press the button',d:'Ends the run. You go home.',danger:true,tap:true}]},
-  snow:{title:'First snow',text:()=>'Snow starts after dark. It hisses in the fire and settles on the tarp.',
+  snow:{title:'First snow',text:()=>`Snow starts after dark. It hisses in the fire and settles on the ${S.shelter>=3?'roof':'tarp'}.`,
     choices:[{t:'Feed the fire all night',d:()=>S.wood>=2?'Uses 2 wood. Warm, but you barely sleep.':'Needs 2 wood.',can:()=>S.wood>=2,run(){S.wood-=2;S.warmth+=15;S.will-=3;S.body-=2;return 'You doze in bits. The fire never goes out.'}},
       {t:'Bank the coals and sleep',d:'Colder, but you rest.',run(){S.warmth-=10;S.body+=6;return 'You wake stiff with frost on the bag, but rested.'}},
-      {t:'Shake the tarp and dig in',d:()=>S.shelter>0?'Your boughs keep you off the frozen ground.':'Without a bough bed this will be cold.',run(){if(S.shelter>0){S.warmth+=5;S.will+=3;return 'Snug in the boughs. The snow is almost pretty.'}S.warmth-=6;S.will-=3;return 'Wet knees, cold hands, a long night.'}}]},
+      {t:'Dig in under the boughs',d:()=>S.shelter>0?'Your boughs keep you off the frozen ground.':'Without a bough bed this will be cold.',run(){if(S.shelter>0){S.warmth+=5;S.will+=3;return 'Snug in the boughs. The snow is almost pretty.'}S.warmth-=6;S.will-=3;return 'Wet knees, cold hands, a long night.'}}]},
   wolves:{title:'Wolves',text:()=>'Wolves howl across the lake. Close or far, you cannot tell.',
     choices:[{t:'Build the fire up',d:()=>S.wood>=1?'Uses 1 wood. Warmth +6.':'Needs 1 wood.',can:()=>S.wood>=1,run(){S.wood--;S.warmth+=6;S.will+=2;return 'Sparks go up. The howling moves off.'}},
       {t:'Just listen',d:'It could be beautiful. It could be awful.',run(){if(R()<.6){S.will+=7;return 'It goes on for minutes. You have never heard anything like it.'}S.will-=6;return 'Every crack of a branch is a wolf after that.'}},
@@ -766,7 +772,7 @@ const CARDS={
       {t:'Stay in the bag',d:'Body +3.',run(){S.body+=3;return 'You listen until the splashing fades.'}}]},
   aurora:{title:'The sky is moving',text:()=>'Green curtains hang over the lake, folding and unfolding.',
     choices:[{t:'Get up and watch',d:'Warmth −8.',run(){S.warmth-=8;S.will+=12;return 'You stand there until your toes go numb. Worth it.'}},
-      {t:'Stay warm',d:'Warmth +2.',run(){S.warmth+=2;return 'You see a sliver of it through the tarp.'}}]},
+      {t:'Stay warm',d:'Warmth +2.',run(){S.warmth+=2;return S.shelter>=3?'You see a sliver of it through the door.':'You see a sliver of it past the tarp.'}}]},
   boots:{title:'Frozen boots',text:()=>'Your boots froze stiff where you left them.',when:()=>S.day>4,
     choices:[{t:'Thaw them inside your bag',d:'Warmth −6.',run(){S.warmth-=6;return 'Wet, cold lumps against your belly all night. They thaw.'}},
       {t:'Thaw them at the fire',d:()=>S.wood>=1?'Uses 1 wood.':'Needs 1 wood.',can:()=>S.wood>=1,run(){S.wood--;return 'They steam and stink. Warm by morning.'}},
@@ -792,7 +798,7 @@ const CARDS={
   ice:{title:'The lake booms',text:()=>'All night the ice groans and booms as it grows. Like thunder underneath you.',when:()=>S.day>=iceDay()-1,
     choices:[{t:'Listen to it',d:'Will +5.',run(){S.will+=5;return 'Eerie, and beautiful.'}},
       {t:'Pull the hood tight',d:'Body +3.',run(){S.body+=3;return 'You sleep, mostly.'}}]},
-  owl:{title:'The owl',text:()=>'A great grey owl lands on the ridge pole of your tarp and stares at the fire.',
+  owl:{title:'The owl',text:()=>`A great grey owl lands on ${S.shelter>=3?'the chimney':'the ridge pole of your tarp'} and stares at the fire.`,
     choices:[{t:'Talk to it',d:'Will +6.',run(){S.will+=6;return 'It listens to your whole day. Then it is gone without a sound.'}},
       {t:'Shoo it off',d:'Nothing happens.',run(){return 'It goes. You feel a bit lonelier.'}}]}
 };
@@ -805,7 +811,7 @@ Object.assign(CARDS,{
       {t:'Sleep it off',d:'It might pass. It might not.',run(){if(R()<.5){S.body-=2;return 'It passes in the night.'}S.body-=10;return 'A bad night. You feel hollow in the morning.'}}]},
   stars:{title:'No moon',text:()=>'No moon, no cloud. More stars than dark.',when:()=>wxNow()==='clear',
     choices:[{t:'Lie on your back and look',d:'Warmth −6, Will +8.',run(){S.warmth-=6;S.will+=8;return 'A satellite crosses. Then another. You lose count.'}},
-      {t:'Stay in the bag',d:'Warmth +2.',run(){S.warmth+=2;return 'You fall asleep looking out the gap in the tarp.'}}]},
+      {t:'Stay in the bag',d:'Warmth +2.',run(){S.warmth+=2;return S.shelter>=3?'You fall asleep watching the fire through the door.':'You fall asleep looking out the gap in the tarp.'}}]},
   wolverine:{title:'Something heavy',text:()=>'Something heavy is pulling at the woodpile. It grunts.',when:()=>S.day>7&&S.wood>=2,
     choices:[{t:'Bang the pot and yell',d:'It will probably go. Will −2.',run(){S.will-=2;if(R()<.75)return 'A wolverine, low and wide. It goes, slowly, like it is doing you a favour.';S.wood-=2;return 'It takes its time. Two logs gone.'}},
       {t:'Let it be',d:'You will lose some wood.',run(){S.wood=Math.max(0,S.wood-2);return 'In the morning, two logs are dragged off into the trees.'}}]},
@@ -1194,12 +1200,12 @@ function ensureScene(k){const ms=S?S.mapSeed|0:0;if(!scenes[k]||scenes[k].ms!==m
 function prefetch(){setTimeout(()=>{ensureScene('shore');setTimeout(()=>ensureScene('woods'),60)},60)}
 // ---------- tips: plain facts, shown once each, never required ----------
 const TIPS={
-  start:'Every hour costs food and warmth. Sitting at camp by a lit fire, warmth goes up instead.',
-  dusk:'After dark you can only work at camp. A fire still burning when you go to sleep makes the night much warmer.',
+  start:'Outlast the other nine. Every hour costs food and warmth; sitting at camp by a lit fire, warmth goes up instead.',
+  dusk:'After dark you can only work at camp. You fall asleep at 22:00. A fire still burning when you sleep makes the night much warmer.',
   shore:'Fish bite less as the water gets colder. A night line fishes while you sleep.',
   woods:'Snares catch hares overnight. Foxes find a catch that sits too long. Click any tree to fell it.',
   night:'Every night is colder than the one before. Shelter, a blanket and a lit fire each take some of the cold off.',
-  low:'When any bar reaches zero, the run ends. Body drops while Food is empty or Warmth is under 20.',
+  low:'Body drops while Food is empty or Warmth is under 20, and fast once Warmth hits zero. If Body or Will runs out, the run ends.',
   build:'You have enough wood to improve your shelter. Click the tarp. A better shelter makes every night warmer.',
   glow:'Anything you can do right now glows softly on the map. Click it, or use the list on the right.'};
 const hintEl=$('hint');let hintKey=null;
