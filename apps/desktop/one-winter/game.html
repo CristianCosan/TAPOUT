@@ -464,7 +464,7 @@ function drawWoodsProps(g){
 // ---------- the rules: every number lives here ----------
 const N={start:{warmth:80,food:80,body:90,will:70,wood:1},
   // the clock: a day runs from dawn to bed; dusk comes earlier every day; outside work stops at dark
-  dawn:7,dusk0:18,duskDrop:.12,bed:22,foodHour:1.05,coldDiv:4,fireWarmHour:3.5,fireHours:5,fireMax:12,fireNight:8,starveBody:3,coldBody:2,
+  dawn:7,dusk0:18,duskDrop:.12,bed:22,foodHour:1.05,coldDiv:3.4,fireWarmHour:3.5,fireHours:5,fireMax:12,fireNight:8,starveBody:3,coldBody:2,
   walk:{shore:.25,woods:.4},limp:1.5,
   hours:{wood:1,fire:.5,cook:1,whittle:1,tea:.5,rest:2,shelter:[3,4,5],fish:1.5,sit:1,forage:1.5,setLine:.5,pullLines:.5,fell:2.5,pitch:.5,deadwood:1.5,setSnares:1,checkSnares:.5,confess:.5},
   tempStart:6,tempDrop:1.55,tempFloor:-21,coldBase:5,coldPerDeg:.58,shoreWind:2,shelterDay:2,fireWarm:3,foodTurn:4,
@@ -678,7 +678,7 @@ function spotOf(id){const a=ACTIONS[id];if(!a.spot||!S)return null;
   if(a.spot==='linefish'){const i=S.lines.findIndex(l=>l.fish);return i<0?null:[SP.shore.lines[i][0],SP.shore.lines[i][1]-30,55]}
   if(a.site!==S.site)return null;return sideSpot(a.spot)}
 
-function clampAll(){['warmth','food','body','will'].forEach(k=>S[k]=clamp(Math.round(S[k]*10)/10,0,100))}
+function clampAll(){if(S&&!S.over&&S.warmth<=0){S.body+=S.warmth*1.5-6;S.warmth=2;S.hypo=S.day;S.flags.hypoNote=1}['warmth','food','body','will'].forEach(k=>S[k]=clamp(Math.round(S[k]*10)/10,0,100))}
 // time passes: every hour costs food, and warmth unless you sit by a lit fire at camp
 function passTime(h){if(!(h>0))return;S.food-=N.foodHour*h;
   const burn=S.site==='camp'?Math.min(h,Math.max(0,S.fire)):0;
@@ -741,7 +741,7 @@ function after(){clampAll();milestones();
   if(!S.over&&dark()&&S.site!=='camp'&&!S.flags.bed){const from=S.site;S.site='camp';passTime(N.walk[from]||.3);clampAll();log('It is getting dark. You head back to camp.')}
   if(S.hour>=N.bed&&!S.flags.bed){S.flags.bed=true;log('You can barely keep your eyes open. You crawl into the bag.')}
   save();refresh();if(checkEnd())return;if(S.flags.bed)setTimeout(nightfall,700)}
-function checkEnd(){if(S.over)return true;if(S.will<=0){endRun('will');return true}if(S.warmth<=0||S.body<=0){endRun(S.warmth<=0?'cold':'body');return true}return false}
+function checkEnd(){if(S.over)return true;if(S.will<=0){endRun('will');return true}if(S.body<=0){endRun(S.hypo>=S.day-1?'cold':'body');return true}if(S.flags.hypoNote){delete S.flags.hypoNote;log('You can\'t stop shaking. The cold is in your body now. Get to a fire, fast.')}return false}
 
 // ---------- night ----------
 const CARDS={
