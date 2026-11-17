@@ -91,11 +91,12 @@ body.app .stage{border:0}
 .choice.danger b{color:var(--fire)}
 .choice.on{border-color:var(--fire);background:rgba(208,122,44,.16)}
 .choice.on b::after{content:"  ✓";color:var(--fire)}
+.card.wide{width:min(980px,96%)}.kit{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}.kit .choice{grid-template-columns:44px 1fr;column-gap:10px;align-items:center}.kit .choice .ki{grid-row:1/3;width:44px;height:44px}.kit .choice small{font-size:13px}
+.bring{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:#B9BEB0}.bring span{display:flex;align-items:center;gap:6px}.bring .ki{width:26px;height:26px}
 .story{margin:0;padding:0;list-style:none;display:grid;gap:5px;font-size:15px;line-height:1.4;color:#C9CDC2;border-left:2px solid rgba(208,122,44,.5);padding-left:12px}
 .story b{font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-size:13px;color:var(--fire);margin-right:6px}
 .past{font-size:14px;color:#8E9486}.past summary{cursor:pointer;font-family:var(--display);letter-spacing:.1em;text-transform:uppercase}
 .past ol{margin-top:6px;gap:3px}.past b{color:var(--fg)}
-.kit{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media (max-width:560px){.kit{grid-template-columns:1fr}}
 .kit .choice{padding:9px 12px}
 .kit .choice b{font-size:18px}
@@ -184,7 +185,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
     <section>
       <h2>How to play</h2>
       <ol>
-        <li>Pick 3 things for your pack. The choices change every run.</li>
+        <li>Pick 4 things for your pack. Playing well unlocks more.</li>
         <li>Click things in the picture, or use the list in the corner. Use the names at the top to walk between Camp, Shore and Woods.</li>
         <li>Every job takes time. Outside work stops at dark; the evening is for the fire. Every day is colder. Last one in wins.</li>
         <li>Each win opens a harder season. Playing well unlocks new kit.</li>
@@ -475,17 +476,44 @@ const ITEMS=[
   {id:'spices',t:'Salt and spices',d:'Every cooked meal gives Will +5 more.'},
   {id:'snowshoes',t:'Snowshoes',d:'Turns in the Woods cost 2 less warmth, and woods work 2 less food.'},
   {id:'photo',t:'Photo of your parents',d:'Tomas and Ilse at the lake cabin. Will +2 every night.'}];
-const BASE_KIT=['net','blanket','letter','wire','socks','saw'];
+const BASE_KIT=['net','blanket','letter','wire','socks','saw','pemmican','firstaid'];
+const PICK=4;
+// small drawings for the pack screen (24x24)
+const W1='#e4e7e3',WD='#8a6038',WL='#d9b483',ST='#8a9294',RD='#b5452f',IK='#22303a';
+const KIT_ICONS={
+  net:`<path d="M3 5h18v14H3z" fill="none" stroke="${W1}" stroke-width="1.3"/><path d="M3 9.7h18M3 14.3h18M7.5 5v14M12 5v14M16.5 5v14" stroke="${W1}" stroke-width=".9" opacity=".7"/><circle cx="5" cy="5" r="1.4" fill="${RD}"/><circle cx="12" cy="5" r="1.4" fill="${RD}"/><circle cx="19" cy="5" r="1.4" fill="${RD}"/>`,
+  blanket:`<rect x="3" y="7" width="18" height="11" rx="1.5" fill="#7b4a3a"/><path d="M3 10h18M3 15h18" stroke="#d9c7a0" stroke-width="1.4"/><path d="M5 18v2M8 18v2M11 18v2M14 18v2M17 18v2" stroke="#7b4a3a" stroke-width="1"/>`,
+  letter:`<rect x="3" y="6" width="18" height="12" rx="1" fill="#e8e0cc"/><path d="M3 6l9 7 9-7" fill="none" stroke="#a89878" stroke-width="1.3"/><path d="M14.5 15.5c.6-1.2 2.4-1.2 2.6 0 .2-1.2 2-1.2 2.4 0 .1 1-1.6 2.2-2.5 2.8-.9-.6-2.6-1.8-2.5-2.8z" fill="${RD}"/>`,
+  wire:`<ellipse cx="12" cy="12" rx="7" ry="5" fill="none" stroke="#c9a14a" stroke-width="1.3"/><ellipse cx="12" cy="12" rx="5" ry="3.4" fill="none" stroke="#c9a14a" stroke-width="1.3"/><path d="M19 12l3 4" stroke="#c9a14a" stroke-width="1.3"/>`,
+  socks:`<path d="M8 3h6v9l5 4c1.5 1.3.5 4-1.5 4H11c-2 0-3-1-3-3z" fill="#9a8a72"/><path d="M8 3h6v3H8z" fill="#d9c7a0"/><path d="M8 9h6" stroke="#d9c7a0" stroke-width="1.2"/>`,
+  saw:`<path d="M3 15C5 5 19 5 21 15" fill="none" stroke="${RD}" stroke-width="2"/><path d="M3 15h18" stroke="${ST}" stroke-width="2"/><path d="M4 16.5l1-1 1 1 1-1 1 1 1-1 1 1 1-1 1 1 1-1 1 1 1-1 1 1 1-1 1 1 1-1 1 1" stroke="${W1}" stroke-width=".8" fill="none"/>`,
+  pemmican:`<rect x="3" y="8" width="18" height="4" rx="1" fill="#6e4a32"/><rect x="4" y="13" width="17" height="4" rx="1" fill="#7a5538"/><rect x="5" y="18" width="15" height="3" rx="1" fill="#5e3e2a"/><path d="M7 9.5h2M12 9.5h1M16 10h2M8 15h1M13 14.5h2" stroke="#c9a070" stroke-width=".9"/>`,
+  firstaid:`<rect x="3" y="6" width="18" height="13" rx="2" fill="${RD}"/><path d="M9 4h6v2H9z" fill="none" stroke="${RD}" stroke-width="1.3"/><path d="M12 9v7M8.5 12.5h7" stroke="#fff" stroke-width="2.2"/>`,
+  thermos:`<rect x="8" y="6" width="8" height="15" rx="2" fill="#4f6f62"/><rect x="8.5" y="3" width="7" height="3.5" rx="1" fill="${ST}"/><path d="M8 10h8M8 17h8" stroke="#2f4a40" stroke-width="1"/>`,
+  auger:`<path d="M5 4h14" stroke="${RD}" stroke-width="2.4" stroke-linecap="round"/><path d="M12 4v16" stroke="${ST}" stroke-width="1.6"/><path d="M9 10l6 2-6 2 6 2-6 2 3 2" fill="none" stroke="${W1}" stroke-width="1.2"/>`,
+  tarp:`<path d="M2 19L12 5l10 14z" fill="#3e6f8a"/><path d="M12 5v14" stroke="#2c536a" stroke-width="1"/><path d="M2 19h20" stroke="${WD}" stroke-width="1.6"/>`,
+  spices:`<rect x="4" y="9" width="6" height="11" rx="1.5" fill="#d9c7a0"/><rect x="4" y="6.5" width="6" height="3" rx="1" fill="${RD}"/><rect x="13" y="11" width="6" height="9" rx="1.5" fill="#d9c7a0"/><rect x="13" y="8.5" width="6" height="3" rx="1" fill="${IK}"/><circle cx="7" cy="15" r="1.5" fill="#a85"/><circle cx="16" cy="16" r="1.2" fill="#666"/>`,
+  snowshoes:`<ellipse cx="8" cy="12" rx="4" ry="8" fill="none" stroke="${WD}" stroke-width="1.5"/><ellipse cx="17" cy="12" rx="4" ry="8" fill="none" stroke="${WD}" stroke-width="1.5"/><path d="M5 9l6 6M5 15l6-6M14 9l6 6M14 15l6-6" stroke="${WL}" stroke-width=".8"/>`,
+  harmonica:`<rect x="2" y="9" width="20" height="7" rx="1.5" fill="${ST}"/><rect x="2" y="9" width="20" height="2.5" rx="1" fill="#b9c0c2"/><path d="M5 13.5h1.3M8 13.5h1.3M11 13.5h1.3M14 13.5h1.3M17 13.5h1.3" stroke="${IK}" stroke-width="1.6"/>`,
+  photo:`<rect x="3" y="4" width="18" height="16" rx="1" fill="#e8e0cc"/><rect x="5" y="6" width="14" height="10" fill="#6d8aa0"/><circle cx="10" cy="10" r="1.6" fill="${IK}"/><circle cx="14.5" cy="10" r="1.6" fill="${IK}"/><path d="M7.5 16c0-3 5-3 5 0M12 16c0-3 5-3 5 0" fill="${IK}"/>`,
+  // the kit every contestant brings
+  k_tarp:`<path d="M2 19L12 5l10 14z" fill="#3e6f8a"/><path d="M2 19h20" stroke="${WD}" stroke-width="1.6"/>`,
+  k_axe:`<path d="M6 21L16 5" stroke="${WD}" stroke-width="2.2" stroke-linecap="round"/><path d="M13 4c3-1 6 1 7 4l-5 2z" fill="${ST}"/>`,
+  k_rod:`<rect x="10" y="3" width="4" height="9" rx="1" fill="${IK}"/><rect x="10.8" y="12" width="2.4" height="9" fill="${ST}"/><path d="M15 6l4-2M15 8l5 0M15 10l4 2" stroke="#f0a040" stroke-width="1.2"/>`,
+  k_pot:`<path d="M5 9h14l-1.5 10h-11z" fill="${ST}"/><path d="M5 9c0-5 14-5 14 0" fill="none" stroke="${W1}" stroke-width="1.2"/>`,
+  k_line:`<circle cx="9" cy="12" r="5.5" fill="none" stroke="${W1}" stroke-width="1.4"/><circle cx="9" cy="12" r="2" fill="${W1}"/><path d="M14 11c4 0 5 3 5 6 0 2-2 2-2 0" fill="none" stroke="${ST}" stroke-width="1.3"/>`,
+  k_wire:`<ellipse cx="12" cy="12" rx="7" ry="5" fill="none" stroke="${ST}" stroke-width="1.3"/><ellipse cx="12" cy="12" rx="5" ry="3.4" fill="none" stroke="${ST}" stroke-width="1.3"/>`,
+  k_crate:`<rect x="2" y="7" width="20" height="13" rx="1.5" fill="#d9a43a"/><rect x="2" y="7" width="20" height="3" fill="#b8862a"/><circle cx="12" cy="15" r="3" fill="${IK}"/><circle cx="12" cy="15" r="1.4" fill="#6d8aa0"/><rect x="9" y="4" width="6" height="3" rx="1" fill="${IK}"/>`};
+const BRING=[['k_tarp','Tarp'],['k_axe','Axe'],['k_rod','Ferro rod'],['k_pot','Pot'],['k_line','Fishing line'],['k_wire','Snare wire'],['k_crate','Camera crate']];
+const kitIcon=id=>`<svg class="ki" viewBox="0 0 24 24" aria-hidden="true">${KIT_ICONS[id]||''}</svg>`;
 const UNLOCKS=[
   {id:'harmonica',how:'reach day 10',test:S=>S.day>=10},
-  {id:'pemmican',how:'catch 4 hares in one run',test:S=>S.caughtHares>=4},
   {id:'auger',how:'catch 3 fish through the ice in one run',test:S=>(S.iceFish||0)>=3},
-  {id:'firstaid',how:'place 3rd or better',test:S=>S.place<=3},
   {id:'thermos',how:'win a run',test:S=>S.result==='win'},
   {id:'tarp',how:'live through 3 storms in one run',test:S=>(S.storms||0)>=3},
   {id:'spices',how:'cook 14 meals in one run',test:S=>(S.meals||0)>=14},
   {id:'snowshoes',how:'cut deadwood 12 times in one run',test:S=>(S.cuts||0)>=12},
-  {id:'photo',how:'reach day 15',test:S=>S.day>=15}];
+  {id:'photo',how:'reach day 15',test:S=>S.day>=15}]
 const SEASONS=[
   {t:'Season 1',d:'A normal winter.'},
   {t:'Season 2 · Early winter',d:'Every day is 3 °C colder.'},
@@ -495,7 +523,8 @@ const SEASONS=[
   {t:'Season 6 · The North',d:'Also: 5 °C colder in all, the lake freezes a day early, few rose hips, the last rivals are the toughest.'}];
 const seasonMods=n=>({temp:n>=6?-5:n>=2?-3:0,fish:n>=3?-.08:0,hips:n>=6?3:n>=3?4:N.hipsStart,snare:n>=4?-.06:0,thief:n>=4?.15:0,will:n>=6?3:n>=5?2:0,force:n>=6?18:n>=5?17:N.forceDay,dbl:n>=6?21:n>=5?20:N.doubleDay,ice:n>=6?-1:0});
 function loadMeta(){let m=null;try{m=JSON.parse(localStorage.getItem('oneWinter.meta')||'null')}catch(e){}
-  if(!m){m={maxSeason:1,unlocked:BASE_KIT.slice(),best:null};try{m.best=JSON.parse(localStorage.getItem('oneWinter.best')||'null')}catch(e){}}return m}
+  if(!m){m={maxSeason:1,unlocked:BASE_KIT.slice(),best:null};try{m.best=JSON.parse(localStorage.getItem('oneWinter.best')||'null')}catch(e){}}
+  BASE_KIT.forEach(id=>{if(!m.unlocked.includes(id))m.unlocked.push(id)});return m}
 function saveMeta(m){try{localStorage.setItem('oneWinter.meta',JSON.stringify(m))}catch(e){}}
 let META=loadMeta(),pickSeason=META.maxSeason;
 const R=Math.random;
@@ -518,7 +547,7 @@ function newRun(season,mapSeed,winter){season=season||pickSeason;const wi=WINTER
   S={hour:N.dawn,winter:wi.id,iceDay:(wi.ice||N.iceDay)+mods.ice,events:[],mapSeed:mapSeed||1+(R()*999983|0),day:1,turn:0,site:'camp',...N.start,fish:0,hares:0,caughtFish:0,caughtHares:0,shelter:0,fire:0,items:[],letter:false,pem:0,aid:0,hips:mods.hips,season,mods,iceFish:0,
     snares:0,caught:0,ankle:0,felled:[],pitch:0,deadfall:N.deadfall,lines:shuffle(LINE_NAMES.slice()).slice(0,2).map(n=>({n,set:false,fish:0})),hung:false,wx:wx.w,temps:wx.t,rivals:RIVALS.map(r=>r[0]),out:[],log:[],over:false,result:null,
     deck:shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw',...['lynx','plane','chocolate','silence'].filter(()=>R()<.35)]),used:[],flags:{},
-    offer:shuffle(META.unlocked.slice()).slice(0,6)}}
+    offer:ITEMS.map(i=>i.id).filter(id=>META.unlocked.includes(id))}}
 const LINE_NAMES=['Old Hope','Pike Rock','Birch Point','The Elbow','Loon Bay','Second Chance','Mara\'s Spot','Cold Feet'];
 const has=id=>S.items.includes(id);
 const temp=()=>S.temps[S.day-1],wxNow=()=>S.wx[S.day-1];
@@ -867,13 +896,13 @@ function intro(){current=ensureScene('camp');refresh();
     cardEl.appendChild(btn(`Continue day ${saved.day}`,()=>{S=saved;startSound();resume()},'go'));
     cardEl.appendChild(btn('Start a new run',()=>{intro.skipSaved=true;try{localStorage.removeItem('oneWinter.run')}catch(e){}newRun();intro();prefetch()},'choice'));openModal();return}
   const pick=new Set();best=META.best;
-  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · Day 1 · ${deg(S.temps[0])}${best?` · your best: ${PLACE(best.place)} of 10`:''}</p><h2>The boat leaves at dawn</h2><p class="night">This run: ${winterOf().t}. ${winterOf().d}</p><p>Ten people on ten stretches of shore, nobody in sight of anyone. Last one in wins $400,000. You have a tarp, an axe, a ferro rod, a pot, a fishing line and three snare wires.</p><p><b>Pick 3 more things for your pack.</b></p>`;
+  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · Day 1 · ${deg(S.temps[0])}${best?` · your best: ${PLACE(best.place)} of 10`:''}</p><h2>The boat leaves at dawn</h2><p class="night">This run: ${winterOf().t}. ${winterOf().d}</p><p>Ten people on ten stretches of shore, nobody in sight of anyone. Last one in wins $400,000. </p><p class="k">Every contestant brings</p><div class="bring">${BRING.map(([k,t])=>`<span>${kitIcon(k)}${t}</span>`).join('')}</div><p><b>Pick ${PICK} more things for your pack.</b></p>`;cardEl.classList.add('wide');
   if(META.maxSeason>1){const row=document.createElement('div');row.className='seasons';SEASONS.slice(0,META.maxSeason).forEach((se,i)=>{const b=btn(`<b>${i+1}</b>`,()=>{pickSeason=i+1;newRun(i+1,S.mapSeed,S.winter);intro()},'choice'+(S.season===i+1?' on':''));b.title=se.t+': '+se.d;row.appendChild(b)});
     cardEl.appendChild(row);const sd=document.createElement('p');sd.className='locked';sd.textContent=SEASONS[S.season-1].t+': '+SEASONS[S.season-1].d;cardEl.appendChild(sd)}
   const grid=document.createElement('div');grid.className='kit';cardEl.appendChild(grid);
   const go=btn('Start the run',()=>{S.items=[...pick];startSound();closeModal();log('The boat is gone. Just you, the lake and the cameras.');save();refresh();flyover([['Day 1',`Morning · ${remaining()}`],[`${S.lines[0].n} and ${S.lines[1].n}`,'good spots for a night line']].slice(0,1),()=>refresh())},'go');go.disabled=true;
-  S.offer.forEach(id=>{const it=ITEMS.find(i=>i.id===id);const b=btn(`<b>${it.t}</b><small>${it.d}</small>`,()=>{if(pick.has(id))pick.delete(id);else if(pick.size<3)pick.add(id);b.classList.toggle('on',pick.has(id));go.disabled=pick.size!==3;go.textContent=pick.size===3?'Start the run':`Pick ${3-pick.size} more`},'choice');grid.appendChild(b)});
-  go.textContent='Pick 3 more';cardEl.appendChild(go);
+  S.offer.forEach(id=>{const it=ITEMS.find(i=>i.id===id);const b=btn(`${kitIcon(id)}<b>${it.t}</b><small>${it.d}</small>`,()=>{if(pick.has(id))pick.delete(id);else if(pick.size<PICK)pick.add(id);b.classList.toggle('on',pick.has(id));go.disabled=pick.size!==PICK;go.textContent=pick.size===PICK?'Start the run':`Pick ${PICK-pick.size} more`},'choice');grid.appendChild(b)});
+  go.textContent=`Pick ${PICK} more`;cardEl.appendChild(go);
   if(META.tipsOff){const tb=btn('Turn tips back on',()=>{META.tipsOff=false;META.tipsSeen=[];saveMeta(META);tb.remove()},'choice');cardEl.appendChild(tb)}
   const H=META.history||[];if(H.length){const d=document.createElement('details');d.className='past';
     d.innerHTML=`<summary>Your past runs (${H.length})</summary><ol>${H.map(h=>`<li><b>${PLACE(h.place)}</b> · day ${h.day} · season ${h.season} · ${(WINTERS.find(w=>w.id===h.winter)||WINTERS[0]).t.toLowerCase()} · ${h.items.map(id=>ITEMS.find(i=>i.id===id).t).join(', ')}</li>`).join('')}</ol>`;cardEl.appendChild(d)}
@@ -1087,7 +1116,7 @@ const $=id=>document.getElementById(id);
 const modalEl=$('modal'),cardEl=$('card'),hud=$('hud'),acts=$('acts'),logEl=$('log'),tip=$('tip');
 function openModal(){modalEl.hidden=false;if(hintKey)hideHint();keyNumbers()}
 function keyNumbers(){keyBtns().forEach((b,i)=>b.dataset.k=i+1)}
-function keyBtns(){return [...cardEl.querySelectorAll('.choice,.go')].filter(b=>!b.closest('.seasons')).slice(0,9)}function closeModal(){modalEl.hidden=true}
+function keyBtns(){return [...cardEl.querySelectorAll('.choice,.go')].filter(b=>!b.closest('.seasons')).slice(0,9)}function closeModal(){modalEl.hidden=true;cardEl.classList.remove('wide')}
 function log(t){S.log.push(t);if(S.log.length>2)S.log.shift();logEl.innerHTML=S.log.map(l=>`<p>${l}</p>`).join('')}
 let current=null,hover=null;
 function ensureScene(k){const ms=S?S.mapSeed|0:0;if(!scenes[k]||scenes[k].ms!==ms)scenes[k]=buildScene(k,ms);return scenes[k]}
