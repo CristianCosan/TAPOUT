@@ -332,6 +332,11 @@ paged journal. Placeholder shapes stand in for the art. The three layout guides
 - Tests: save suite (round trip, truncation, bad checksum, all-backups-bad, clear), desktop file
   store, 0.0.2 migration. The settings screen moved to M20 (D-028).
 
+## One Winter ow.15 (2026-11-17), friends build in progress
+- Top-down view again, a clock instead of 3 turns, 4-item kit pick with drawings, lean-to / reflector /
+  hut camp, walk-in intro, soft glow on actions (D-128 to D-131). Target: a polished exe for Sir's
+  friends around 2026-12-01.
+
 ## Not started
 
 M14 onwards: the painted locations, art, audio, narrative pass, Steam.
