@@ -332,6 +332,10 @@ paged journal. Placeholder shapes stand in for the art. The three layout guides
 - Tests: save suite (round trip, truncation, bad checksum, all-backups-bad, clear), desktop file
   store, 0.0.2 migration. The settings screen moved to M20 (D-028).
 
+## One Winter ow.16 (2026-11-17), test build for Sir
+
+Side view kept (Sir picked A). On top of ow.15: Haul driftwood (Shore) and Climb the ridge (Woods), tips that name the goal, the 22:00 bedtime and the hypothermia rule, hut-aware night cards, Dan placed clear of the bars panel, actions only run at their own place (D-133). Checked: mid-day and night save/reload resume correctly; bots: careful and casual players win Season 1 at about day 18, about 13 jobs a day; a random clicker lasts about a week. `npm run check` green.
+
 ## One Winter ow.15 (2026-11-17), friends build in progress
 - Top-down view again, a clock instead of 3 turns, 4-item kit pick with drawings, lean-to / reflector /
   hut camp, walk-in intro, soft glow on actions (D-128 to D-131). Target: a polished exe for Sir's
