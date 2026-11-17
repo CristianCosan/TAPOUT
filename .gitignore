@@ -10,3 +10,4 @@ playwright-report/
 reports/tmp/
 .DS_Store
 dist-types/
+apps/desktop/one-winter/.*.html
