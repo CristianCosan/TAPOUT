@@ -107,12 +107,12 @@ function intro(){current=ensureScene('camp');refresh();if(!META.kit)META.kit={ru
   openModal()}
 function startRun(kit){startSound();closeModal();const L=levelPick();OWX.season=L.season;OWX.winter=L.winter;SES.newRun(kit,String(OWX.mapSeed));
   const lv=levelOf(L.season,L.winter);if(lv){SES.getView().state.level=lv;SES.click('hideModal()')}syncS();saveX();refresh();
-  const first=[[`Day 1`,`${hhmm(V.hour)} · ${WXL()}`]];if(lv)first.push([levelName(),'']);
+  const first=[[`Day 1`,`${hhmm(V.hour)} · ${WXL()} · ${LEFT()}`]];if(lv)first.push([levelName(),'']);
   startCine(()=>flyover(first,()=>refresh()))}
 const WXL=()=>V?noEmo(T.WEATHER[V.weather].label)+' · '+deg(Math.round(T.ambientTempC())):'';
 function resume(){if(!SES.continueRun()){intro.skipSaved=true;newRun();intro();return}OWX=loadX()||{mapSeed:1+(R()*999983|0),felled:[],flags:{},season:1,winter:WINTERS[0].id};
   delete OWX.flags.introStage;S=blankS();syncS();closeModal();refresh();onView();
-  if(!VW.modal&&!VW.endScreen)flyover([[`Day ${V.day}`,`${hhmm(V.hour)} · ${WXL()}`]],()=>refresh())}
+  if(!VW.modal&&!VW.endScreen)flyover([[`Day ${V.day}`,`${hhmm(V.hour)} · ${WXL()} · ${LEFT()}`]],()=>refresh())}
 function save(){if(OWX){if(V)OWX.day=V.day;saveX()}}
 // ---------- everything the run says, drawn ----------
 let OWCARD=false,NIGHTCH=0;
@@ -125,7 +125,10 @@ function onView(){const before=S?S.day:0;syncS();if(!V)return;if(V.day>before&&b
   if(VW.endScreen&&!VW.modal){if(!ENDSHOWN)showEnd();return}
   if(PENDFLY&&!VW.modal&&!FLY&&!CINE){if(!NIGHTCH&&OWX.cardDay!==V.day&&!V.over){OWX.cardDay=V.day;saveX();if(showOWCard())return}PENDFLY=false;dayFly()}}
 SES.subscribe(()=>{if(OWX)onView()});
-function dayFly(){const lines=[[`Day ${V.day}`,`${hhmm(V.hour)} · ${WXL()}`]];
+const LEFT=(n)=>`${n===undefined?V.rivals:n} remaining`;
+// Sir's approved flyover (11-17): the count as it was, each rival who tapped out, then the new count.
+function dayFly(){const out=(V.rivalOrder||[]).filter(r=>r.day===V.day);const lines=[[`Day ${V.day}`,`${hhmm(V.hour)} · ${WXL()} · ${LEFT(V.rivals+out.length)}`]];
+  if(out.length){out.forEach(r=>lines.push([r.name,'tapped out']));lines.push([LEFT(),''])}
   if(T.iceCm()>0)lines.push(['Ice on the lake',Math.round(T.iceCm())+' cm']);
   if(V.weather==='storm')lines.push(['A storm today','']);
   closeModal();music.mood('day');flyover(lines,()=>refresh())}
@@ -175,11 +178,8 @@ function maybeEvent(){if(!V||V.over||VW.modal||OWCARD||!modalEl.hidden||OWX.evDa
   owCardHtml(`Day ${V.day} · ${SCENES[V.loc].name}`,ev.title,ev.text);
   ev.choices.forEach(ch=>cardEl.appendChild(btn(`<b>${ch.t}</b><small>${owWords(ch.d)}</small>`,()=>{const tx=owApply(()=>ch.run());OWCARD=false;closeModal();log(tx);refresh()},'choice')));openModal()}
 function endRun(){if(V&&!V.over)SES.click('confirmTapOut()')}
-function nightfall(){}
 function morning(){}
 function after(){refresh()}
-function checkEnd(){return !!(S&&S.over)}
-function milestones(){}
 // ---------- the picture: places you can click ----------
 function rebuildActions(){Object.keys(ACTIONS).forEach(k=>delete ACTIONS[k]);
   Object.entries(SPOTS).forEach(([site,spots])=>Object.entries(spots).forEach(([spot,ids])=>{ACTIONS[site+':'+spot]={site,spot,ids,name:()=>SPOTNAME[spot]||spot}}))}
@@ -191,7 +191,6 @@ function spotOf(id){const a=ACTIONS[id];if(!a||!a.spot||!S||a.site!==S.site)retu
   if(a.spot==='cache'){const c=SP.camp.cache;return[c[0],c[1]-34,62]}
   if(a.spot==='line'){const l=SP.shore.lines;return[(l[0][0]+l[1][0])/2+40,(l[0][1]+l[1][1])/2-40,110]}
   return sideSpot(a.spot)}
-function hrs(){return 0}
 function doAction(id){if(!S||!V||S.over||!modalEl.hidden||FLY||CINE)return;const a=ACTIONS[id];if(!a||a.site!==S.site)return;
   const s=spotOf(id);if(s)walkTo(s);spotCard(a)}
 function travel(site){if(!V||V.over||!modalEl.hidden||V.loc===site||FLY||CINE)return;const t=VW.hud.get('tab-'+site);if(t&&t.disabled)return;sfx('step');SES.click(`goTo('${site}')`);if(V.loc===site&&!VW.modal)setTimeout(maybeEvent,900)}
@@ -249,7 +248,7 @@ function refresh(){if(!S)return;current=ensureScene(S.site);
   const h=VW.hud,ht=id=>h.get(id)?noEmo((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,'')):'';
   $('cDay').textContent=`DAY ${V.day} · ${hhmm(V.hour)}`;$('cWx').textContent=WXL();$('cFc').textContent=ht('chip-wet')+' · '+ht('pillWeight');
   {const a=T.dawnHour(),b=vDusk()+1.5,el=$('cSlots');el.innerHTML=`<b style="width:${clamp((V.hour-a)/(b-a),0,1)*100}%"></b><u style="left:${(vDusk()-a)/(b-a)*100}%"></u>`}
-  const quiet=!ht('pillRivals');$('rivals').innerHTML=quiet?'':`<b>${V.rivals}</b> ${V.rivals===1?'rival':'rivals'} left`;$('rivals').hidden=quiet;
+  $('rivals').innerHTML=`<b>${V.rivals}</b> ${V.rivals===1?'rival':'rivals'} left`;$('rivals').hidden=false; // Sir 11-19: "show"
   const mp=$('map');mp.innerHTML='';['camp','shore','woods'].forEach(k=>{const b=document.createElement('button');b.type='button';b.textContent=SCENES[k].name;if(k===V.loc)b.className='here';
     const tb=h.get('tab-'+k);b.disabled=k===V.loc||!!(tb&&tb.disabled)||V.over;b.title=ht('tt-'+k)+` (${k[0].toUpperCase()})`;b.onclick=()=>travel(k);mp.appendChild(b)});
   const bar=(k,n,c)=>{const v=k==='energy'?V.energy/V.maxEnergy*100:V[k],val=k==='energy'?ht('val-energy'):Math.round(V[k]),low=k==='stress'?v>75:v<25;
