@@ -9,6 +9,7 @@ import { S } from './state.ts';
 import { LATE_UPGRADES, TARP_STAGE, TUNING } from './tuning.ts';
 import { lateBuilt } from './late.ts';
 import { RULES } from './rules.ts';
+import { levelTempC } from './level.ts';
 // ============================== time, cost & injury engine ==============================
 // v12 §6.1: ankle-specific multiplier table replaces the old blanket 1.5x - travel/wood are hammered
 // (x3.5), most physical work is heavily taxed (x3.0), cooking/boiling stay near-normal (x1.1).
@@ -51,6 +52,7 @@ export function ambientTempC(forceNight?){
   if (S.weather==='storm') t2 -= 8;
   else if (S.weather==='clear') t2 -= 4;
   else if (S.weather==='rain') t2 += 3;
+  t2 += levelTempC();
   return Math.round(t2);
 }
 export function effectiveInsulation(indoors?, fireActive?){

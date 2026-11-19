@@ -3,6 +3,7 @@
 // calls routed through ./ui.ts. Parity with the original is enforced by tests.
 
 import { rand } from './runtime.ts';
+import { levelDawn } from './level.ts';
 import { checkAnkleSalvage } from './breakSequence.ts';
 import { breakdownDailyTick, checkVowDeadline } from './breakdown.ts';
 import { activeChainCount, teethTierForStreak } from './camp.ts';
@@ -391,6 +392,7 @@ export function finishNight(notes?){
   const debtAtDawn = S.energyDebt;
   const intakeRatio = S.kcalBurn > 0 ? S.kcalIntake / S.kcalBurn : 1;
   S.day++;
+  levelDawn();
   S.hour = ((S._bedtimeHour||22) + 6) % 24;
   S.mealsToday = 0; S.darkLogged = false; S.playedToday = false; S.restsToday = 0; S.confessedToday = false; S.sitsToday = 0;
   S.treeMarkedToday = false; S.washedToday = false;

@@ -48,7 +48,7 @@ function syncS(){VW=SES.getView();V=VW?VW.state:null;if(!S)S=blankS();if(!V)retu
 const vDusk=()=>V?T.duskHour():N.dusk0;
 // ---------- start of a run ----------
 function owDeck(){return shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw',...['lynx','plane','chocolate','silence'].filter(()=>R()<.35)])}
-function newRun(){OWX={mapSeed:1+(R()*999983|0),felled:[],flags:{},season:pickSeason,winter:WINTERS[R()*WINTERS.length|0].id,deck:owDeck(),used:[],events:[]};S=blankS();V=null;VW=null;ENDSHOWN=false}
+function newRun(){const L=levelPick();OWX={mapSeed:1+(R()*999983|0),felled:[],flags:{},season:L.season,winter:L.winter,deck:owDeck(),used:[],events:[]};S=blankS();V=null;VW=null;ENDSHOWN=false}
 // Sir 2026-11-19: start with the standard ten; later kit opens by how a run went, about one or two
 // after a first run, a third now and then, a fourth only if you play for it. Every requirement shows.
 const KIT_UNLOCK={rations:{how:'Reach day 6 in a run.',test:v=>v.day>=6},
@@ -59,6 +59,34 @@ const KIT_UNLOCK={rations:{how:'Reach day 6 in a run.',test:v=>v.day>=6},
   shovel:{how:'Finish the timber shelter in a run.',test:v=>(v.structure|0)>=3},
   soap:{how:'Reach day 15 in a run.',test:v=>v.day>=15}};
 const kitName=k=>k.label,kitDo=k=>{const t=noEmo(k.has);return t.charAt(0).toUpperCase()+t.slice(1)+'.'};
+// ---------- harder levels after a win (D-136, Sir chose "Yes, as harder levels after a win") ----------
+// A normal run is season 1 in an ordinary winter and stays pure v12. Each win opens the next season (up to 6).
+// Only effects the full game can carry are used; their numbers ride on the run as state.level.
+const LV_SEASONS=[
+  {t:'Season 1',d:'A normal winter.',m:{}},
+  {t:'Season 2 · Early winter',d:'Every day is 3 °C colder.',m:{temp:-3}},
+  {t:'Season 3 · Lean shore',d:'Also: fish bite less on lines and the net.',m:{temp:-3,fish:-.08}},
+  {t:'Season 4 · Hungry woods',d:'Also: snares catch less.',m:{temp:-3,fish:-.08,snare:-.06}},
+  {t:'Season 5 · The long dark',d:'Also: every night costs 2 morale.',m:{temp:-3,fish:-.08,snare:-.06,nightMorale:2}},
+  {t:'Season 6 · The North',d:'Also: 5 °C colder in all, and every night costs 3 morale.',m:{temp:-5,fish:-.08,snare:-.06,nightMorale:3}}];
+const LV_WINTERS=[
+  {id:'plain',t:'An ordinary winter',d:'Cold, then colder.',m:{}},
+  {id:'mild',t:'A slow start',d:'The first week is 4 °C milder. From day 12 it is 3 °C colder.',m:{mild:true}},
+  {id:'snowy',t:'A snowy winter',d:'Hare tracks are easy to read, so snares catch more.',m:{snare:.06}},
+  {id:'windy',t:'A windy winter',d:'Chop on the lake, so fish bite more.',m:{fish:.05}}];
+function levelPick(){const mx=Math.max(1,Math.min(6,META.maxSeason|0||1)),p=META.level||{};
+  return {season:Math.max(1,Math.min(mx,p.season|0||1)),winter:LV_WINTERS.some(w=>w.id===p.winter)&&mx>1?p.winter:'plain'}}
+function levelOf(season,winter){const a=(LV_SEASONS[season-1]||LV_SEASONS[0]).m,b=(LV_WINTERS.find(w=>w.id===winter)||LV_WINTERS[0]).m;
+  if(season<=1&&winter==='plain')return null;const m={season,winter};
+  ['temp','fish','snare','nightMorale'].forEach(k=>{const v=(a[k]||0)+(b[k]||0);if(v)m[k]=Math.round(v*100)/100});if(b.mild)m.mild=true;return m}
+const levelName=()=>{const L=V&&V.level;if(!L)return '';const w=LV_WINTERS.find(x=>x.id===L.winter);return (LV_SEASONS[L.season-1]||LV_SEASONS[0]).t.split(' · ')[0]+(w&&w.id!=='plain'?' · '+w.t.toLowerCase():'')};
+function levelRows(){const mx=Math.max(1,Math.min(6,META.maxSeason|0||1));if(mx<2)return null;const p=levelPick();
+  const box=document.createElement('div');box.className='levels';
+  const row=(label,items,cur,set)=>{const h=document.createElement('p');h.innerHTML=`<b>${label}</b>`;box.appendChild(h);const g=document.createElement('div');g.className='kit';box.appendChild(g);
+    items.forEach(it=>{const b=btn(`<b>${it.t}</b><small>${it.d}</small>`,()=>{set(it);g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on')},'choice'+(it.key===cur?' on':''));g.appendChild(b)})};
+  row('Season',LV_SEASONS.slice(0,mx).map((x,i)=>({...x,key:i+1})),p.season,it=>{META.level={...levelPick(),season:it.key};saveMeta(META)});
+  row('Kind of winter',LV_WINTERS.map(x=>({...x,key:x.id})),p.winter,it=>{META.level={...levelPick(),winter:it.key};saveMeta(META)});
+  return box}
 function intro(){current=ensureScene('camp');refresh();if(!META.kit)META.kit={runs:0,open:[]};
   if(SES.hasSave()&&!intro.skipSaved){let day='';try{const s=JSON.parse(localStorage.getItem('oneWinter.x')||'null');if(s&&s.day)day=' '+s.day}catch(e){}
     cardEl.innerHTML=`<p class="k">HOLDOUT</p><h2>Your run is waiting</h2><p>Pick up where you left it.</p>`;
@@ -71,14 +99,16 @@ function intro(){current=ensureScene('camp');refresh();if(!META.kit)META.kit={ru
   const go=btn('Start the run',()=>{startRun([...pick])},'go');
   const upd=()=>{go.disabled=pick.size!==PICK;go.textContent=pick.size===PICK?'Start the run':pick.size<PICK?`Pick ${PICK-pick.size} more`:`Take ${pick.size-PICK} out`};
   [...std,...open].forEach(k=>{const b=btn(`${kitIcon(k.id)}<b>${kitName(k)}</b><small>${kitDo(k)}</small>`,()=>{if(!choose)return;if(pick.has(k.id))pick.delete(k.id);else pick.add(k.id);b.classList.toggle('on',pick.has(k.id));upd()},'choice'+(pick.has(k.id)?' on':''));if(!choose)b.disabled=false;grid.appendChild(b)});
-  upd();cardEl.appendChild(go);
+  upd();const lr=levelRows();if(lr)cardEl.appendChild(lr);cardEl.appendChild(go);
   if(locked.length){const d=document.createElement('details');d.className='past';d.open=K.runs===0;
     d.innerHTML=`<summary>More kit to earn (${locked.length})</summary><ol>${locked.map(k=>`<li><b>${kitName(k)}</b>: ${KIT_UNLOCK[k.id]?KIT_UNLOCK[k.id].how:'Keep playing.'} <span class="muted">${kitDo(k)}</span></li>`).join('')}</ol>`;cardEl.appendChild(d)}
   const H=META.kit.history||[];if(H.length){const d=document.createElement('details');d.className='past';
     d.innerHTML=`<summary>Your past runs (${H.length})</summary><ol>${H.map(h=>`<li><b>Day ${h.day}</b> · ${h.title}</li>`).join('')}</ol>`;cardEl.appendChild(d)}
   openModal()}
-function startRun(kit){startSound();closeModal();SES.newRun(kit,String(OWX.mapSeed));syncS();saveX();refresh();
-  startCine(()=>flyover([[`Day 1`,`${hhmm(V.hour)} · ${WXL()}`]],()=>refresh()))}
+function startRun(kit){startSound();closeModal();const L=levelPick();OWX.season=L.season;OWX.winter=L.winter;SES.newRun(kit,String(OWX.mapSeed));
+  const lv=levelOf(L.season,L.winter);if(lv){SES.getView().state.level=lv;SES.click('hideModal()')}syncS();saveX();refresh();
+  const first=[[`Day 1`,`${hhmm(V.hour)} · ${WXL()}`]];if(lv)first.push([levelName(),'']);
+  startCine(()=>flyover(first,()=>refresh()))}
 const WXL=()=>V?noEmo(T.WEATHER[V.weather].label)+' · '+deg(Math.round(T.ambientTempC())):'';
 function resume(){if(!SES.continueRun()){intro.skipSaved=true;newRun();intro();return}OWX=loadX()||{mapSeed:1+(R()*999983|0),felled:[],flags:{},season:1,winter:WINTERS[0].id};
   delete OWX.flags.introStage;S=blankS();syncS();closeModal();refresh();onView();
@@ -115,7 +145,8 @@ function showEnd(){ENDSHOWN=true;const el=id=>VW.elements.get(id)||{},tx=id=>noE
   const fresh=T.KIT_POOL.filter(k=>!k.std&&!K.open.includes(k.id)&&KIT_UNLOCK[k.id]&&KIT_UNLOCK[k.id].test(V));fresh.forEach(k=>K.open.push(k.id));
   const best=META.best,isBest=!best||V.day>best.day;if(isBest)META.best={day:V.day,place:best?best.place:10};
   K.history=[{day:V.day,title:tx('endTitle')||'Run over'},...(K.history||[])].slice(0,10);saveMeta(META);try{localStorage.removeItem('oneWinter.x')}catch(e){}
-  const unl=fresh.map(k=>`<p style="color:var(--fire)">New kit unlocked: <b>${kitName(k)}</b>. ${kitDo(k)}</p>`).join('');
+  let lvUp='';if(V.cause==='win'){const mx=Math.max(1,META.maxSeason|0||1);if(mx<6){META.maxSeason=mx+1;saveMeta(META);const nx=LV_SEASONS[mx];lvUp=`<p style="color:var(--fire)">A harder level is open: <b>${nx.t}</b>. ${nx.d} Pick it, and a kind of winter, before your next run.</p>`}}
+  const unl=lvUp+fresh.map(k=>`<p style="color:var(--fire)">New kit unlocked: <b>${kitName(k)}</b>. ${kitDo(k)}</p>`).join('');
   cardEl.classList.remove('wide');cardEl.dataset.v='';
   cardEl.innerHTML=`<p class="k">HOLDOUT · Day ${V.day}${isBest?' · your best yet':''}</p><h2>${tx('endTitle')}</h2><p>${tx('endCause')}</p>${unl}<div class="v12 end">${hx('endEpilogue')}${hx('endStats')}</div>`;
   const b=btn('Play again',()=>{SES.leaveRun();newRun();intro();prefetch()},'go');cardEl.appendChild(b);openModal();b.focus()}

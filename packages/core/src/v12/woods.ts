@@ -15,6 +15,7 @@ import { S } from './state.ts';
 import { afterAction, isNightNow, spend } from './threads.ts';
 import { CARRY_CAP, GAME, SIR_TIMES, hoursFor, HUGE_RACK_CAP, MAX_SNARES_PER_SPOT, MAX_SNARES_TOTAL, MEAT_HAUL_CAP, RACK_CAP, SHOT_HIT_RECOVERED, SHOT_MISS_LOST, SHOT_MISS_RECOVERED, TUNING, carryBlocked, rollHuntSpecies, rollSmallGame } from './tuning.ts';
 import { $, hideModal, sfxMooseCall, showModal, typewriterInto } from './ui.ts';
+import { levelCatch } from './level.ts';
 // ============================== actions: woods ==============================
 export function actForage(){
   const hrs = (S.berryPicker ? 0.8 : 1) * hoursFor('forage');
@@ -153,6 +154,7 @@ export function checkOneSnare(i?){
   if (RULES.soakTime) sn.setAbs = nowAbs();
   let hit = false;
   let q = Math.min(0.9, sp.q * pityMultiplier()) * TUNING.food.passiveCutMultiplier;
+  q = levelCatch(q, 'snare');
   if (S.winter) q = Math.min(q, (1/TUNING.catchRates.postSnowSnareDaysPerCatch) / Math.max(1,S.snareList.length));
   for (let d=0; d<days; d++) if (rand() < q) hit = true;
   let resultText;

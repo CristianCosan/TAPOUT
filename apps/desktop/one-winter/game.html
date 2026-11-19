@@ -106,6 +106,7 @@ body.app .stage{border:0}
 .past ol{margin-top:6px;gap:3px}.past b{color:var(--fg)}
 @media (max-width:560px){.kit{grid-template-columns:1fr}}
 .kit .choice{padding:9px 12px}
+.levels{margin:10px 0 4px}.levels p{margin:8px 0 4px}.levels .kit .choice{grid-template-columns:1fr}
 .kit .choice b{font-size:18px}
 .card.wide .go{position:sticky;bottom:-22px;z-index:2;box-shadow:0 -10px 14px #1C2226}.card.wide .go:disabled{opacity:1;background:#5a3c1f;color:#cdbb9f}
 @media (max-height:860px){.card.wide{gap:8px;padding:14px 20px}.card.wide h2{font-size:24px}.kit{gap:6px}.kit .choice{padding:6px 10px}.kit .choice b{font-size:16px}.kit .choice small{font-size:12.5px;line-height:1.3}.kit .choice .ki{width:34px;height:34px}.kit .choice{grid-template-columns:34px 1fr}.bring{font-size:13px}.bring .ki{width:20px;height:20px}}
@@ -226,7 +227,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 <script>
 (function(){
 "use strict";
-const VERSION='3.0.0-ow.18';
+const VERSION='3.0.0-ow.19';
 const W=1600,H=900;
 const C={snow:[228,231,227],grass:[138,143,126],pine:[47,74,67],lake:[60,90,107],fire:[208,122,44],ink:[28,34,38]};
 const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -498,9 +499,7 @@ const partOfDay=()=>dark()?'Evening':S.hour<11?'Morning':S.hour<14?'Midday':S.ho
 const hhmm=h=>{const m=Math.round(h*60)%1440;return `${m/60|0}:${String(m%60).padStart(2,'0')}`};
 const clockStr=()=>`${hhmm(S.hour)} · ${partOfDay()}`;
 const durStr=h=>h<1?`${Math.round(h*60)} min`:`${h%1?(h|0)+'½':h} h`;
-function hrs(id){const v=N.hours[id];const h=Array.isArray(v)?v[Math.min(S.shelter,v.length-1)]:v||0;return id==='cook'&&has('knife')?h/2:h}
 // after dark you can still work at camp by the fire, but not out at the shore or in the woods
-function canNow(a){if(a.free)return true;if(S.hour>=N.bed)return false;return !dark()||(a.site==='camp'&&a.night)}
 const RIVALS=[['Doug Harlan','he'],['Birch Calloway','he'],['Willem Strand','he'],['Ronald Pike','he'],['Jordie Lavelle','they'],['Cassie Moreau','she'],['Cole Brenner','he'],['Luke Ostrander','he'],['Bree Halvorsen','she']];
 const WHY=['missed home too much','cut a hand badly on the axe','had nothing to eat for four days','got too cold to think straight','broke a wrist on the ice','said the silence got to them','lost the fire in the rain and never got it back','had a fever the medics did not like'];
 const WX={clear:'clear and still',over:'overcast',wind:'wind off the lake',snow:'snowing',storm:'storm'};
@@ -583,7 +582,7 @@ const SEASONS=[
 const seasonMods=n=>({temp:n>=6?-5:n>=2?-3:0,fish:n>=3?-.08:0,hips:n>=6?3:n>=3?4:N.hipsStart,snare:n>=4?-.06:0,thief:n>=4?.15:0,will:n>=6?3:n>=5?2:0,force:n>=6?18:n>=5?17:N.forceDay,dbl:n>=6?21:n>=5?20:N.doubleDay,ice:n>=6?-1:0});
 function loadMeta(){let m=null;try{m=JSON.parse(localStorage.getItem('oneWinter.meta')||'null')}catch(e){}
   if(!m){m={maxSeason:1,unlocked:BASE_KIT.slice(),best:null};try{m.best=JSON.parse(localStorage.getItem('oneWinter.best')||'null')}catch(e){}}
-  BASE_KIT.forEach(id=>{if(!m.unlocked.includes(id))m.unlocked.push(id)});return m}
+  if(!Array.isArray(m.unlocked))m.unlocked=[];BASE_KIT.forEach(id=>{if(!m.unlocked.includes(id))m.unlocked.push(id)});return m}
 function saveMeta(m){try{localStorage.setItem('oneWinter.meta',JSON.stringify(m))}catch(e){}}
 let META=loadMeta(),pickSeason=META.maxSeason;
 const R=Math.random;
@@ -601,12 +600,6 @@ const winterOf=()=>WINTERS.find(w=>w.id===(S&&S.winter))||WINTERS[0];
 function makeWeather(mods,wi){wi=wi||WINTERS[0];const sn=wi.snow||0,wd=wi.wind||0;const w=[];const t=[];for(let d=1;d<=24;d++){let k=d===1?'clear':d===2?'over':d===3?'snow':null;
   if(!k){const r=R();k=(d>5&&w[d-2]!=='storm'&&r<.13)?'storm':r<.35+sn?'snow':r<.55+sn+wd?'wind':r<.8+sn*.5+wd*.5?'over':'clear'}w.push(k);
   t.push(Math.round(Math.max(N.tempFloor,N.tempStart-N.tempDrop*(d-1)+(R()*4-2))-(k==='storm'?3:0)+(k==='clear'&&d>6?-2:0)+mods.temp+(wi.temp?wi.temp(d):0)))}return {w,t}}
-function newRun(season,mapSeed,winter){season=season||pickSeason;const wi=WINTERS.find(w=>w.id===winter)||WINTERS[R()*WINTERS.length|0],mods=seasonMods(season);
-  mods.fish+=wi.fish||0;mods.snare+=wi.snare||0;mods.hips*=wi.hips||1;const wx=makeWeather(mods,wi);
-  S={topFell:true,hour:N.dawn,winter:wi.id,iceDay:(wi.ice||N.iceDay)+mods.ice,events:[],mapSeed:mapSeed||1+(R()*999983|0),day:1,turn:0,site:'camp',...N.start,fish:0,hares:0,caughtFish:0,caughtHares:0,shelter:0,fire:0,items:[],letter:false,pem:0,aid:0,hips:mods.hips,season,mods,iceFish:0,
-    snares:0,caught:0,ankle:0,felled:[],pitch:0,deadfall:N.deadfall,lines:shuffle(LINE_NAMES.slice()).slice(0,2).map(n=>({n,set:false,fish:0})),hung:false,wx:wx.w,temps:wx.t,rivals:RIVALS.map(r=>r[0]),out:[],log:[],over:false,result:null,
-    deck:shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw',...['lynx','plane','chocolate','silence'].filter(()=>R()<.35)]),used:[],flags:{},
-    offer:ITEMS.map(i=>i.id).filter(id=>META.unlocked.includes(id))}}
 const LINE_NAMES=['Old Hope','Pike Rock','Birch Point','The Elbow','Loon Bay','Second Chance','Mara\'s Spot','Cold Feet'];
 const has=id=>S.items.includes(id);
 const temp=()=>S.temps[S.day-1],wxNow=()=>S.wx[S.day-1];
@@ -696,7 +689,6 @@ const ACTIONS={
     say:()=>'Free. Bring them back before a fox does.',
     run(){S.hares+=S.caught;S.caughtHares+=S.caught;S.will+=6;const n=S.caught;S.caught=0;return n>1?'Two snowshoe hares. You say thank you out loud.':'A snowshoe hare, already white for winter.'}}
 };
-function avail(id){const a=ACTIONS[id];if(a.when&&!a.when())return null;const c=a.can?a.can():true;return c===true?true:c}
 function standing(){if(TOP){const sc=ensureScene('woods');return sc.trees.map((t,i)=>i).filter(i=>{const t=sc.trees[i];return !felled(sc,i)&&t.x>30&&t.x<W-30&&t.y>30&&t.y<H-30}).sort((a,b)=>Math.hypot(sc.trees[a].x-GLADE.x,sc.trees[a].y-GLADE.y)-Math.hypot(sc.trees[b].x-GLADE.x,sc.trees[b].y-GLADE.y))}
   const f=sideScene('woods').fell;return f.map((t,i)=>i).filter(i=>!S.felled.includes(i)).sort((a,b)=>Math.abs(f[a].x-640)-Math.abs(f[b].x-640))}
 let TOP=false;
@@ -705,15 +697,6 @@ function topSpot(name){const sh=ensureScene('shore'),[fx,fy]=firePos();switch(na
   case 'stump':return[566,548,24];case 'pot':return[fx+30,fy+28,15];case 'crate':return[740,338,24];
   case 'rock':return[sh.dock[0],sh.dock[1],50];case 'bush':return[sh.bush[0],sh.bush[1],60];case 'drift':return[512,545,48];
   case 'deadfall':return[700,470,80];case 'snares':return[1150,300,70];case 'catch':return[1310,236,60];case 'snag':return[862,566,34]}return null}
-function spotOf(id){const a=ACTIONS[id];if(!a.spot||!S)return null;
-  if(TOP){if(a.spot==='tree'){if(S.site!=='woods')return null;const sw=ensureScene('woods'),i=S.target!=null?S.target:standing()[0];if(i==null)return null;const t=sw.trees[i];return[t.x,t.y,t.r]}
-    const sh=ensureScene('shore');if(a.spot==='line'){const i=S.lines.findIndex(l=>!l.set);return i<0?null:[...sh.lineSpots[i],40]}
-    if(a.spot==='linefish'){const i=S.lines.findIndex(l=>l.fish);return i<0?null:[...sh.lineSpots[i],40]}
-    if(a.site!==S.site&&a.site!=='any')return null;return topSpot(a.spot)}
-  if(a.spot==='tree'){if(S.site!=='woods')return null;const i=S.target!=null?S.target:standing()[0];if(i==null)return null;const t=sideTreeOf(i);return[t.x,t.b-t.h*.35,Math.max(40,t.h*.25)]}
-  if(a.spot==='line'){const i=S.lines.findIndex(l=>!l.set);return i<0?null:[SP.shore.lines[i][0],SP.shore.lines[i][1]-30,55]}
-  if(a.spot==='linefish'){const i=S.lines.findIndex(l=>l.fish);return i<0?null:[SP.shore.lines[i][0],SP.shore.lines[i][1]-30,55]}
-  if(a.site!==S.site)return null;return sideSpot(a.spot)}
 
 function clampAll(){['warmth','food','body','will'].forEach(k=>S[k]=clamp(Math.round(S[k]*10)/10,0,100))}
 // time passes: every hour costs food, and warmth unless you sit by a lit fire at camp
@@ -722,9 +705,6 @@ function passTime(h){if(!(h>0))return;S.food-=N.foodHour*h;
   S.warmth+=N.fireWarmHour*burn-warmCost()/N.coldDiv*(h-burn);
   S.fire=Math.max(0,S.fire-h);if(S.food<=0)S.body-=N.starveBody*h;if(S.warmth<20)S.body-=N.coldBody*h;S.hour+=h;setTurn()}
 function passTurn(){passTime(3)}
-function doAction(id){if(!S||S.over||!modalEl.hidden||FLY||CINE)return;const a=ACTIONS[id];if(!a||(a.site&&a.site!==S.site))return;if(a.open){walkTo(spotOf(id));a.open();return}if(avail(id)!==true||!canNow(a))return;
-  const s=a.spot?spotOf(id):null;if(s){walkTo(s);P.work=1.3}const before=snap();
-  log(a.run());popDiff(before,s?[s[0],s[1]-s[2]*.6]:[P.x,P.y-200]);passTime(hrs(id));after()}
 const POPK=[['warmth','warmth'],['food','food'],['body','body'],['will','will'],['wood','wood'],['fish','fish'],['hares','hare']];
 function snap(){const o={};POPK.forEach(([k])=>o[k]=S[k]);return o}
 const pops=[];
@@ -733,10 +713,6 @@ function popDiff(b,at){const parts=POPK.map(([k,n])=>{const d=Math.round(Math.mi
 // ---------- trees: in the woods you can fell any of them; at camp they stay for the wind ----------
 function treeAt(x,y){return TOP?treeAtTop(x,y):sideTreeAt(x,y)}
 function treeAtTop(x,y){if(!current)return null;let best=null;current.trees.forEach((t,i)=>{if(felled(current,i))return;const d=Math.hypot(x-t.x,y-t.y);if(d<t.r*.85&&(!best||d<best.d))best={i,d}});return best&&best.i}
-function treeClick(i){if(!S||S.over||!modalEl.hidden||FLY||CINE)return;
-  if(S.site==='woods'){if(dark())return;S.target=i;doAction('fell');return}
-  if(TOP){const t=current.trees[i];walkTo([t.x,t.y,t.r])}else{const t=sideScene(S.site).mid[i];walkTo([t.x,t.b,40])}
-  log(S.site==='camp'?'You leave it standing. The trees around camp keep the wind off you.':'Too far to drag green logs back to camp. There is driftwood here.')}
 // ---------- the person on screen ----------
 const ENTRY={camp:[705,560],shore:[470,380],woods:[640,560]};
 const P={x:705,y:560,tx:705,ty:560,site:'',a:-1.2,steps:[],face:1};
@@ -757,28 +733,12 @@ function drawPerson(t){if(P.site!==S.site){P.site=S.site;[P.x,P.y]=ENTRY[S.site]
 function drawPops(){const now=performance.now()/1000;for(let i=pops.length-1;i>=0;i--){const p=pops[i],age=now-p.b;if(age>2.2){pops.splice(i,1);continue}if(age<0)continue;
   const a=age<.2?age/.2:1-Math.max(0,age-1.4)/.8;lc.save();lc.font='700 30px "Barlow Condensed",sans-serif';lc.textAlign='center';lc.lineJoin='round';lc.lineWidth=5;lc.strokeStyle=css(C.ink,.7*a);
   lc.strokeText(p.t.toUpperCase(),p.x,p.y-age*26);lc.fillStyle=p.good?css(C.snow,a):css(mix(C.fire,C.snow,.25),a);lc.fillText(p.t.toUpperCase(),p.x,p.y-age*26);lc.restore()}}
-function travel(site){if(!S||S.over||!modalEl.hidden||S.site===site||FLY||CINE)return;
-  if(site!=='camp'&&dark())return;const far=N.walk[site==='camp'?S.site:site]||.3;
-  if(S.ankle>0){S.site=site;log(`You limp to the ${SCENES[site].name}. It takes a long time.`);passTime(N.limp)}
-  else{S.site=site;sfx('step');log(['You walk down to the water.','You climb back up to camp.','You follow the trail into the trees.'][['shore','camp','woods'].indexOf(site)]);passTime(far)}
-  after();if(!S.over&&modalEl.hidden&&!dark())maybeEvent()}
 // ---------- the story of the run: a few moments kept, told back at the end ----------
 function note(w,text){if(!S.story)S.story=[];S.story.push({d:S.day,w,t:text})}
-function milestones(){const f=S.flags;
-  if(S.caughtFish>0&&!f.m_fish){f.m_fish=1;note(3,'Your first fish, pulled in cold and heavy.')}
-  if(S.caughtHares>0&&!f.m_hare){f.m_hare=1;note(3,'Your first hare from the snares.')}
-  if(S.shelter>=3&&!f.m_hut){f.m_hut=1;note(3,'The hut is finished: log walls, a snow roof, and the fire inside.')}
-  if(S.letter&&!f.m_letter){f.m_letter=1;note(2,"You read Mara's letter twice.")}
-  if(S.ankle>0&&!f.m_ankle){f.m_ankle=1;note(3,'You hurt your ankle in the dark.')}}
 const AWE=['aurora','moose','wolves','owl','stars','fire2','radio','ice'];
 function storyLines(){const st=(S.story||[]).map((e,i)=>({...e,i}));if(!st.length)return [];
   const keep=new Set([st[0].i,st[st.length-1].i]);st.slice().sort((a,b)=>b.w-a.w||a.i-b.i).forEach(e=>{if(keep.size<8)keep.add(e.i)});
   return st.filter(e=>keep.has(e.i)).map(e=>`<li><b>Day ${e.d}</b> ${e.t}</li>`)}
-function after(){clampAll();milestones();
-  if(!S.over&&dark()&&S.site!=='camp'&&!S.flags.bed){const from=S.site;S.site='camp';passTime(N.walk[from]||.3);clampAll();log('It is getting dark. You head back to camp.')}
-  if(S.hour>=N.bed&&!S.flags.bed){S.flags.bed=true;log('You can barely keep your eyes open. You crawl into the bag.')}
-  save();refresh();if(checkEnd())return;if(S.flags.bed)setTimeout(nightfall,700)}
-function checkEnd(){if(S.over)return true;if(S.will<=0){endRun('will');return true}if(S.warmth<=0||S.body<=0){endRun(S.warmth<=0?'cold':'body');return true}return false}
 
 // ---------- night ----------
 const CARDS={
@@ -890,11 +850,6 @@ const EVENTS={
   drone:{site:'camp',title:'The drone',text:"The crew's camera drone hums low over camp and hangs there.",
     choices:[{t:'Wave and show them the camp',d:'Will +3.',run(){S.will+=3;return 'Somewhere, an editor is choosing this shot.'}},{t:'Ignore it',d:'Nothing happens.',run(){return 'It drifts off down the shore.'}}]}
 };
-function maybeEvent(){if(S.over||dark()||S.flags.evDay===S.day||R()>=.3)return;S.flags.evDay=S.day;
-  const ids=Object.keys(EVENTS).filter(id=>EVENTS[id].site===S.site&&!(S.events||[]).includes(id)&&(!EVENTS[id].when||EVENTS[id].when()));if(!ids.length)return;
-  const id=ids[R()*ids.length|0],ev=EVENTS[id];S.events=[...(S.events||[]),id];save();
-  cardEl.innerHTML=`<p class="k">Day ${S.day} · ${SCENES[S.site].name}</p><h2>${ev.title}</h2><p>${ev.text}</p>`;
-  ev.choices.forEach(ch=>cardEl.appendChild(btn(`<b>${ch.t}</b><small>${ch.d}</small>`,()=>{closeModal();const tx=ch.run();if(ch.d!=='Nothing happens.')note(1,`${ev.title}. ${tx}`);log(tx);after()},'choice')));openModal()}
 function loseFood(){if(S.hung)return false;if(S.hares>0){S.hares--;return true}if(S.fish>0){S.fish--;return true}return false}
 function pickCard(){
   if(S.will<28&&!S.flags.phoneDay||S.will<28&&S.day-S.flags.phoneDay>=3){S.flags.phoneDay=S.day;return 'phone'}
@@ -903,20 +858,6 @@ function pickCard(){
   for(let tries=0;tries<2;tries++){for(let i=0;i<S.deck.length;i++){const id=S.deck[i];const c=CARDS[id];if(!c.when||c.when()){S.deck.splice(i,1);S.used.push(id);return id}}
     S.deck=shuffle(S.used.filter(id=>!['snow'].includes(id)));S.used=[]}
   return 'owl'}
-function nightfall(){if(S.over||!S.flags.bed||S.phase==='night')return;if(!modalEl.hidden||FLY||CINE){setTimeout(nightfall,700);return}S.flags.bed=false;S.site='camp';
-  const w0=S.warmth,f0=S.food,v0=S.will,b0=S.body,lit=S.fire>0,t=temp()-6;
-  S.warmth+=-Math.round(N.nightBase+(N.tempStart-t)*N.nightPerDeg)+S.shelter*N.shelterNight+(has('blanket')?N.blanketNight:0)+(lit?N.fireNight:0);
-  S.food-=N.nightFood;S.will-=Math.round(N.nightWill+S.mods.will+S.day*N.nightWillPerDay)-(lit?N.fireWill:0)-(lit&&has('harmonica')?N.harmonica:0)-(has('photo')?N.photo:0);
-  S.body+=(S.warmth>=40&&S.food>=30)?6:-8;S.fire=Math.max(0,S.fire-N.fireNight);
-  // snares work overnight
-  for(let i=0;i<S.snares;i++)if(R()<snareChance())S.caught=Math.min(S.snares,S.caught+1);
-  if(S.snares>0&&R()<N.snareBreak)S.snares--;
-  S.lines.forEach(l=>{l.lost=false;if(!l.set)return;if(R()<N.lineBreak+(wxNow()==='storm'?N.stormLine:0)){l.set=false;l.fish=0;l.lost=true;return}if(R()<fishChance()*N.lineOdds)l.fish=1});
-  clampAll();S.phase='night';save();refresh();
-  const diff=(k,a)=>{const d=Math.round(S[k])-Math.round(a);return `${k[0].toUpperCase()+k.slice(1)} ${d>=0?'+':'−'}${Math.abs(d)}`};
-  const sum=`The night: ${diff('warmth',w0)}, ${diff('food',f0)}, ${diff('will',v0)}, ${diff('body',b0)}${lit?'. The fire kept going.':'. No fire.'}`;
-  if(checkEnd())return;
-  S.card=pickCard();S.cardSum=sum;save();showCard()}
 function showCard(){const card=CARDS[S.card];music.mood('night');
   cardEl.innerHTML=`<p class="k">Night ${S.day} · ${deg(temp()-6)}</p><h2>${card.title}</h2><p class="night">${S.cardSum}</p><p>${card.text()}</p>`;
   card.choices.forEach(ch=>{const d=typeof ch.d==='function'?ch.d():ch.d;const b=btn(`<b>${ch.t}</b><small>${d}</small>`,()=>ch.tap?confirmTap():resolve(ch),'choice'+(ch.danger?' danger':''));
@@ -925,83 +866,7 @@ function resolve(ch){const text=ch.run();clampAll();const cd=CARDS[S.card];if(cd
   cardEl.innerHTML=`<p class="k">Night ${S.day}</p><p>${text}</p>`;const b=btn('Sleep',morning);cardEl.appendChild(b);b.focus()}
 function confirmTap(){cardEl.innerHTML=`<p class="k">The sat phone</p><h2>Press it?</h2><p>This ends your run. A boat comes within the hour.</p>`;
   cardEl.appendChild(btn('Yes, press it',()=>endRun('tap'),'choice danger'));cardEl.appendChild(btn('No, put it away',()=>{S.will+=2;resolve({run:()=>'Your thumb hovers. Then you put it back.'})},'choice'))}
-function morning(){
-  // rivals
-  const gone=[];let n=R()<N.rivalOdds(S.day)?1:0;if(S.day>=S.mods.force)n=Math.max(n,1);if(S.day>=S.mods.dbl)n=2;
-  for(let i=0;i<n&&S.rivals.length;i++){const who=S.rivals.splice(R()*S.rivals.length|0,1)[0];S.out.push(who);gone.push(who)}
-  if(wxNow()==='storm')S.storms=(S.storms||0)+1;
-  S.day++;S.hour=N.dawn;S.flags.bed=false;S.site='camp';S.phase='day';if(S.ankle>0)S.ankle--;if(has('thermos')){S.warmth=Math.min(100,S.warmth+6);S.will=Math.min(100,S.will+2)}
-  if(S.caught>0&&R()<N.thief+S.mods.thief){S.caught=Math.max(0,S.caught-1);S.flags.thief=true}else S.flags.thief=false;
-  if(S.flags.lostMorning){S.hour=11;S.flags.lostMorning=false;S.flags.crew=true}else S.flags.crew=false;setTurn();
-  save();
-  if(gone.length&&S.rivals.length<=2&&S.rivals.length>0)note(2,`${gone.join(' and ')} tapped out. ${S.rivals.length===1?'One rival':'Two rivals'} left.`);
-  if(S.day===iceDay())note(2,'The lake froze over in the night.');
-  if(S.rivals.length===0){endRun('win');return}
-  const lines=[[`Day ${S.day}`,`${hhmm(S.hour)} · ${remaining()}`]];
-  gone.forEach(w=>lines.push([w,'tapped out']));
-  if(gone.length)lines.push([`${S.rivals.length+1} remaining`,`−${gone.length}`]);
-  if(S.day===iceDay())lines.push(['The lake froze','in the night']);
-  if(wxNow()==='storm')lines.push(['A storm today','']);
-  if(S.flags.crew)lines.push(['The crew is here','filming all morning']);
-  if(S.caught>0)lines.push(['Something in the snares','']);
-  if(S.lines.some(l=>l.fish))lines.push([`A fish on ${S.lines.filter(l=>l.fish).map(l=>l.n).join(' and ')}`,'']);
-  closeModal();refresh();flyover(lines,()=>{music.mood('day');refresh()})}
 const PLACE=k=>['1st','2nd','3rd'][k-1]||k+'th';
-function endRun(kind){S.over=true;S.result=kind;music.mood('night');
-  const place=kind==='win'?1:S.rivals.length+1;S.place=place;
-  note(5,{win:'The last rival is gone. You won.',tap:'You pressed the button.',will:'You pressed the button. The thought won.',cold:'The medics took you out, too cold to go on.',body:'The medics took you out. Your body had had enough.'}[kind]);
-  const T={win:['You won',`Day ${S.day}. The last rival tapped out in the night. The boat that comes is for you, with a cheque for $400,000 and Mara waiting at the landing.`,S.season<SEASONS.length?'Each win opens a harder season.':'You beat the hardest winter there is.'],
-    tap:['You pressed the button',`Day ${S.day}. Forty minutes later you hear the boat.`,'No shame in it. The show goes on without you.'],
-    will:['The thought wins',`Day ${S.day}. You sit with the phone for an hour, then press it.`,'Will ran out. Warm meals, the fire and small wins keep it up.'],
-    cold:['Pulled by the medics',`Day ${S.day}. Your hands stop working. The medics take you out, wrapped in foil.`,'Warmth ran out. A fire lit at dusk carries you through the night, and the shelter matters more every week.'],
-    body:['Pulled by the medics',`Day ${S.day}. Your body has had enough. The medics take you out.`,'Body ran out. It drops when you are starving or freezing.']}[kind];
-  const best=META.best,isBest=!best||place<best.place||(place===best.place&&S.day>best.day);if(isBest)META.best={place,day:S.day};
-  const fresh=UNLOCKS.filter(u=>!META.unlocked.includes(u.id)&&u.test(S));fresh.forEach(u=>META.unlocked.push(u.id));
-  let newSeason=false;if(kind==='win'&&S.season>=META.maxSeason&&META.maxSeason<SEASONS.length){META.maxSeason++;pickSeason=META.maxSeason;newSeason=true}
-  META.history=[{season:S.season,winter:S.winter,place,day:S.day,kind,items:S.items.slice()},...(META.history||[])].slice(0,10);
-  saveMeta(META);try{localStorage.removeItem('oneWinter.run')}catch(e){}
-  const unl=fresh.map(u=>`<p style="color:var(--fire)">New kit unlocked: <b>${ITEMS.find(i=>i.id===u.id).t}</b>. ${ITEMS.find(i=>i.id===u.id).d}</p>`).join('')+(newSeason?`<p style="color:var(--fire)">New season unlocked: <b>${SEASONS[META.maxSeason-1].t}</b>. ${SEASONS[META.maxSeason-1].d}</p>`:'');
-  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · ${winterOf().t} · ${kind==='win'?'winner':'run over'}</p><h2>${T[0]}</h2><p>${T[1]}</p>
-   <p style="font-family:var(--display);font-size:26px;letter-spacing:.04em">You placed ${PLACE(place)} of 10${isBest?' <span style="color:var(--fire)">· your best yet</span>':best?` · best: ${PLACE(best.place)}`:''}</p>
-   <div class="stats"><span>Days<b>${S.day}</b></span><span>Fish<b>${S.caughtFish}</b></span><span>Hares<b>${S.caughtHares}</b></span><span>Shelter<b>${S.shelter}/3</b></span></div>${unl}
-   <ol class="story">${storyLines().join('')}</ol>
-   <p class="muted">Your kit: ${S.items.map(id=>ITEMS.find(i=>i.id===id).t).join(', ')}. ${T[2]}</p>`;
-  const b=btn('Play again',()=>{newRun();intro();prefetch()},'go');cardEl.appendChild(b);openModal();b.focus()}
-function intro(){current=ensureScene('camp');refresh();
-  let saved=null;try{saved=JSON.parse(localStorage.getItem('oneWinter.run')||'null')}catch(e){}
-  let best=null;try{best=JSON.parse(localStorage.getItem('oneWinter.best')||'null')}catch(e){}
-  if(saved&&!saved.over&&!intro.skipSaved){cardEl.innerHTML=`<p class="k">HOLDOUT</p><h2>Your run is waiting</h2><p>Day ${saved.day}, ${saved.rivals.length} rivals left.</p>`;
-    cardEl.appendChild(btn(`Continue day ${saved.day}`,()=>{S=saved;startSound();resume()},'go'));
-    cardEl.appendChild(btn('Start a new run',()=>{intro.skipSaved=true;try{localStorage.removeItem('oneWinter.run')}catch(e){}newRun();intro();prefetch()},'choice'));openModal();return}
-  const pick=new Set();best=META.best;
-  cardEl.innerHTML=`<p class="k">HOLDOUT · ${SEASONS[S.season-1].t} · Day 1 · ${deg(S.temps[0])}${best?` · your best: ${PLACE(best.place)} of 10`:''}</p><h2>The boat leaves at dawn</h2><p class="night">This run: ${winterOf().t}. ${winterOf().d}</p><p>Ten people on ten stretches of shore, nobody in sight of anyone. Last one in wins $400,000. </p><p class="k">Every contestant brings</p><div class="bring">${BRING.map(([k,t])=>`<span>${kitIcon(k)}${t}</span>`).join('')}</div><p><b>Pick ${PICK} of these ${S.offer.length} for your pack.</b></p>`;cardEl.classList.add('wide');
-  if(META.maxSeason>1){const row=document.createElement('div');row.className='seasons';SEASONS.slice(0,META.maxSeason).forEach((se,i)=>{const b=btn(`<b>${i+1}</b>`,()=>{pickSeason=i+1;newRun(i+1,S.mapSeed,S.winter);intro()},'choice'+(S.season===i+1?' on':''));b.title=se.t+': '+se.d;row.appendChild(b)});
-    cardEl.appendChild(row);const sd=document.createElement('p');sd.className='locked';sd.textContent=SEASONS[S.season-1].t+': '+SEASONS[S.season-1].d;cardEl.appendChild(sd)}
-  const grid=document.createElement('div');grid.className='kit';cardEl.appendChild(grid);
-  const go=btn('Start the run',()=>{S.items=[...pick];startSound();closeModal();log('The boat is gone. Just you, the lake and the cameras.');save();refresh();startCine(()=>flyover([['Day 1',`7:00 · ${remaining()}`]],()=>refresh()))},'go');go.disabled=true;
-  S.offer.forEach(id=>{const it=ITEMS.find(i=>i.id===id);const b=btn(`${kitIcon(id)}<b>${it.t}</b><small>${it.d}</small>`,()=>{if(pick.has(id))pick.delete(id);else if(pick.size<PICK)pick.add(id);b.classList.toggle('on',pick.has(id));go.disabled=pick.size!==PICK;go.textContent=pick.size===PICK?'Start the run':`Pick ${PICK-pick.size} more`},'choice');grid.appendChild(b)});
-  go.textContent=`Pick ${PICK} more`;cardEl.appendChild(go);
-  if(META.tipsOff){const tb=btn('Turn tips back on',()=>{META.tipsOff=false;META.tipsSeen=[];saveMeta(META);tb.remove()},'choice');cardEl.appendChild(tb)}
-  const H=META.history||[];if(H.length){const d=document.createElement('details');d.className='past';
-    d.innerHTML=`<summary>Your past runs (${H.length})</summary><ol>${H.map(h=>`<li><b>${PLACE(h.place)}</b> · day ${h.day} · season ${h.season} · ${(WINTERS.find(w=>w.id===h.winter)||WINTERS[0]).t.toLowerCase()} · ${h.items.map(id=>ITEMS.find(i=>i.id===id).t).join(', ')}</li>`).join('')}</ol>`;cardEl.appendChild(d)}
-  const lk=UNLOCKS.filter(u=>!META.unlocked.includes(u.id));if(lk.length){const d=document.createElement('details');d.className='past';
-    d.innerHTML=`<summary>Still locked (${lk.length})</summary><ol>${lk.map(u=>`<li><b>${ITEMS.find(i=>i.id===u.id).t}</b>: ${u.how}</li>`).join('')}</ol>`;cardEl.appendChild(d)}
-  openModal()}
-function shelterCard(){const lv=S.shelter,lit=S.fire>0;
-  cardEl.innerHTML=`<p class="k">Camp · ${clockStr()}</p><h2>Your shelter</h2><p>${['A tarp lean-to, open to the fire. Cold ground under you.','A lean-to with a thick bough bed under it.','A lean-to with log side walls, and a reflector wall behind the fire.','A small log hut with a snow roof and a fire inside.'][lv]}</p>`;
-  const opt=(id,t,d)=>{const av=avail(id),b=btn(`<b>${t}</b>${d?`<small>${d}</small>`:''}`,()=>{closeModal();doAction(id)},'choice');b.disabled=av!==true||!canNow(ACTIONS[id]);return b};
-  if(lv<3)cardEl.appendChild(opt('shelter',SHELTER[lv],S.wood>=N.shelterCost[lv]?`${N.shelterCost[lv]} wood`:`Needs ${N.shelterCost[lv]} wood. You have ${S.wood}.`));
-  cardEl.appendChild(opt('rest','Rest inside',''));
-  cardEl.appendChild(opt('confess','Talk to the camera',''));if(avail('sleep')===true)cardEl.appendChild(opt('sleep',ACTIONS.sleep.name(),''));
-  if(has('letter')&&!S.letter)cardEl.appendChild(opt('letter',"Read Mara's letter",''));
-  cardEl.appendChild(btn('Back outside',closeModal,'go'));openModal()}
-function packCard(){cardEl.innerHTML=`<p class="k">Your pack</p><h2>What you brought</h2><ul class="story">${['Tarp, axe, ferro rod, pot, fishing line, snare wire',...S.items.map(id=>ITEMS.find(i=>i.id===id).t)].map(t=>`<li>${t}</li>`).join('')}</ul>`;
-  ['pemmican','aid','letter'].forEach(id=>{if(avail(id)===null)return;cardEl.appendChild(btn(`<b>${ACTIONS[id].name()}</b>`,()=>{closeModal();doAction(id)},'choice'))});
-  cardEl.appendChild(btn('Close the pack',closeModal,'go'));openModal()}
-function resume(){if(S.flags)delete S.flags.introStage;if(!S.mods){S.season=1;S.mods=seasonMods(1)}if(S.hour==null){S.hour=Math.min(N.dawn+S.turn*3.5,21);S.fire=(S.fire||0)*3;if(S.turn>=3)S.flags.bed=true}setTurn();if(!S.lines)S.lines=shuffle(LINE_NAMES.slice()).slice(0,2).map(n=>({n,set:false,fish:0}));if(!S.felled)S.felled=[];if(!S.topFell){const n=S.felled.length;S.felled=[];S.topFell=true;S.felled=standing().slice(0,n)}if(S.deadfall==null)S.deadfall=N.deadfall;closeModal();logEl.innerHTML=(S.log||[]).map(l=>`<p>${l}</p>`).join('');refresh();
-  if(S.phase==='night'&&S.card)showCard();else if(S.phase==='night')nightfall();else if(S.phase==='slept')morning();else if(S.flags.bed)nightfall();
-  else flyover([[`Day ${S.day}`,`${hhmm(S.hour)} · ${remaining()}`]],()=>refresh())}
-function save(){try{if(S&&!S.over)localStorage.setItem('oneWinter.run',JSON.stringify(S))}catch(e){}}
 function btn(html,fn,cls){const b=document.createElement('button');b.type='button';b.className=cls||'choice';b.innerHTML=html.startsWith('<')?html:`<b>${html}</b>`;if(cls==='go')b.innerHTML=html;b.onclick=fn;return b}
 
 // ---------- side view: one wide camera per place, the way the show films it ----------
@@ -1246,7 +1111,6 @@ const modalEl=$('modal'),cardEl=$('card'),hud=$('hud'),acts=$('acts'),logEl=$('l
 function openModal(){modalEl.hidden=false;if(hintKey)hideHint();keyNumbers()}
 function keyNumbers(){keyBtns().forEach((b,i)=>b.dataset.k=i+1)}
 function keyBtns(){return [...cardEl.querySelectorAll('.choice,.go')].filter(b=>!b.closest('.seasons')).slice(0,9)}function closeModal(){modalEl.hidden=true;cardEl.classList.remove('wide')}
-function log(t){S.log.push(t);if(S.log.length>2)S.log.shift();logEl.innerHTML=S.log.map(l=>`<p>${l}</p>`).join('')}
 let current=null,hover=null;
 function ensureScene(k){const ms=S?S.mapSeed|0:0;if(!scenes[k]||scenes[k].ms!==ms)scenes[k]=buildScene(k,ms);return scenes[k]}
 function prefetch(){setTimeout(()=>{ensureScene('shore');setTimeout(()=>ensureScene('woods'),60)},60)}
@@ -1261,42 +1125,11 @@ const TIPS={
   build:'You have enough wood to improve your shelter. Click the tarp. A better shelter makes every night warmer.',
   glow:'Anything you can do right now glows softly on the map. Click it, or use the list on the right.'};
 const hintEl=$('hint');let hintKey=null;
-function hintFor(){if(META.tipsOff||S.over)return null;const seen=META.tipsSeen||[],ok=k=>!seen.includes(k);
-  if(ok('low')&&['warmth','food','body','will'].some(k=>S[k]<25))return 'low';
-  if(ok('start')&&S.day===1&&S.site==='camp')return 'start';
-  if(ok('glow')&&S.day===1&&S.hour>=8)return 'glow';
-  if(ok('build')&&S.shelter===0&&S.wood>=N.shelterCost[0]+2&&S.site==='camp'&&!dark())return 'build';
-  if(ok('shore')&&S.site==='shore')return 'shore';
-  if(ok('woods')&&S.site==='woods')return 'woods';
-  if(ok('dusk')&&S.turn>=2&&S.site==='camp')return 'dusk';
-  if(ok('night')&&S.day>=2)return 'night';
-  return null}
 function showHint(){if(hintKey||!modalEl.hidden)return;const k=hintFor();if(!k)return;hintKey=k;
   META.tipsSeen=[...(META.tipsSeen||[]),k];saveMeta(META);$('hintT').textContent=TIPS[k];hintEl.hidden=false}
 function hideHint(){hintKey=null;hintEl.hidden=true}
 $('hintOk').onclick=()=>{hideHint();showHint()};
 $('hintOff').onclick=()=>{META.tipsOff=true;saveMeta(META);hideHint()};
-function refresh(){if(!S)return;showHint();
-  current=ensureScene(S.site);
-  const gctx=$('ground').getContext('2d');if(TOP){gctx.drawImage(dayCanvas(current,S.day),0,0);if(S.site==='camp')drawCampProps(gctx);else if(S.site==='woods')drawWoodsProps(gctx);else drawShoreProps(gctx)}else{gctx.drawImage(drawSideBg(S.site),0,0);drawSideProps(gctx)}
-  $('cDay').textContent=`DAY ${S.day} · ${clockStr().toUpperCase()}`;
-  $('cWx').textContent=`${deg(temp())} · ${WX[wxNow()]}`;
-  const nw=S.wx[S.day],nt=S.temps[S.day];$('cFc').textContent=nw?`Tomorrow: ${WX[nw]}, ${deg(nt)}`:'';
-  {const span=N.bed-N.dawn,el=$('cSlots');el.innerHTML=`<b style="width:${clamp((S.hour-N.dawn)/span,0,1)*100}%"></b><u style="left:${(dusk()-N.dawn)/span*100}%"></u>`}
-  $('rivals').innerHTML=`<b>${S.rivals.length}</b> ${S.rivals.length===1?'rival':'rivals'} left`;
-  const mp=$('map');mp.innerHTML='';['camp','shore','woods'].forEach(k=>{const b=document.createElement('button');b.type='button';b.textContent=SCENES[k].name;if(k===S.site)b.className='here';
-    b.disabled=k===S.site||(k!=='camp'&&dark());b.title=(S.ankle>0?'Your ankle: walking is slow':dark()&&k!=='camp'?'Too dark to go out':'Walk there')+` (${k[0].toUpperCase()})`;b.onclick=()=>travel(k);mp.appendChild(b)});
-  const bar=(k,c)=>`<div class="row${S[k]<25?' low':''}"><span>${k}</span><div class="bar"><span style="width:${S[k]}%;--c:${c}"></span></div><b>${Math.round(S[k])}</b></div>`;
-  const ic=(k,n,title,off)=>`<span class="${off?'off':''}" title="${title}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${n?`<i>${n}</i>`:''}</span>`;
-  hud.innerHTML=bar('warmth','#D07A2C')+bar('food','#A7AC98')+bar('body','#7F9DAD')+bar('will','#E4E7E3')+
-    '';$('gear').innerHTML=`<div class="inv">${ic('wood',S.wood,'Wood: '+S.wood,!S.wood)}${S.fish?ic('fish',S.fish,'Fish: '+S.fish):''}${S.hares?ic('hare',S.hares,'Hares: '+S.hares):''}${ic('fire',S.fire>0?Math.ceil(S.fire)+'h':0,S.fire>0?`Fire: about ${Math.ceil(S.fire)} more hours`:'Fire: out',!(S.fire>0))}${S.pitch?ic('pitch',S.pitch,'Spruce pitch: next fire takes one less wood'):''}${S.ankle?ic('ankle',0,'Hurt ankle: walking is slow'):''}</div>`;
-  const cold=turnCold();
-  acts.innerHTML=`<h3>${SCENES[S.site].name} · ${clockStr()}</h3>`;
-  Object.keys(ACTIONS).forEach(id=>{const a=ACTIONS[id];if(a.hidden||a.site!==S.site&&a.site!=='any')return;const av=avail(id);if(av===null)return;
-    const b=document.createElement('button');b.type='button';b.className='act';b.dataset.id=id;
-    const nh=hrs(id),ok=av===true&&canNow(a);b.innerHTML=`<b>${a.name()}</b>${nh&&!a.open?`<i class="dur">${durStr(nh)}</i>`:''}${av===true?(ok||a.open?'':'<small>Too dark now.</small>'):`<small>${av}</small>`}`;b.disabled=!a.open&&!ok;
-    b.onclick=()=>doAction(id);b.onmouseenter=()=>{hover=id};b.onmouseleave=()=>{hover=null};acts.appendChild(b)});
-  [...acts.querySelectorAll('.act')].slice(0,9).forEach((b,i)=>b.dataset.k=i+1)}
 
 const ICONS={wood:'<rect x="3" y="12" width="17" height="6" rx="3" fill="#7a5532"/><rect x="5" y="6" width="17" height="6" rx="3" fill="#8a6038"/><circle cx="6" cy="15" r="3" fill="#d9b483" stroke="#7a5532"/><circle cx="8" cy="9" r="3" fill="#e2bf8e" stroke="#8a6038"/><circle cx="8" cy="9" r="1" fill="#b08858"/>',
   fish:'<path d="M2 12c3-5 11-6 15 0-4 6-12 5-15 0z" fill="#8fa7b0"/><path d="M4 12c3 2 9 3 13 0" stroke="#c9d6da" stroke-width="1.4" fill="none"/><path d="M17 12l5-4v8z" fill="#6f8a94"/><circle cx="6" cy="10.8" r="1" fill="#22303a"/>',
@@ -1572,7 +1405,7 @@ function syncS(){VW=SES.getView();V=VW?VW.state:null;if(!S)S=blankS();if(!V)retu
 const vDusk=()=>V?T.duskHour():N.dusk0;
 // ---------- start of a run ----------
 function owDeck(){return shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw',...['lynx','plane','chocolate','silence'].filter(()=>R()<.35)])}
-function newRun(){OWX={mapSeed:1+(R()*999983|0),felled:[],flags:{},season:pickSeason,winter:WINTERS[R()*WINTERS.length|0].id,deck:owDeck(),used:[],events:[]};S=blankS();V=null;VW=null;ENDSHOWN=false}
+function newRun(){const L=levelPick();OWX={mapSeed:1+(R()*999983|0),felled:[],flags:{},season:L.season,winter:L.winter,deck:owDeck(),used:[],events:[]};S=blankS();V=null;VW=null;ENDSHOWN=false}
 // Sir 2026-11-19: start with the standard ten; later kit opens by how a run went, about one or two
 // after a first run, a third now and then, a fourth only if you play for it. Every requirement shows.
 const KIT_UNLOCK={rations:{how:'Reach day 6 in a run.',test:v=>v.day>=6},
@@ -1583,6 +1416,34 @@ const KIT_UNLOCK={rations:{how:'Reach day 6 in a run.',test:v=>v.day>=6},
   shovel:{how:'Finish the timber shelter in a run.',test:v=>(v.structure|0)>=3},
   soap:{how:'Reach day 15 in a run.',test:v=>v.day>=15}};
 const kitName=k=>k.label,kitDo=k=>{const t=noEmo(k.has);return t.charAt(0).toUpperCase()+t.slice(1)+'.'};
+// ---------- harder levels after a win (D-136, Sir chose "Yes, as harder levels after a win") ----------
+// A normal run is season 1 in an ordinary winter and stays pure v12. Each win opens the next season (up to 6).
+// Only effects the full game can carry are used; their numbers ride on the run as state.level.
+const LV_SEASONS=[
+  {t:'Season 1',d:'A normal winter.',m:{}},
+  {t:'Season 2 · Early winter',d:'Every day is 3 °C colder.',m:{temp:-3}},
+  {t:'Season 3 · Lean shore',d:'Also: fish bite less on lines and the net.',m:{temp:-3,fish:-.08}},
+  {t:'Season 4 · Hungry woods',d:'Also: snares catch less.',m:{temp:-3,fish:-.08,snare:-.06}},
+  {t:'Season 5 · The long dark',d:'Also: every night costs 2 morale.',m:{temp:-3,fish:-.08,snare:-.06,nightMorale:2}},
+  {t:'Season 6 · The North',d:'Also: 5 °C colder in all, and every night costs 3 morale.',m:{temp:-5,fish:-.08,snare:-.06,nightMorale:3}}];
+const LV_WINTERS=[
+  {id:'plain',t:'An ordinary winter',d:'Cold, then colder.',m:{}},
+  {id:'mild',t:'A slow start',d:'The first week is 4 °C milder. From day 12 it is 3 °C colder.',m:{mild:true}},
+  {id:'snowy',t:'A snowy winter',d:'Hare tracks are easy to read, so snares catch more.',m:{snare:.06}},
+  {id:'windy',t:'A windy winter',d:'Chop on the lake, so fish bite more.',m:{fish:.05}}];
+function levelPick(){const mx=Math.max(1,Math.min(6,META.maxSeason|0||1)),p=META.level||{};
+  return {season:Math.max(1,Math.min(mx,p.season|0||1)),winter:LV_WINTERS.some(w=>w.id===p.winter)&&mx>1?p.winter:'plain'}}
+function levelOf(season,winter){const a=(LV_SEASONS[season-1]||LV_SEASONS[0]).m,b=(LV_WINTERS.find(w=>w.id===winter)||LV_WINTERS[0]).m;
+  if(season<=1&&winter==='plain')return null;const m={season,winter};
+  ['temp','fish','snare','nightMorale'].forEach(k=>{const v=(a[k]||0)+(b[k]||0);if(v)m[k]=Math.round(v*100)/100});if(b.mild)m.mild=true;return m}
+const levelName=()=>{const L=V&&V.level;if(!L)return '';const w=LV_WINTERS.find(x=>x.id===L.winter);return (LV_SEASONS[L.season-1]||LV_SEASONS[0]).t.split(' · ')[0]+(w&&w.id!=='plain'?' · '+w.t.toLowerCase():'')};
+function levelRows(){const mx=Math.max(1,Math.min(6,META.maxSeason|0||1));if(mx<2)return null;const p=levelPick();
+  const box=document.createElement('div');box.className='levels';
+  const row=(label,items,cur,set)=>{const h=document.createElement('p');h.innerHTML=`<b>${label}</b>`;box.appendChild(h);const g=document.createElement('div');g.className='kit';box.appendChild(g);
+    items.forEach(it=>{const b=btn(`<b>${it.t}</b><small>${it.d}</small>`,()=>{set(it);g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on')},'choice'+(it.key===cur?' on':''));g.appendChild(b)})};
+  row('Season',LV_SEASONS.slice(0,mx).map((x,i)=>({...x,key:i+1})),p.season,it=>{META.level={...levelPick(),season:it.key};saveMeta(META)});
+  row('Kind of winter',LV_WINTERS.map(x=>({...x,key:x.id})),p.winter,it=>{META.level={...levelPick(),winter:it.key};saveMeta(META)});
+  return box}
 function intro(){current=ensureScene('camp');refresh();if(!META.kit)META.kit={runs:0,open:[]};
   if(SES.hasSave()&&!intro.skipSaved){let day='';try{const s=JSON.parse(localStorage.getItem('oneWinter.x')||'null');if(s&&s.day)day=' '+s.day}catch(e){}
     cardEl.innerHTML=`<p class="k">HOLDOUT</p><h2>Your run is waiting</h2><p>Pick up where you left it.</p>`;
@@ -1595,14 +1456,16 @@ function intro(){current=ensureScene('camp');refresh();if(!META.kit)META.kit={ru
   const go=btn('Start the run',()=>{startRun([...pick])},'go');
   const upd=()=>{go.disabled=pick.size!==PICK;go.textContent=pick.size===PICK?'Start the run':pick.size<PICK?`Pick ${PICK-pick.size} more`:`Take ${pick.size-PICK} out`};
   [...std,...open].forEach(k=>{const b=btn(`${kitIcon(k.id)}<b>${kitName(k)}</b><small>${kitDo(k)}</small>`,()=>{if(!choose)return;if(pick.has(k.id))pick.delete(k.id);else pick.add(k.id);b.classList.toggle('on',pick.has(k.id));upd()},'choice'+(pick.has(k.id)?' on':''));if(!choose)b.disabled=false;grid.appendChild(b)});
-  upd();cardEl.appendChild(go);
+  upd();const lr=levelRows();if(lr)cardEl.appendChild(lr);cardEl.appendChild(go);
   if(locked.length){const d=document.createElement('details');d.className='past';d.open=K.runs===0;
     d.innerHTML=`<summary>More kit to earn (${locked.length})</summary><ol>${locked.map(k=>`<li><b>${kitName(k)}</b>: ${KIT_UNLOCK[k.id]?KIT_UNLOCK[k.id].how:'Keep playing.'} <span class="muted">${kitDo(k)}</span></li>`).join('')}</ol>`;cardEl.appendChild(d)}
   const H=META.kit.history||[];if(H.length){const d=document.createElement('details');d.className='past';
     d.innerHTML=`<summary>Your past runs (${H.length})</summary><ol>${H.map(h=>`<li><b>Day ${h.day}</b> · ${h.title}</li>`).join('')}</ol>`;cardEl.appendChild(d)}
   openModal()}
-function startRun(kit){startSound();closeModal();SES.newRun(kit,String(OWX.mapSeed));syncS();saveX();refresh();
-  startCine(()=>flyover([[`Day 1`,`${hhmm(V.hour)} · ${WXL()}`]],()=>refresh()))}
+function startRun(kit){startSound();closeModal();const L=levelPick();OWX.season=L.season;OWX.winter=L.winter;SES.newRun(kit,String(OWX.mapSeed));
+  const lv=levelOf(L.season,L.winter);if(lv){SES.getView().state.level=lv;SES.click('hideModal()')}syncS();saveX();refresh();
+  const first=[[`Day 1`,`${hhmm(V.hour)} · ${WXL()}`]];if(lv)first.push([levelName(),'']);
+  startCine(()=>flyover(first,()=>refresh()))}
 const WXL=()=>V?noEmo(T.WEATHER[V.weather].label)+' · '+deg(Math.round(T.ambientTempC())):'';
 function resume(){if(!SES.continueRun()){intro.skipSaved=true;newRun();intro();return}OWX=loadX()||{mapSeed:1+(R()*999983|0),felled:[],flags:{},season:1,winter:WINTERS[0].id};
   delete OWX.flags.introStage;S=blankS();syncS();closeModal();refresh();onView();
@@ -1639,7 +1502,8 @@ function showEnd(){ENDSHOWN=true;const el=id=>VW.elements.get(id)||{},tx=id=>noE
   const fresh=T.KIT_POOL.filter(k=>!k.std&&!K.open.includes(k.id)&&KIT_UNLOCK[k.id]&&KIT_UNLOCK[k.id].test(V));fresh.forEach(k=>K.open.push(k.id));
   const best=META.best,isBest=!best||V.day>best.day;if(isBest)META.best={day:V.day,place:best?best.place:10};
   K.history=[{day:V.day,title:tx('endTitle')||'Run over'},...(K.history||[])].slice(0,10);saveMeta(META);try{localStorage.removeItem('oneWinter.x')}catch(e){}
-  const unl=fresh.map(k=>`<p style="color:var(--fire)">New kit unlocked: <b>${kitName(k)}</b>. ${kitDo(k)}</p>`).join('');
+  let lvUp='';if(V.cause==='win'){const mx=Math.max(1,META.maxSeason|0||1);if(mx<6){META.maxSeason=mx+1;saveMeta(META);const nx=LV_SEASONS[mx];lvUp=`<p style="color:var(--fire)">A harder level is open: <b>${nx.t}</b>. ${nx.d} Pick it, and a kind of winter, before your next run.</p>`}}
+  const unl=lvUp+fresh.map(k=>`<p style="color:var(--fire)">New kit unlocked: <b>${kitName(k)}</b>. ${kitDo(k)}</p>`).join('');
   cardEl.classList.remove('wide');cardEl.dataset.v='';
   cardEl.innerHTML=`<p class="k">HOLDOUT · Day ${V.day}${isBest?' · your best yet':''}</p><h2>${tx('endTitle')}</h2><p>${tx('endCause')}</p>${unl}<div class="v12 end">${hx('endEpilogue')}${hx('endStats')}</div>`;
   const b=btn('Play again',()=>{SES.leaveRun();newRun();intro();prefetch()},'go');cardEl.appendChild(b);openModal();b.focus()}
