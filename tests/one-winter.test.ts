@@ -7,8 +7,9 @@ const root = new URL('../apps/desktop/', import.meta.url);
 const game = readFileSync(new URL('one-winter/game.html', root), 'utf8');
 
 describe('One Winter page', () => {
-  it('loads no scripts from anywhere', () => {
-    expect(game).not.toMatch(/<script[^>]+src=/);
+  it('loads no scripts from anywhere but its own rules bundle', () => {
+    const srcs = [...game.matchAll(/<script[^>]+src="([^"]+)"/g)].map((m) => m[1]);
+    expect(srcs).toEqual(['rules.js']);
   });
 
   it('has the rules numbers in one place', () => {
@@ -21,6 +22,8 @@ describe('One Winter page', () => {
     expect(page.startsWith('<!doctype html>')).toBe(true);
     expect(page).not.toContain('fonts.googleapis.com');
     expect(page).toContain('href="fonts/fonts.css"');
+    expect(existsSync(new URL('renderer/rules.js', root))).toBe(true);
+    expect(readFileSync(new URL('renderer/rules.js', root), 'utf8')).toContain('TAPOUT');
     for (const f of ['BarlowCondensed-500', 'BarlowCondensed-700', 'AtkinsonHyperlegible-400', 'AtkinsonHyperlegible-700']) {
       expect(existsSync(new URL(`renderer/fonts/${f}.woff2`, root))).toBe(true);
     }

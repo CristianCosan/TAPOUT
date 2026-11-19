@@ -1,8 +1,10 @@
 // Builds the renderer the Electron window loads: One Winter (D-114), one HTML page.
 // one-winter/game.html is the same page as the browser build; here it gets a document
 // skeleton and the two fonts from one-winter/fonts instead of Google Fonts, so it runs offline.
+// D-135: the page runs Sir's full rules from rules.js, rebuilt here from packages/ every time.
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
 const source = path.resolve(__dirname, '../one-winter');
 const target = path.resolve(__dirname, '../renderer');
@@ -17,6 +19,7 @@ if (!game.includes(`const VERSION='${version}';`)) {
   console.error(`one-winter/game.html: VERSION does not match ${version}.`);
   process.exit(1);
 }
+execFileSync(process.execPath, [path.join(source, 'src', 'build-rules.mjs')], { stdio: 'inherit' });
 const page = [
   '<!doctype html>',
   '<html lang="en"><head><meta charset="utf-8">',
@@ -31,6 +34,7 @@ const page = [
 fs.rmSync(target, { recursive: true, force: true });
 fs.mkdirSync(path.join(target, 'fonts'), { recursive: true });
 fs.writeFileSync(path.join(target, 'index.html'), page);
+fs.copyFileSync(path.join(source, 'rules.js'), path.join(target, 'rules.js'));
 for (const f of fs.readdirSync(path.join(source, 'fonts'))) {
   fs.copyFileSync(path.join(source, 'fonts', f), path.join(target, 'fonts', f));
 }
