@@ -48,12 +48,14 @@ function syncS(){VW=SES.getView();V=VW?VW.state:null;if(!S)S=blankS();if(!V)retu
 const vDusk=()=>V?T.duskHour():N.dusk0;
 // ---------- start of a run ----------
 function newRun(){OWX={mapSeed:1+(R()*999983|0),felled:[],flags:{},season:pickSeason,winter:WINTERS[R()*WINTERS.length|0].id};S=blankS();V=null;VW=null;ENDSHOWN=false}
+// Sir 2026-11-19: start with the standard ten; later kit opens by how a run went, about one or two
+// after a first run, a third now and then, a fourth only if you play for it. Every requirement shows.
 const KIT_UNLOCK={rations:{how:'Reach day 6 in a run.',test:v=>v.day>=6},
-  knife:{how:'Cook 3 meals in one run.',test:v=>(v.tot.meals|0)>=3},
-  tarp:{how:'Finish the lean-to in a run.',test:v=>(v.structure|0)>=1||(v.dugout|0)>=1},
+  tarp:{how:'Finish the framed hut in a run.',test:v=>(v.structure|0)>=2},
   net:{how:'Land 6 fish in one run.',test:v=>((v.tot.lines|0)+(v.tot.net|0))>=6},
+  knife:{how:'Bring down big or medium game with the bow in a run.',test:v=>(v.tot.animalsKilled|0)>=1},
   salt:{how:'Smoke meat twice in one run.',test:v=>(v.tot.smoked|0)>=2},
-  shovel:{how:'Finish the framed hut in a run.',test:v=>(v.structure|0)>=2},
+  shovel:{how:'Finish the timber shelter in a run.',test:v=>(v.structure|0)>=3},
   soap:{how:'Reach day 15 in a run.',test:v=>v.day>=15}};
 const kitName=k=>k.label,kitDo=k=>{const t=noEmo(k.has);return t.charAt(0).toUpperCase()+t.slice(1)+'.'};
 function intro(){current=ensureScene('camp');refresh();if(!META.kit)META.kit={runs:0,open:[]};

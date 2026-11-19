@@ -226,7 +226,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 <script>
 (function(){
 "use strict";
-const VERSION='3.0.0-ow.17';
+const VERSION='3.0.0-ow.18';
 const W=1600,H=900;
 const C={snow:[228,231,227],grass:[138,143,126],pine:[47,74,67],lake:[60,90,107],fire:[208,122,44],ink:[28,34,38]};
 const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -527,6 +527,18 @@ const PICK=10;
 // small drawings for the pack screen (24x24)
 const W1='#e4e7e3',WD='#8a6038',WL='#d9b483',ST='#8a9294',RD='#b5452f',IK='#22303a';
 const KIT_ICONS={
+  axe:`<path d="M6 21L16 6" stroke="${WD}" stroke-width="2.6" stroke-linecap="round"/><path d="M13 4c3-2 7 0 8 3l-5 3c-1-2-2-3-3-3z" fill="${ST}"/><path d="M16 10l-3-3" stroke="${IK}" stroke-width=".8"/>`,
+  pot:`<path d="M4 9h16l-1.5 9a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7z" fill="#5a5f61"/><rect x="3" y="7.5" width="18" height="2.4" rx="1" fill="${ST}"/><path d="M7 7.5c0-4 10-4 10 0" fill="none" stroke="${ST}" stroke-width="1.3"/>`,
+  bag:`<rect x="3" y="6" width="18" height="12" rx="6" fill="#3f6a5a"/><path d="M9 6.5v11M15 6.5v11" stroke="#2c4b40" stroke-width="1.2"/><rect x="16" y="9" width="4" height="6" rx="2" fill="${W1}" opacity=".7"/>`,
+  ferro:`<rect x="3" y="14" width="10" height="4" rx="2" fill="${WD}"/><rect x="12" y="15" width="9" height="2" rx="1" fill="#4a4f52"/><path d="M15 12l1.5-3M18 12l2-2.5M17 11.5l3 .3" stroke="#f0a040" stroke-width="1.3" stroke-linecap="round"/>`,
+  bow:`<path d="M6 3c8 4 8 14 0 18" fill="none" stroke="${WD}" stroke-width="2.2" stroke-linecap="round"/><path d="M6 3v18" stroke="${W1}" stroke-width=".8"/><path d="M4 12h16" stroke="${WL}" stroke-width="1.3"/><path d="M20 12l-3-2v4z" fill="${ST}"/>`,
+  line:`<rect x="3" y="10" width="9" height="9" rx="2" fill="${WD}"/><circle cx="7.5" cy="14.5" r="2.4" fill="${WL}"/><path d="M12 12c4-1 6-4 7-8" fill="none" stroke="${W1}" stroke-width="1"/><path d="M19 4v4a2 2 0 0 1-3 0" fill="none" stroke="${ST}" stroke-width="1.3"/>`,
+  mace:`<rect x="7" y="7" width="10" height="14" rx="2.5" fill="#c0392b"/><rect x="9" y="3.5" width="6" height="4" rx="1" fill="${IK}"/><rect x="8.5" y="11" width="7" height="5" rx="1" fill="${W1}" opacity=".85"/>`,
+  multitool:`<rect x="4" y="10" width="14" height="5" rx="2.5" fill="${ST}"/><path d="M17 11l4-3M17 14l4 2" stroke="${ST}" stroke-width="1.6" stroke-linecap="round"/><circle cx="7" cy="12.5" r="1" fill="${IK}"/>`,
+  shovel:`<path d="M12 2v11" stroke="${WD}" stroke-width="2.4" stroke-linecap="round"/><path d="M9.5 2.5h5" stroke="${WD}" stroke-width="2" stroke-linecap="round"/><path d="M7 13h10v3a5 5 0 0 1-10 0z" fill="${ST}"/>`,
+  rations:`<rect x="5" y="6" width="14" height="13" rx="2" fill="#7d8a57"/><rect x="5" y="9" width="14" height="5" fill="#d9c7a0"/><rect x="6" y="5" width="12" height="2" rx="1" fill="${ST}"/>`,
+  salt:`<path d="M8 8h8l1 12H7z" fill="${W1}"/><rect x="8" y="4" width="8" height="4" rx="1" fill="${ST}"/><circle cx="10.5" cy="6" r=".6" fill="${IK}"/><circle cx="13.5" cy="6" r=".6" fill="${IK}"/>`,
+  soap:`<rect x="4" y="9" width="16" height="9" rx="3" fill="#cfd8c4"/><circle cx="17" cy="7" r="2" fill="none" stroke="${W1}" stroke-width=".9"/><circle cx="20" cy="4.5" r="1.2" fill="none" stroke="${W1}" stroke-width=".8"/>`,
   net:`<path d="M3 5h18v14H3z" fill="none" stroke="${W1}" stroke-width="1.3"/><path d="M3 9.7h18M3 14.3h18M7.5 5v14M12 5v14M16.5 5v14" stroke="${W1}" stroke-width=".9" opacity=".7"/><circle cx="5" cy="5" r="1.4" fill="${RD}"/><circle cx="12" cy="5" r="1.4" fill="${RD}"/><circle cx="19" cy="5" r="1.4" fill="${RD}"/>`,
   blanket:`<rect x="3" y="7" width="18" height="11" rx="1.5" fill="#7b4a3a"/><path d="M3 10h18M3 15h18" stroke="#d9c7a0" stroke-width="1.4"/><path d="M5 18v2M8 18v2M11 18v2M14 18v2M17 18v2" stroke="#7b4a3a" stroke-width="1"/>`,
   letter:`<rect x="3" y="6" width="18" height="12" rx="1" fill="#e8e0cc"/><path d="M3 6l9 7 9-7" fill="none" stroke="#a89878" stroke-width="1.3"/><path d="M14.5 15.5c.6-1.2 2.4-1.2 2.6 0 .2-1.2 2-1.2 2.4 0 .1 1-1.6 2.2-2.5 2.8-.9-.6-2.6-1.8-2.5-2.8z" fill="${RD}"/>`,
@@ -1560,12 +1572,14 @@ function syncS(){VW=SES.getView();V=VW?VW.state:null;if(!S)S=blankS();if(!V)retu
 const vDusk=()=>V?T.duskHour():N.dusk0;
 // ---------- start of a run ----------
 function newRun(){OWX={mapSeed:1+(R()*999983|0),felled:[],flags:{},season:pickSeason,winter:WINTERS[R()*WINTERS.length|0].id};S=blankS();V=null;VW=null;ENDSHOWN=false}
+// Sir 2026-11-19: start with the standard ten; later kit opens by how a run went, about one or two
+// after a first run, a third now and then, a fourth only if you play for it. Every requirement shows.
 const KIT_UNLOCK={rations:{how:'Reach day 6 in a run.',test:v=>v.day>=6},
-  knife:{how:'Cook 3 meals in one run.',test:v=>(v.tot.meals|0)>=3},
-  tarp:{how:'Finish the lean-to in a run.',test:v=>(v.structure|0)>=1||(v.dugout|0)>=1},
+  tarp:{how:'Finish the framed hut in a run.',test:v=>(v.structure|0)>=2},
   net:{how:'Land 6 fish in one run.',test:v=>((v.tot.lines|0)+(v.tot.net|0))>=6},
+  knife:{how:'Bring down big or medium game with the bow in a run.',test:v=>(v.tot.animalsKilled|0)>=1},
   salt:{how:'Smoke meat twice in one run.',test:v=>(v.tot.smoked|0)>=2},
-  shovel:{how:'Finish the framed hut in a run.',test:v=>(v.structure|0)>=2},
+  shovel:{how:'Finish the timber shelter in a run.',test:v=>(v.structure|0)>=3},
   soap:{how:'Reach day 15 in a run.',test:v=>v.day>=15}};
 const kitName=k=>k.label,kitDo=k=>{const t=noEmo(k.has);return t.charAt(0).toUpperCase()+t.slice(1)+'.'};
 function intro(){current=ensureScene('camp');refresh();if(!META.kit)META.kit={runs:0,open:[]};
