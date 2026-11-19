@@ -13,6 +13,10 @@ export default tseslint.config(
       'legacy/**',
       'scripts/**',
       'docs/**',
+      // One Winter: the generated rules bundle, the page fragment spliced into game.html, and its build scripts.
+      'apps/desktop/one-winter/rules.js',
+      'apps/desktop/one-winter/src/*.js',
+      'apps/desktop/one-winter/src/*.mjs',
     ],
   },
   js.configs.recommended,

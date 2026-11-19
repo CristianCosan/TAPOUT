@@ -1,5 +1,18 @@
 # Status
 
+**3.0.0-ow.18 (D-135, 2026-11-19): One Winter runs Sir's full game.** Sir asked for everything back (energy, thirst,
+wet clothes, weight, injuries and illness, the dugout and cache, hunting, bear, wolverine and night raids, vows and
+breakdowns, the pop-up choices and the action > option > choice chains). The page now loads `rules.js`, a bundle of
+`packages/core` and `packages/content` through the Session (`apps/desktop/one-winter/src/bridge.ts`, built by
+`src/build-rules.mjs`, also run by `copy-renderer.cjs`), and only draws what the run says: Sir's v12 action
+sections, seven bars, the v12 cards, builds as his step-by-step jobs (rc.4/rc.8), the pack with food, water and
+clothes, travel, sleep and the sat phone. The side view, walk-in, drone flyover and camp stay; the camp now draws
+what is really built (tarp on the ground, lean-to, framed hut, timber shelter, dugout, firepit, rack, cache). The
+page code for this lives in `src/full.js` and is put into game.html by `src/splice.mjs`. Kit: the standard ten on
+a first run, the seven others open by how a run went, each requirement shown from the start (bots: a casual run
+opens one, a careful one two, now and then three). Still to come: One Winter's own seasons, winter kinds, night
+cards and day events next to Sir's (Sir chose "Keep both"), and clearing out the old One Winter rules code.
+
 **One Winter (D-114 to D-127, 3.0.0-ow.14) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
 `apps/desktop/one-winter/game.html`, playable in the browser (https://claude.ai/artifact/Db6GhJvze7a9i4JKJdK31T) and,
 from this version, as the Windows build: the desktop app's renderer is that page with the fonts bundled
