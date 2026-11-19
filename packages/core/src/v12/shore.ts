@@ -14,6 +14,7 @@ import { afterAction, spend } from './threads.ts';
 import { CARRY_CAP, MAX_LINES_TOTAL, TUNING, carryBlocked, hoursFor, rollFish } from './tuning.ts';
 import { $, hideModal, showModal } from './ui.ts';
 import { pityMultiplier } from './woods.ts';
+import { levelCatch } from './level.ts';
 // ============================== actions: shore ==============================
 export function openLineModal(){
   if (!hasKit('line')){ showModal(`<h3>No fishing line</h3><div class="wsub">You didn't draft any - passive lines were never an option this run. A net, if you drafted or weave one, still works.</div><button class="mbtn ghost" onclick="hideModal()">Close</button>`); return; }
@@ -176,6 +177,7 @@ export function checkOneLine(i?){
   if (RULES.soakTime) ln.setAbs = nowAbs();
   let hit=false;
   let q = Math.min(0.9, sp.q * pityMultiplier()) * TUNING.food.passiveCutMultiplier;
+  q = levelCatch(q, 'fish');
   for (let d=0; d<days; d++) if (rand() < q) hit = true;
   let resultText;
   if (hit){
@@ -206,6 +208,7 @@ export function checkNet(){
   if (RULES.soakTime) S.net.setAbs = nowAbs();
   let meatTot=0, descs=[];
   let q = Math.min(0.9, sp.q * TUNING.catchRates.netMultiplier * pityMultiplier()) * TUNING.food.passiveCutMultiplier;
+  q = levelCatch(q, 'fish');
   for (let d=0; d<days; d++) if (rand() < q){ const f = rollFish(); meatTot+=f.meat; descs.push(`a ${f.name} fish`); }
   let resultText;
   if (meatTot>0){ addMeat(meatTot,'net'); S.net.noLuck=0; S.anyCatchToday = true; resultText = `✓ ${descs.join(', ')} - ${meatTot} meat`; log(`Caught. ${descs.join(', ')} in the net. +${meatTot} meat.`, 'good'); }

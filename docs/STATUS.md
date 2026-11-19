@@ -1,5 +1,10 @@
 # Status
 
+**3.0.0-ow.19 (D-136, 2026-11-19): harder levels after a win.** Normal runs stay pure v12. Each win opens the next
+season (up to 6), and the start card then lets you pick the season and a kind of winter (ordinary, slow start, snowy,
+windy). They ride on the run as `state.level` (packages/core/src/v12/level.ts). The old One Winter rule functions the
+full game replaced are gone from game.html. Open for Sir: the rival count (quietField hides it; the 11-17 flyover showed it).
+
 **3.0.0-ow.18 (D-135, 2026-11-19): One Winter runs Sir's full game.** Sir asked for everything back (energy, thirst,
 wet clothes, weight, injuries and illness, the dugout and cache, hunting, bear, wolverine and night raids, vows and
 breakdowns, the pop-up choices and the action > option > choice chains). The page now loads `rules.js`, a bundle of
