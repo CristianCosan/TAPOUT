@@ -43,11 +43,12 @@ function syncS(){VW=SES.getView();V=VW?VW.state:null;if(!S)S=blankS();if(!V)retu
   S.snares=Math.min(3,(V.snareList||[]).length);S.caught=0;
   const ls=(V.lineList||[]).slice(0,2).map(l=>({n:String(l.spotId||'line'),set:true,fish:0}));while(ls.length<2)ls.push({n:'',set:false,fish:0});S.lines=ls;
   S.wx=[];S.temps=[];S.wx[d-1]=WXMAP[V.weather]||'over';S.temps[d-1]=Math.round(T.ambientTempC());S.iceDay=T.iceCm()>0?1:999;
-  S.rivals=new Array(Math.max(0,V.rivals|0)).fill('');S.felled=OWX.felled;S.flags=OWX.flags;S.mapSeed=OWX.mapSeed;S.season=OWX.season;S.winter=OWX.winter;S.phase='day';
+  S.rivals=new Array(Math.max(0,V.rivals|0)).fill('');if(!OWX.deck){OWX.deck=owDeck();OWX.used=[];OWX.events=[]}S.deck=OWX.deck;S.used=OWX.used;S.events=OWX.events;S.felled=OWX.felled;S.flags=OWX.flags;S.mapSeed=OWX.mapSeed;S.season=OWX.season;S.winter=OWX.winter;S.phase='day';
   S.log=(V.log||[]).slice(0,2).reverse().map(l=>noEmo(l.msg))}
 const vDusk=()=>V?T.duskHour():N.dusk0;
 // ---------- start of a run ----------
-function newRun(){OWX={mapSeed:1+(R()*999983|0),felled:[],flags:{},season:pickSeason,winter:WINTERS[R()*WINTERS.length|0].id};S=blankS();V=null;VW=null;ENDSHOWN=false}
+function owDeck(){return shuffle(['cache','wolves','moose','aurora','boots','kerry','dream','flare','mouse','snareNight','ice','dream2','owl','radio','fever','stars','wolverine','fire2','thaw',...['lynx','plane','chocolate','silence'].filter(()=>R()<.35)])}
+function newRun(){OWX={mapSeed:1+(R()*999983|0),felled:[],flags:{},season:pickSeason,winter:WINTERS[R()*WINTERS.length|0].id,deck:owDeck(),used:[],events:[]};S=blankS();V=null;VW=null;ENDSHOWN=false}
 // Sir 2026-11-19: start with the standard ten; later kit opens by how a run went, about one or two
 // after a first run, a third now and then, a fourth only if you play for it. Every requirement shows.
 const KIT_UNLOCK={rations:{how:'Reach day 6 in a run.',test:v=>v.day>=6},
@@ -84,12 +85,15 @@ function resume(){if(!SES.continueRun()){intro.skipSaved=true;newRun();intro();r
   if(!VW.modal&&!VW.endScreen)flyover([[`Day ${V.day}`,`${hhmm(V.hour)} · ${WXL()}`]],()=>refresh())}
 function save(){if(OWX){if(V)OWX.day=V.day;saveX()}}
 // ---------- everything the run says, drawn ----------
-function onView(){const before=S?S.day:0;syncS();if(!V)return;if(V.day>before&&before>0)PENDFLY=true;
+let OWCARD=false,NIGHTCH=0;
+function onView(){const before=S?S.day:0;syncS();if(!V)return;if(V.day>before&&before>0){PENDFLY=true;NIGHTCH=0}
+  if(VW.modal&&PENDFLY&&(VW.modal.match(/onclick=/g)||[]).length>=2&&VW.modal!==onView.last)NIGHTCH++;onView.last=VW.modal;
+  if(OWCARD&&!VW.modal){refresh();save();return}
   refresh();save();
   if(VW.modal){showV12()}else if(V12M){V12M=false;closeModal()}
   if(VW.result&&VW.result.id!==LASTRES&&!VW.modal){LASTRES=VW.result.id;popResult(VW.result)}
   if(VW.endScreen&&!VW.modal){if(!ENDSHOWN)showEnd();return}
-  if(PENDFLY&&!VW.modal&&!FLY&&!CINE){PENDFLY=false;dayFly()}}
+  if(PENDFLY&&!VW.modal&&!FLY&&!CINE){if(!NIGHTCH&&OWX.cardDay!==V.day&&!V.over){OWX.cardDay=V.day;saveX();if(showOWCard())return}PENDFLY=false;dayFly()}}
 SES.subscribe(()=>{if(OWX)onView()});
 function dayFly(){const lines=[[`Day ${V.day}`,`${hhmm(V.hour)} · ${WXL()}`]];
   if(T.iceCm()>0)lines.push(['Ice on the lake',Math.round(T.iceCm())+' cm']);
@@ -115,6 +119,30 @@ function showEnd(){ENDSHOWN=true;const el=id=>VW.elements.get(id)||{},tx=id=>noE
   cardEl.classList.remove('wide');cardEl.dataset.v='';
   cardEl.innerHTML=`<p class="k">HOLDOUT · Day ${V.day}${isBest?' · your best yet':''}</p><h2>${tx('endTitle')}</h2><p>${tx('endCause')}</p>${unl}<div class="v12 end">${hx('endEpilogue')}${hx('endStats')}</div>`;
   const b=btn('Play again',()=>{SES.leaveRun();newRun();intro();prefetch()},'go');cardEl.appendChild(b);openModal();b.focus()}
+// ---------- One Winter's own night cards and day events, next to Sir's (D-135, Sir chose "Keep both") ----------
+// A One Winter night card comes on a morning when Sir's own night brought no choice. Its numbers land on the
+// run's own bars: Warmth on warmth, Food on food, Body on health, Will on morale; wood is firewood, a fish 2 meat, a hare 3.
+const owWords=t=>String(t).replace(/\bWill\b/g,'Morale').replace(/\bBody\b/g,'Health');
+const meatNow=()=>(V.meatQ||[]).reduce((a,e)=>a+(e.n||0),0);
+function owStats(){S.warmth=V.warmth;S.food=V.hunger;S.body=V.health;S.will=V.morale;S.wood=V.stock.firewood|0;const m=meatNow();S.fish=m>=2?1:0;S.hares=m>=5?1:0;S.hung=(V.cacheTier|0)>0;S.ankle=0;S.caught=0;S.snares=Math.min(3,(V.snareList||[]).length);S.caughtHares=V.tot.snared|0}
+function owApply(fn){owStats();const b={w:S.warmth,f:S.food,h:S.body,m:S.will,wd:S.wood,fi:S.fish,ha:S.hares};const text=fn();
+  const c=(k,d)=>{if(d)V[k]=clamp(Math.round((V[k]+d)*10)/10,0,100)};c('warmth',S.warmth-b.w);c('hunger',S.food-b.f);c('health',S.body-b.h);c('morale',S.will-b.m);
+  V.stock.firewood=Math.max(0,(V.stock.firewood|0)+Math.round(S.wood-b.wd));
+  const meat=(S.fish-b.fi)*2+(S.hares-b.ha)*3;if(meat>0){V.meatQ.push({n:meat,abs:V.day*24+V.hour});V.tot.food+=meat}
+  else if(meat<0){let n=-meat;while(n>0&&V.meatQ.length){const e=V.meatQ[0],t=Math.min(e.n,n);e.n-=t;n-=t;if(e.n<=0)V.meatQ.shift()}}
+  SES.click('hideModal()');return owWords(text)}
+function owCardHtml(k,title,text){cardEl.classList.remove('wide');cardEl.dataset.v='';cardEl.innerHTML=`<p class="k">${k}</p><h2>${title}</h2><p>${owWords(text)}</p>`}
+function showOWCard(){owStats();const id=pickCard(),card=CARDS[id];OWX.deck=S.deck;OWX.used=S.used;if(!card)return false;OWCARD=true;saveX();
+  owCardHtml(`Night ${V.day-1}`,card.title,card.text());
+  card.choices.forEach(ch=>{const d=typeof ch.d==='function'?ch.d():ch.d;const b=btn(`<b>${ch.t}</b><small>${owWords(d)}</small>`,()=>{
+      if(ch.tap){OWCARD=false;closeModal();SES.click('confirmTapOut()');return}
+      const tx=owApply(()=>ch.run());cardEl.innerHTML=`<p class="k">Night ${V.day-1}</p><p>${tx}</p>`;const g=btn('Start the day',()=>{OWCARD=false;closeModal();onView()},'go');cardEl.appendChild(g);openModal();g.focus()},'choice'+(ch.danger?' danger':''));
+    if(ch.can&&!ch.can())b.disabled=true;cardEl.appendChild(b)});openModal();return true}
+function maybeEvent(){if(!V||V.over||VW.modal||OWCARD||!modalEl.hidden||OWX.evDay===V.day||V.hour>=vDusk()-1||R()>=.3)return;owStats();
+  const ids=Object.keys(EVENTS).filter(id=>EVENTS[id].site===V.loc&&!OWX.events.includes(id)&&(!EVENTS[id].when||EVENTS[id].when()));if(!ids.length)return;
+  const id=ids[R()*ids.length|0],ev=EVENTS[id];OWX.evDay=V.day;OWX.events.push(id);saveX();OWCARD=true;
+  owCardHtml(`Day ${V.day} · ${SCENES[V.loc].name}`,ev.title,ev.text);
+  ev.choices.forEach(ch=>cardEl.appendChild(btn(`<b>${ch.t}</b><small>${owWords(ch.d)}</small>`,()=>{const tx=owApply(()=>ch.run());OWCARD=false;closeModal();log(tx);refresh()},'choice')));openModal()}
 function endRun(){if(V&&!V.over)SES.click('confirmTapOut()')}
 function nightfall(){}
 function morning(){}
@@ -135,7 +163,7 @@ function spotOf(id){const a=ACTIONS[id];if(!a||!a.spot||!S||a.site!==S.site)retu
 function hrs(){return 0}
 function doAction(id){if(!S||!V||S.over||!modalEl.hidden||FLY||CINE)return;const a=ACTIONS[id];if(!a||a.site!==S.site)return;
   const s=spotOf(id);if(s)walkTo(s);spotCard(a)}
-function travel(site){if(!V||V.over||!modalEl.hidden||V.loc===site||FLY||CINE)return;const t=VW.hud.get('tab-'+site);if(t&&t.disabled)return;sfx('step');SES.click(`goTo('${site}')`)}
+function travel(site){if(!V||V.over||!modalEl.hidden||V.loc===site||FLY||CINE)return;const t=VW.hud.get('tab-'+site);if(t&&t.disabled)return;sfx('step');SES.click(`goTo('${site}')`);if(V.loc===site&&!VW.modal)setTimeout(maybeEvent,900)}
 function treeClick(i){if(!S||!V||S.over||!modalEl.hidden||FLY||CINE)return;
   if(S.site==='woods'){const e=entryMap().get('a-wood');if(!e||!e.visible){log('The axe stays in the belt. Logs come later.');return}S.target=i;
     if(!e.enabled){log(noEmo(e.detail));return}const t=sideTreeOf(i);if(t){walkTo([t.x,t.b,40]);P.work=1.3}const w0=V.stock.wood+V.carry.wood;runEntry(e);
