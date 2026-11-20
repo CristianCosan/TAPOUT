@@ -95,9 +95,13 @@ function pickWeighted<T>(rng: RngState, items: Array<[T, number]>): T | null {
 /**
  * The one place v12 bakes a function's source text into a button: the shot introspection modal
  * (`(() => { fireShot(); })()`). The port emits the bare call; both are the same click.
+ * Also the one recorded legacy bug fix (2026-11-20, packages/core/src/lastLook.test.ts): v12 put
+ * "Betty's snag" into recordLastLook('...') unescaped, a syntax error; the port escapes the apostrophe.
  */
 export function normalizeModal(html: string | null): string | null {
-  return html === null ? null : html.replace(/\(\(\)\s*=>\s*\{\s*(\w+)\(\);?\s*\}\)\(\)/g, '$1()');
+  return html === null ? null : html
+    .replace(/\(\(\)\s*=>\s*\{\s*(\w+)\(\);?\s*\}\)\(\)/g, '$1()')
+    .replace(/recordLastLook\('Betty's snag'\)/g, "recordLastLook('Betty\\'s snag')");
 }
 
 const QUITTING = /endGame\('tap'\)|confirmTapOutStep2|confirmTapOut\b/;
