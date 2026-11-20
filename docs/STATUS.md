@@ -1,5 +1,11 @@
 # Status
 
+**3.0.0-ow.29 (2026-11-20): first-run tips are back.** Since ow.18 the tips had been switched off (Settings still
+showed a Tips switch that did nothing). Playtest 2 asked for fading tips, so four short ones are back, each shown
+once: how the action list and the picture work, the three places, that food, water and warmth fall by the hour,
+and the pack at camp. They say how the screen works, never what to do next; "No more tips" or Settings turns them
+off. The tip box now sits bottom left on a solid panel instead of over the bars.
+
 **3.0.0-ow.28 (2026-11-20): a net crash fixed, camp pickups back.** A reachability bot (every action the rules
 offer at a place must have a button there) found two things. With the ready-made gill net, the net counted as built
 but sat in the pack with no spot, yet the "Lines & net" card still offered Check, which threw after taking the
