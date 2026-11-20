@@ -78,7 +78,7 @@ export function showLossStep3(kind?){
 export function recordWhy(text?){ S.endingChoices.why = text === '(say nothing)' ? null : text; }
 export function showLossStep4(kind?){
   const opts = ['the shelter','the water','the treeline','the tally tree',"Betty's snag"];
-  const btns = opts.map(o=>`<button class="mbtn ghost" onclick="hideModal(); recordLastLook('${o}'); showLossStep5('${kind}')">${o}</button>`).join('');
+  const btns = opts.map(o=>`<button class="mbtn ghost" onclick="hideModal(); recordLastLook('${o.replace(/'/g,"\\'")}'); showLossStep5('${kind}')">${o}</button>`).join('');
   showModal(`<h3>The Last Look</h3><div class="wsub">One last thing to look at before you go.</div>${btns}`);
 }
 export function recordLastLook(text?){ S.endingChoices.lastLook = text; }
@@ -104,7 +104,7 @@ export function showWinStep2(){
 }
 export function showWinStep3(){
   const opts = ['the shelter','the smoker','the tally tree','Betty'];
-  const btns = opts.map(o=>`<button class="mbtn ghost" onclick="hideModal(); recordLastLook('${o}'); showWinStep4()">${o}</button>`).join('');
+  const btns = opts.map(o=>`<button class="mbtn ghost" onclick="hideModal(); recordLastLook('${o.replace(/'/g,"\\'")}'); showWinStep4()">${o}</button>`).join('');
   showModal(`<h3>Showing Them</h3><div class="wsub">There's a version of a tour in you, apparently. What do you show them first?</div>${btns}`);
 }
 export function showWinStep4(){
