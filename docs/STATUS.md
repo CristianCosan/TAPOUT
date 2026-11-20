@@ -1,5 +1,10 @@
 # Status
 
+**3.0.0-ow.30 (2026-11-20): test mode and "Raw chill" back.** Two of Sir's earlier asks that One Winter had
+lost: the Test mode in Settings during a run (D-086: infinite energy, +20 of every material, fed/watered/warm/rested,
+traps ready, win at the next med check; each button presses the core's own test function), and the weather line
+reading "Raw chill" instead of "Cold snap" when the thermometer is above 5 °C (Build 0.0.61). Presentation only.
+
 **3.0.0-ow.29 (2026-11-20): first-run tips are back.** Since ow.18 the tips had been switched off (Settings still
 showed a Tips switch that did nothing). Playtest 2 asked for fading tips, so four short ones are back, each shown
 once: how the action list and the picture work, the three places, that food, water and warmth fall by the hour,
