@@ -28,7 +28,7 @@ const SPOTS={camp:{fire:['a-fire','a-friction','a-firenoferro','a-boil','a-cook'
 const SPOTNAME={fire:'The fire',pot:'The pot',shelter:'Your shelter',pile:'Woodpile',rack:'Smoking rack',cache:'Food cache',stump:'The stump',crate:'Camera crate',pack:'Your pack',rock:'The rocks',line:'Lines and net',drift:'The water',bush:'The bushes',deadfall:'Deadfall',snares:'Snare runs',snag:'Old snag',tree:'Spruce'};
 const PATHS={'a-shelter':'shelter','a-dugout':'dugout','a-firepit':'firepit','a-rack':'rack','a-cache':'cache'};
 const entryMap=()=>{const m=new Map();(VW?VW.panel:[]).forEach(e=>m.set(e.id,e));
-  const h=VW&&VW.hud,ht=id=>h&&h.get(id)?noEmo(h.get(id).text||h.get(id).html.replace(/<[^>]+>/g,'')):'';
+  const h=VW&&VW.hud,ht=id=>h&&h.get(id)?noEmo(String(h.get(id).html||(h.get(id).text??'')).replace(/<[^>]+>/g,'')):'';
   if(h){m.set('sleep',{id:'sleep',label:'Sleep',onclick:'actSleep()',loc:'all',visible:true,enabled:!(h.get('sleepBtn')||{}).disabled&&!V.over,detail:ht('sleep-sub')});
     m.set('early',{id:'early',label:ht('early-label')||'Turn in early',onclick:'actTurnInEarly()',loc:'all',visible:!(h.get('earlyBtn')||{}).hidden,enabled:!V.over,detail:ht('early-sub')});
     m.set('pack',{id:'pack',label:'Open your pack',onclick:'',loc:'camp',visible:true,enabled:true,detail:'What you carry, what you wear, food and water.'})}
@@ -233,7 +233,7 @@ function jobCard(key,name,e){const spec=T.BUILD_TASKS[key],plan=T.jobPlan(key);i
   const go=btn(`<b>${spec.jobs[done]}</b>`,()=>{const d0=V.day,a0=JSON.stringify(V.acts);P.work=1.3;sfx(spec.motion==='chop'?'chop':'step');SES.click(`actJob('${key}')`);
     if(VW.modal||VW.endScreen||V.day!==d0)return;const p2=T.jobPlan(key);if(p2&&p2.done>done&&p2.done<p2.of)jobCard(key,name,e);else if(JSON.stringify(V.acts)!==a0||!p2)closeModal();else jobCard(key,name,e)},'choice');
   go.disabled=!plan.open;cardEl.appendChild(go);cardEl.appendChild(btn('Stop for now',closeModal,'go'));openModal()}
-function packCard(){const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,''))):'';cardEl.classList.remove('wide');cardEl.dataset.v='';
+function packCard(){const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords(String(h.get(id).html||(h.get(id).text??'')).replace(/<[^>]+>/g,''))):'';cardEl.classList.remove('wide');cardEl.dataset.v='';
   cardEl.innerHTML=`<p class="k">Your pack · ${clockStr()}</p><h2>What you have</h2>
    <div class="stats"><span>Logs<b>${ht('inv-wood')}</b></span><span>Firewood<b>${ht('inv-firewood')}</b></span><span>Moss<b>${ht('inv-moss')}</b></span><span>Tinder<b>${ht('inv-tinder')}</b></span>
    <span>Rocks<b>${ht('inv-rocks')}</b></span><span>Clay<b>${ht('inv-clay')}</b></span><span>Meat<b>${ht('inv-meat')}</b></span><span>Arrows<b>${ht('inv-arrows')}</b></span></div>
@@ -255,7 +255,7 @@ const carryWords=t=>t.replace(/(\u{1FAB5}|\u{1FAA8}|\u{1F33F}|\u{1F9F1})\s*(\d+\
 function refresh(){if(!S)return;current=ensureScene(S.site);
   const gctx=$('ground').getContext('2d');gctx.drawImage(drawSideBg(S.site),0,0);drawSideProps(gctx);
   if(!V){$('cDay').textContent='DAY 1 · 6:00';$('cWx').textContent='';$('cFc').textContent='';$('rivals').innerHTML='';hud.innerHTML='';$('gear').innerHTML='';acts.innerHTML='';$('map').innerHTML='';return}
-  const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,''))):'';
+  const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords(String(h.get(id).html||(h.get(id).text??'')).replace(/<[^>]+>/g,''))):'';
   $('cDay').textContent=`DAY ${V.day} · ${hhmm(V.hour)}`;$('cWx').textContent=WXL();$('cFc').textContent=ht('chip-wet')+' · '+ht('pillWeight');
   {const a=T.dawnHour(),b=vDusk()+1.5,el=$('cSlots');el.innerHTML=`<b style="width:${clamp((V.hour-a)/(b-a),0,1)*100}%"></b><u style="left:${(vDusk()-a)/(b-a)*100}%"></u>`}
   $('rivals').innerHTML=`<b>${V.rivals}</b> ${V.rivals===1?'rival':'rivals'} left`;$('rivals').hidden=false; // Sir 11-19: "show"
