@@ -143,7 +143,7 @@ const STORENAME={wood:'logs',raw:'raw water',water:'clean water'};
 const POPBARS={energy:'energy',health:'health',hunger:'food',thirst:'water',warmth:'warmth',morale:'morale',stress:'stress'};
 function popResult(r){const at=[P.x,P.y-210],parts=[];Object.entries(r.bars||{}).forEach(([k,d])=>{d=Math.round(d);if(d&&POPBARS[k])parts.push({t:`${d>0?'+':'−'}${Math.abs(d)} ${POPBARS[k]}`,good:k==='stress'?d<0:d>0})});
   Object.entries(r.stores||{}).forEach(([k,d])=>{d=Math.round(d);k=k.replace(/^inv-/,'');k=STORENAME[k]||k;if(d)parts.push({t:`${d>0?'+':'−'}${Math.abs(d)} ${k}`,good:d>0})});
-  parts.slice(0,5).forEach((p,i)=>pops.push({x:at[0],y:at[1]-i*30,t:p.t,b:performance.now()/1000+i*.12,good:p.good}))}
+  parts.filter(p=>p.good).slice(0,5).forEach((p,i)=>pops.push({x:at[0],y:at[1]-i*38,t:p.t,b:performance.now()/1000+i*.12,good:p.good}))}
 function showV12(){V12M=true;const html=inert(VW.modal);
   if(cardEl.dataset.v!==html){cardEl.classList.remove('wide');cardEl.innerHTML=`<div class="v12">${html}</div>`;cardEl.dataset.v=html}
   for(const [id,el] of VW.elements){if(id.startsWith('end'))continue;const n=cardEl.querySelector('#'+CSS.escape(id));if(!n)continue;

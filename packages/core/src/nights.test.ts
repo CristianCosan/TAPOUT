@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { dawnHour, setPresenter, startRun, TAPOUT_RULES, V12_RULES, type RuleSet } from './game.ts';
 import { darkHour, nightEnergyMul } from './v12/nights.ts';
 import { eCost } from './v12/cost.ts';
+import { hudRecord } from './v12/panel.ts';
 
 let modal: string | null = null;
 setPresenter({ showModal: (h: string) => { modal = h; }, hideModal: () => { modal = null; }, typewriterInto: () => {} });
@@ -74,5 +75,11 @@ describe('sirNights on old saves', () => {
     const v = snapshotRun(start(V12_RULES));
     delete (v.rules as Partial<RuleSet>).sirNights;
     expect(restoreRun(v).rules.sirNights).toBe(false);
+  });
+  it('the Sleep button says you rest until dawn; v12 keeps its 6 hours', () => {
+    start(TAPOUT_RULES).state.hour = 20.5;
+    expect(hudRecord().get('sleep-sub')?.text).toBe('rest until dawn');
+    start(V12_RULES).state.hour = 20.5;
+    expect(hudRecord().get('sleep-sub')?.text).toBe('6 hours of rest, wherever bedtime lands you');
   });
 });
