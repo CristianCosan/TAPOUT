@@ -1,5 +1,10 @@
 # Status
 
+**3.0.0-ow.23 (2026-11-20): page fixes from a screenshot tour.** The pack card no longer crashes (ow.22 read a
+number as text) and shows its counts again. Escape closes a card that has a Back or Close button; must-choose cards
+still need a choice. A tall card keeps its last button stuck to the bottom, so Close is always on screen. A page bot
+(`pbot`) now plays whole runs through the screen itself to find gaps.
+
 **3.0.0-ow.22 (2026-11-20):** a TAP / OUT run saved before a newer rule existed now takes the newer rules on
 load (so a run saved under ow.20 gets Sir's nights); v12 runs keep exactly theirs. Midnight scene soaked from all
 three places.
