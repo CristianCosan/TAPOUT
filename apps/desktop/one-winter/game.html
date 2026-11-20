@@ -1319,7 +1319,8 @@ function startRun(kit){startSound();closeModal();const L=levelPick();OWX.season=
   const lv=levelOf(L.season,L.winter);if(lv){SES.getView().state.level=lv;SES.click('hideModal()')}syncS();saveX();refresh();
   const first=[[`Day 1`,`${hhmm(V.hour)} · ${WXL()} · ${LEFT()}`]];if(lv)first.push([levelName(),'']);
   startCine(()=>flyover(first,()=>refresh()))}
-const WXL=()=>V?noEmo(T.WEATHER[V.weather].label)+' · '+deg(Math.round(T.ambientTempC())):'';
+// v12's 'cold' weather drains warmth but does not lower the thermometer; above 5 °C it reads as a raw chill (Build 0.0.61).
+const WXL=()=>{if(!V)return'';const t=Math.round(T.ambientTempC()),W=T.WEATHER_TEXT;let l=noEmo(T.WEATHER[V.weather].label);if(W&&t>W.coldSnapAtOrBelow)l=l.replace(W.coldSnap,W.rawChill);return l+' · '+deg(t)};
 function resume(){if(!SES.continueRun()){intro.skipSaved=true;newRun();intro();return}OWX=loadX()||{mapSeed:1+(R()*999983|0),felled:[],flags:{},season:1,winter:WINTERS[0].id};
   delete OWX.flags.introStage;S=blankS();syncS();closeModal();refresh();onView();
   if(!VW.modal&&!VW.endScreen)flyover([[`Day ${V.day}`,`${hhmm(V.hour)} · ${WXL()} · ${LEFT()}`]],()=>refresh())}
