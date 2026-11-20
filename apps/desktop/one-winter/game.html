@@ -1457,7 +1457,7 @@ function packCard(){const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords(String(h.ge
   cardEl.innerHTML=`<p class="k">Your pack · ${clockStr()}</p><h2>What you have</h2>
    <div class="stats"><span>Logs<b>${ht('inv-wood')}</b></span><span>Firewood<b>${ht('inv-firewood')}</b></span><span>Moss<b>${ht('inv-moss')}</b></span><span>Tinder<b>${ht('inv-tinder')}</b></span>
    <span>Rocks<b>${ht('inv-rocks')}</b></span><span>Clay<b>${ht('inv-clay')}</b></span><span>Meat<b>${ht('inv-meat')}</b></span><span>Arrows<b>${ht('inv-arrows')}</b></span></div>
-   <p class="muted">Kit: ${T.KIT_POOL.filter(k=>hasKit(k.id)).map(k=>k.label).join(', ')}</p>`;
+   <p class="muted">Kit: ${T.KIT_POOL.filter(k=>hasKit(k.id)).map(k=>{const w=(V.gear||{})[k.id],I=T.INVENTORY_TEXT;return k.label+(w!==undefined&&I?` (${I.condition(w)})`:'')}).join(', ')}</p>`;
   const eat=[['eatBerriesBtn','eatBerries()','Eat berries'],['eatCookedBtn','eatCooked()','Eat a cooked meal'],['eatSmokedBtn','eatSmoked()','Eat smoked meat'],['drinkBtn','actDrink()','Drink clean water']];
   eat.forEach(([id,on,t])=>{const x=h.get(id);if(!x||x.hidden)return;const b=btn(`<b>${t}</b><small>${ht(id)}</small>`,()=>{closeModal();sfx('step');SES.click(on)},'choice');b.disabled=x.disabled||V.over;cardEl.appendChild(b)});
   const r=T.rationsLeft?T.rationsLeft():0;if(r>0)cardEl.appendChild(btn(`<b>Eat a ration</b><small>${r} left · +20 food</small>`,()=>{closeModal();SES.click('eatRation()')},'choice'));

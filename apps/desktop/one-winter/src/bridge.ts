@@ -22,7 +22,7 @@ import {
   rationsLeft,
   wearing,
 } from '@tapout/core';
-import { CAST, P1, GAME_VERSION, BUILD_TASKS, UPGRADE_TEXT, BUILD_STATIONS, WEATHER_TEXT, TEST_TEXT } from '@tapout/content';
+import { CAST, P1, GAME_VERSION, BUILD_TASKS, UPGRADE_TEXT, BUILD_STATIONS, WEATHER_TEXT, TEST_TEXT, INVENTORY_TEXT } from '@tapout/content';
 
 function storage(): Storage | null {
   try {
@@ -59,6 +59,7 @@ function storage(): Storage | null {
   BUILD_STATIONS,
   WEATHER_TEXT,
   TEST_TEXT,
+  INVENTORY_TEXT,
   CAST,
   P1,
   GAME_VERSION,
