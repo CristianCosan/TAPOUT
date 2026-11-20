@@ -125,7 +125,7 @@ function bedCine(){if(CINE)return;closeModal();V12M=false;const from=V.loc,txt='
 function onView(){const before=S?S.day:0;syncS();if(!V)return;
   if(VW.modal&&/forcedSleep\(\)/.test(VW.modal)){refresh();if(!CINE)bedCine();return}if(V.day>before&&before>0){PENDFLY=true;NIGHTCH=0}
   if(VW.modal&&PENDFLY&&(VW.modal.match(/onclick=/g)||[]).length>=2&&VW.modal!==onView.last)NIGHTCH++;onView.last=VW.modal;
-  if(OWCARD&&!VW.modal){refresh();save();return}
+  if(OWCARD&&VW.endScreen)OWCARD=false;if(OWCARD&&!VW.modal){refresh();save();return}
   refresh();save();
   if(VW.modal){showV12()}else if(V12M){V12M=false;closeModal()}
   if(VW.result&&VW.result.id!==LASTRES&&!VW.modal){LASTRES=VW.result.id;popResult(VW.result)}
