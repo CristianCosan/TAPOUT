@@ -2,7 +2,7 @@
 
 **3.0.0-ow.25 (2026-11-20): long morning reports keep their button on screen.** A card with a single button (the
 morning report, most story cards) keeps that button stuck to the bottom when the text is longer than the screen. Checked
-by playing 24 days at 1280x720. The Sleep button now says "rest until dawn" under Sir's nights (it still said 6 hours). Also verified this round: a win runs through to Season 2, a tap-out and a medical pull
+by playing 24 days at 1280x720. The Sleep button now says "rest until dawn" under Sir's nights (it still said 6 hours). The floating numbers after an action show only gains again, as D-126 set (ow.18 had brought costs back, and they piled up after a night). Also verified this round: a win runs through to Season 2, a tap-out and a medical pull
 run through to a new run, every button on 49 kinds of card is valid, audio levels sit within 6 dB across places.
 
 **3.0.0-ow.24 (2026-11-20): the end of a run could get stuck.** On the Last Look card (after a pull or a tap-out,
