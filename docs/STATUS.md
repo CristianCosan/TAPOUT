@@ -1,5 +1,9 @@
 # Status
 
+**3.0.0-ow.22 (2026-11-20):** a TAP / OUT run saved before a newer rule existed now takes the newer rules on
+load (so a run saved under ow.20 gets Sir's nights); v12 runs keep exactly theirs. Midnight scene soaked from all
+three places.
+
 **3.0.0-ow.21 (2026-11-20): nothing of v12's screen left out.** An audit found all 69 v12 actions reachable from the
 page; three v12 lines were not drawn and now are: what you carry (in words: "3/6 logs"), worn gear and hide, and the
 signs line in the Shore and Woods (hunting tracks). Nights as Sir set them (D-138): a card at dark, dearer work after dark, a midnight walk back to bed with a heavier

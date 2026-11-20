@@ -158,7 +158,10 @@ export function restoreRun(snapshot: RunSnapshot): Run {
       : value,
   );
   const rng = { ...snapshot.rng };
-  setRules(snapshot.rules ? { ...V12_RULES, ...snapshot.rules } : V12_RULES);
+  // A TAP / OUT run saved before a newer rule existed (every rule it knew was on) takes the newer rules too;
+  // a v12 run, or one with any rule off, keeps exactly what it had.
+  const allOn = snapshot.rules && Object.values(snapshot.rules).every((v) => v === true);
+  setRules(snapshot.rules ? { ...(allOn ? TAPOUT_RULES : V12_RULES), ...snapshot.rules } : V12_RULES);
   setS(state);
   useRng(rng);
   return liveRun(rng, RULES);
