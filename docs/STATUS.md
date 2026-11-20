@@ -1,5 +1,12 @@
 # Status
 
+**3.0.0-ow.27 (2026-11-20): arrow keys for the action groups.** Up and down open the next or previous group of
+actions, so keyboard-only play can no longer get stuck in a group whose actions are all greyed out; the keys list in
+Settings says so. The old One Winter action table, which the full game replaced, is gone from the page. Checked:
+a fresh start at 1366x768, every card at that size (nothing overflows), saves when browser storage is full (the game
+keeps running), the save size over a 25-day run (about 190 KB in all), and real-mouse and keyboard-only play bots
+(three mouse runs to day 7, 16 and 20, a keyboard run to day 4) with no page errors and no stuck screen.
+
 **3.0.0-ow.26 (2026-11-20): the end screen always wins.** If a One Winter day card was still marked open when a run
 ended, the page kept showing the last story card instead of the end screen. The end screen now clears it. Found by a
 soak that plays runs back to back; memory stays flat across runs (55 to 59 MB). Keys help mentions Esc closing cards.
@@ -45,8 +52,9 @@ clothes, travel, sleep and the sat phone. The side view, walk-in, drone flyover 
 what is really built (tarp on the ground, lean-to, framed hut, timber shelter, dugout, firepit, rack, cache). The
 page code for this lives in `src/full.js` and is put into game.html by `src/splice.mjs`. Kit: the standard ten on
 a first run, the seven others open by how a run went, each requirement shown from the start (bots: a casual run
-opens one, a careful one two, now and then three). Still to come: One Winter's own seasons, winter kinds, night
-cards and day events next to Sir's (Sir chose "Keep both"), and clearing out the old One Winter rules code.
+opens one, a careful one two, now and then three). One Winter's own night cards and day events run next to Sir's
+(Sir chose "Keep both"); seasons and winter kinds came in ow.19. The old One Winter action table, which the full
+game replaced, is gone from game.html (after ow.26).
 
 **One Winter (D-114 to D-127, 3.0.0-ow.14) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
 `apps/desktop/one-winter/game.html`, playable in the browser (https://claude.ai/artifact/Db6GhJvze7a9i4JKJdK31T) and,
