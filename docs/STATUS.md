@@ -1,5 +1,10 @@
 # Status
 
+**3.0.0-ow.21 (2026-11-20): nothing of v12's screen left out.** An audit found all 69 v12 actions reachable from the
+page; three v12 lines were not drawn and now are: what you carry (in words: "3/6 logs"), worn gear and hide, and the
+signs line in the Shore and Woods (hunting tracks). Nights as Sir set them (D-138): a card at dark, dearer work after dark, a midnight walk back to bed with a heavier
+morning, and every morning at dawn.
+
 **3.0.0-ow.20 (D-137, 2026-11-19): the rival count shows** next to the clock and in the morning drone shot, with who
 tapped out (display only; rules unchanged). 32 unused old One Winter declarations removed from game.html.
 

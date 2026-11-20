@@ -116,7 +116,14 @@ function resume(){if(!SES.continueRun()){intro.skipSaved=true;newRun();intro();r
 function save(){if(OWX){if(V)OWX.day=V.day;saveX()}}
 // ---------- everything the run says, drawn ----------
 let OWCARD=false,NIGHTCH=0;
-function onView(){const before=S?S.day:0;syncS();if(!V)return;if(V.day>before&&before>0){PENDFLY=true;NIGHTCH=0}
+// sirNights (Sir 2026-11-20): at midnight there is no choice. Dan walks back to the shelter on his own, the words on
+// screen, and only then does the run go to sleep.
+function bedCine(){if(CINE)return;closeModal();V12M=false;const from=V.loc,txt='With the last bits of energy you drag your tired body back to the shelter and fall asleep.';
+  const steps=[];if(from!=='camp')steps.push({sx:-60,k:'Midnight',t:()=>txt,dur:3.5});
+  steps.push({site:'camp',from:from==='shore'?1500:from==='woods'?110:P.x,sx:SP.camp.shelter[0]+40,k:'Midnight',t:()=>txt,dur:5});
+  P.face=-1;CINE={i:-1,b:0,steps,locked:true,done:()=>SES.click('hideModal(); forcedSleep()')};music.mood('night');cineEl.hidden=false;$('game').classList.add('cine');$('cineSkip').hidden=true;nextCine()}
+function onView(){const before=S?S.day:0;syncS();if(!V)return;
+  if(VW.modal&&/forcedSleep\(\)/.test(VW.modal)){refresh();if(!CINE)bedCine();return}if(V.day>before&&before>0){PENDFLY=true;NIGHTCH=0}
   if(VW.modal&&PENDFLY&&(VW.modal.match(/onclick=/g)||[]).length>=2&&VW.modal!==onView.last)NIGHTCH++;onView.last=VW.modal;
   if(OWCARD&&!VW.modal){refresh();save();return}
   refresh();save();
@@ -226,7 +233,7 @@ function jobCard(key,name,e){const spec=T.BUILD_TASKS[key],plan=T.jobPlan(key);i
   const go=btn(`<b>${spec.jobs[done]}</b>`,()=>{const d0=V.day,a0=JSON.stringify(V.acts);P.work=1.3;sfx(spec.motion==='chop'?'chop':'step');SES.click(`actJob('${key}')`);
     if(VW.modal||VW.endScreen||V.day!==d0)return;const p2=T.jobPlan(key);if(p2&&p2.done>done&&p2.done<p2.of)jobCard(key,name,e);else if(JSON.stringify(V.acts)!==a0||!p2)closeModal();else jobCard(key,name,e)},'choice');
   go.disabled=!plan.open;cardEl.appendChild(go);cardEl.appendChild(btn('Stop for now',closeModal,'go'));openModal()}
-function packCard(){const h=VW.hud,ht=id=>h.get(id)?noEmo((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,'')):'';cardEl.classList.remove('wide');cardEl.dataset.v='';
+function packCard(){const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,''))):'';cardEl.classList.remove('wide');cardEl.dataset.v='';
   cardEl.innerHTML=`<p class="k">Your pack · ${clockStr()}</p><h2>What you have</h2>
    <div class="stats"><span>Logs<b>${ht('inv-wood')}</b></span><span>Firewood<b>${ht('inv-firewood')}</b></span><span>Moss<b>${ht('inv-moss')}</b></span><span>Tinder<b>${ht('inv-tinder')}</b></span>
    <span>Rocks<b>${ht('inv-rocks')}</b></span><span>Clay<b>${ht('inv-clay')}</b></span><span>Meat<b>${ht('inv-meat')}</b></span><span>Arrows<b>${ht('inv-arrows')}</b></span></div>
@@ -242,10 +249,13 @@ function shelterCard(){spotCard(ACTIONS['camp:shelter'])}
 const OPEN={};
 const BARS=[['energy','Energy','#E0B050'],['health','Health','#7F9DAD'],['hunger','Food','#A7AC98'],['thirst','Water','#6F9FC0'],['warmth','Warmth','#D07A2C'],['morale','Morale','#E4E7E3'],['stress','Stress','#9C6B8E']];
 function hintFor(){return null}
+// v12's carry chip names the load by emoji only; say it in words, as the rest of the screen does.
+const CARRYW={'\u{1FAB5}':'logs','\u{1FAA8}':'rocks','\u{1F33F}':'moss','\u{1F9F1}':'clay'};
+const carryWords=t=>t.replace(/(\u{1FAB5}|\u{1FAA8}|\u{1F33F}|\u{1F9F1})\s*(\d+\/\d+)/gu,(m,e,n)=>n+' '+CARRYW[e]).replace(/\u{1F33F}\u00D7(\d+)/gu,'insulated ×$1');
 function refresh(){if(!S)return;current=ensureScene(S.site);
   const gctx=$('ground').getContext('2d');gctx.drawImage(drawSideBg(S.site),0,0);drawSideProps(gctx);
   if(!V){$('cDay').textContent='DAY 1 · 6:00';$('cWx').textContent='';$('cFc').textContent='';$('rivals').innerHTML='';hud.innerHTML='';$('gear').innerHTML='';acts.innerHTML='';$('map').innerHTML='';return}
-  const h=VW.hud,ht=id=>h.get(id)?noEmo((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,'')):'';
+  const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,''))):'';
   $('cDay').textContent=`DAY ${V.day} · ${hhmm(V.hour)}`;$('cWx').textContent=WXL();$('cFc').textContent=ht('chip-wet')+' · '+ht('pillWeight');
   {const a=T.dawnHour(),b=vDusk()+1.5,el=$('cSlots');el.innerHTML=`<b style="width:${clamp((V.hour-a)/(b-a),0,1)*100}%"></b><u style="left:${(vDusk()-a)/(b-a)*100}%"></u>`}
   $('rivals').innerHTML=`<b>${V.rivals}</b> ${V.rivals===1?'rival':'rivals'} left`;$('rivals').hidden=false; // Sir 11-19: "show"
@@ -253,7 +263,7 @@ function refresh(){if(!S)return;current=ensureScene(S.site);
     const tb=h.get('tab-'+k);b.disabled=k===V.loc||!!(tb&&tb.disabled)||V.over;b.title=ht('tt-'+k)+` (${k[0].toUpperCase()})`;b.onclick=()=>travel(k);mp.appendChild(b)});
   const bar=(k,n,c)=>{const v=k==='energy'?V.energy/V.maxEnergy*100:V[k],val=k==='energy'?ht('val-energy'):Math.round(V[k]),low=k==='stress'?v>75:v<25;
     return `<div class="row${low?' low':''}"><span>${n}</span><div class="bar"><span style="width:${clamp(v,0,100)}%;--c:${c}"></span></div><b>${val}</b></div>`};
-  const chips=[ht('chip-fire'),ht('chip-shelter'),!(h.get('chip-injury')||{}).hidden?ht('chip-injury'):'',!(h.get('chip-wolf')||{}).hidden?ht('chip-wolf'):'',ht('conditionChips')].filter(Boolean);
+  const chips=[ht('chip-fire'),ht('chip-shelter'),!(h.get('chip-injury')||{}).hidden?ht('chip-injury'):'',!(h.get('chip-wolf')||{}).hidden?ht('chip-wolf'):'',ht('conditionChips'),ht('carryChips'),ht('gearChips')].filter(Boolean);
   hud.innerHTML=BARS.map(([k,n,c])=>bar(k,n,c)).join('')+`<p class="chips">${chips.join(' · ')}</p>`;
   const ic=(k,n,title,off)=>`<span class="${off?'off':''}" title="${title}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${n?`<i>${n}</i>`:''}</span>`;
   const food=[['eatBerriesBtn','eatBerries()','Berries'],['eatCookedBtn','eatCooked()','Meal'],['eatSmokedBtn','eatSmoked()','Smoked'],['drinkBtn','actDrink()','Water']];
@@ -264,7 +274,7 @@ function refresh(){if(!S)return;current=ensureScene(S.site);
   const m=entryMap(),loc=V.loc,secs=[...(SECTIONS[loc]||[]),...SECTIONS.all].map(([t,ids])=>[t,ids.map(i=>m.get(i)).filter(e=>e&&e.visible)]).filter(([,es])=>es.length);
   const hunt=secs.find(([t])=>t==='Hunt chain');if(hunt)OPEN[loc]='Hunt chain';
   if(!secs.some(([t])=>t===OPEN[loc]))OPEN[loc]=(secs.find(([,es])=>es.some(e=>e.enabled))||secs[0]||[''])[0];
-  acts.innerHTML=`<h3>${SCENES[loc].name} · ${hhmm(V.hour)}</h3>`;
+  acts.innerHTML=`<h3>${SCENES[loc].name} · ${hhmm(V.hour)}</h3>${ht('signsLine')&&loc!=='camp'?`<p class="signs">${ht('signsLine')}</p>`:''}`;
   secs.forEach(([t,es])=>{const hd=document.createElement('button');hd.type='button';hd.className='sec'+(OPEN[loc]===t?' on':'');hd.innerHTML=`${t}<span>${es.filter(e=>e.enabled).length}/${es.length}</span>`;hd.onclick=()=>{OPEN[loc]=OPEN[loc]===t?'':t;refresh()};acts.appendChild(hd);
     if(OPEN[loc]!==t)return;es.forEach(e=>{const b=document.createElement('button');b.type='button';b.className='act';b.dataset.id=e.id;b.innerHTML=`<b>${noEmo(e.label)}</b>${e.detail?`<small>${noEmo(e.detail)}</small>`:''}`;b.disabled=!e.enabled||V.over;b.onclick=()=>{if(!modalEl.hidden||FLY||CINE)return;runEntry(e)};acts.appendChild(b)})});
   const night=document.createElement('div');night.className='night';[['sleep','Sleep'],['early','Turn in early']].forEach(([id,t])=>{const e=m.get(id);if(!e||!e.visible)return;const b=document.createElement('button');b.type='button';b.className='act';b.innerHTML=`<b>${t}</b><small>${noEmo(e.detail)}</small>`;b.disabled=!e.enabled;b.onclick=()=>{if(!modalEl.hidden||FLY||CINE)return;runEntry(e)};night.appendChild(b)});

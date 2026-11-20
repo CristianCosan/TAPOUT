@@ -10,6 +10,7 @@ import { LATE_UPGRADES, TARP_STAGE, TUNING } from './tuning.ts';
 import { lateBuilt } from './late.ts';
 import { RULES } from './rules.ts';
 import { levelTempC } from './level.ts';
+import { nightEnergyMul } from './nights.ts';
 // ============================== time, cost & injury engine ==============================
 // v12 §6.1: ankle-specific multiplier table replaces the old blanket 1.5x - travel/wood are hammered
 // (x3.5), most physical work is heavily taxed (x3.0), cooking/boiling stay near-normal (x1.1).
@@ -34,6 +35,7 @@ export function eCost(base?, tags=''){
   v = Math.round(v * ankleMul(tags));
   if (S.injury && S.injury.type === 'wrist' && tags.includes('h')) v = Math.round(v*1.5);
   if (shiveringActive() && (tags.includes('o')||tags.includes('w')||tags.includes('h'))) v = Math.round(v * TUNING.shivering.energyMul);
+  const nm = nightEnergyMul(); if (nm !== 1) v = Math.round(v * nm);
   return v;
 }
 export function eTime(base?, tags=''){
