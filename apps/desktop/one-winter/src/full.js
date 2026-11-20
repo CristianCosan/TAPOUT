@@ -248,7 +248,20 @@ function shelterCard(){spotCard(ACTIONS['camp:shelter'])}
 // ---------- the screen around the picture ----------
 const OPEN={};
 const BARS=[['energy','Energy','#E0B050'],['health','Health','#7F9DAD'],['hunger','Food','#A7AC98'],['thirst','Water','#6F9FC0'],['warmth','Warmth','#D07A2C'],['morale','Morale','#E4E7E3'],['stress','Stress','#9C6B8E']];
-function hintFor(){return null}
+// First-run tips (Playtest 2: fading tips for discoverability). Each shows once, says how the screen works and
+// never what to do next; Settings or "No more tips" turns them off.
+Object.assign(TIPS,{
+  start:'Last one in wins. Your actions are in the list on the right: click a group to open it, or click things in the picture. Every action takes time and energy.',
+  places:'Camp, Shore and Woods are along the top (or press C, S, W). Walking there takes time.',
+  bars:'Food, water and warmth fall by the hour. If health runs out, the run ends.',
+  pack:'Your pack at camp holds your food, water and clothes. Click it to look inside.'});
+function hintFor(){if(!V||V.over||META.tipsOff||FLY||CINE||VW.modal||OWCARD)return null;const no=k=>!(META.tipsSeen||[]).includes(k);
+  if(no('start'))return 'start';
+  if(no('places')&&(V.day>1||V.hour>=7))return 'places';
+  if(no('bars')&&(V.hunger<50||V.thirst<50||V.warmth<50))return 'bars';
+  if(no('pack')&&V.loc==='camp'&&(V.day>1||V.hour>=9))return 'pack';
+  return null}
+setInterval(()=>{if(modalEl.hidden)showHint()},1500);
 // v12's carry chip names the load by emoji only; say it in words, as the rest of the screen does.
 const CARRYW={'\u{1FAB5}':'logs','\u{1FAA8}':'rocks','\u{1F33F}':'moss','\u{1F9F1}':'clay'};
 const carryWords=t=>t.replace(/(\u{1FAB5}|\u{1FAA8}|\u{1F33F}|\u{1F9F1})\s*(\d+\/\d+)/gu,(m,e,n)=>n+' '+CARRYW[e]).replace(/\u{1F33F}\u00D7(\d+)/gu,'insulated ×$1');
