@@ -968,7 +968,7 @@ function panelPass(){
   setBtn('a-sitwatch', r[0], r[1]);
 
   $('sleepBtn').disabled = S.over || S.hour < 16;
-  $('sleep-sub').textContent = S.hour < 16 ? 'available from 16:00' : (S.loc !== 'camp' ? 'you\'ll walk back to camp and turn in' : '6 hours of rest, wherever bedtime lands you');
+  $('sleep-sub').textContent = S.hour < 16 ? 'available from 16:00' : (S.loc !== 'camp' ? 'you\'ll walk back to camp and turn in' : (RULES.sirNights ? 'rest until dawn' : '6 hours of rest, wherever bedtime lands you'));
   $('earlyBtn').classList.toggle('hidden', S.over);
   $('early-label').textContent = S.loc === 'camp' ? '😪 Turn in early' : '🚶 Head back and turn in';
   $('early-sub').textContent = 'a longer night\'s drain + −4 morale - but never nothing to do';
