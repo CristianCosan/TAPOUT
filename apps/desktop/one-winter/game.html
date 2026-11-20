@@ -566,82 +566,8 @@ const fireCost=()=>(temp()<-8?N.fireWoodCold:N.fireWood)-((S.pitch||0)>0?1:0);
 const fishChance=()=>{if(wxNow()==='storm')return 0;const b=iced()?N.iceFishOdds:N.fishOdds-N.fishDrop*(S.day-1);return clamp(b+S.mods.fish+(has('net')?N.netBonus*(iced()?.5:1):0)+(iced()&&has('auger')?.2:0),.05,.9)};
 const snareChance=()=>N.snareOdds+S.mods.snare+(has('wire')?N.wireBonus:0);
 const tens=p=>Math.round(p*10);
-const SHELTER=['Lay a bough bed','Build a reflector and side walls','Close it into a hut with a chimney'];
-const ACTIONS={
-  wood:{site:'camp',name:()=>'Gather deadfall',spot:'pile',
-    say:()=>`+${N.woodGain} wood from the deadfall nearby. Food −${N.woodFood} more.`,
-    run(){S.wood+=N.woodGain;S.food-=N.woodFood;sfx('chop');return `You drag in deadfall and split it on the stump. +${N.woodGain} wood.`}},
-  fire:{site:'camp',name:()=>S.fire>0?'Build the fire up':'Light the fire',spot:'fire',
-    can:()=>S.wood>=fireCost()||`Needs ${fireCost()} wood.`,
-    say:()=>`Uses ${fireCost()} wood. Warmth +${N.fireGain}. Burns about ${N.fireHours} hours.`,night:true,
-    run(){const was=S.fire>0;S.wood-=fireCost();if(S.pitch>0)S.pitch--;S.warmth+=N.fireGain;S.will+=was?1:3;S.fire=Math.min(N.fireMax,S.fire+N.fireHours);sfx('fire');return S.day<4?'The ferro rod throws a fat spark. Flames climb the birch bark.':'You feed it split wood until it roars.'}},
-  cook:{site:'camp',name:()=>S.hares>0?'Cook a hare':'Cook a fish',spot:'rack',
-    can:()=>(S.fish<1&&S.hares<1)?'Needs a fish or a hare.':S.fire<=0?'Needs a lit fire.':true,night:true,
-    say:()=>S.hares>0?`Uses 1 hare. Food +${N.cookHare}, Will +${cookWill()}.`:`Uses 1 fish. Food +${N.cookFish}, Will +${cookWill()}.`,
-    run(){S.will+=cookWill();S.meals=(S.meals||0)+1;if(S.hares>0){S.hares--;S.food+=N.cookHare;return 'Hare on a spit. Fat drips and spits in the coals. The best meal in days.'}S.fish--;S.food+=N.cookFish;return 'Skin crackling on a green stick. You eat it all, bones picked clean.'}},
-  tent:{site:'camp',name:()=>'Your shelter',spot:'shelter',open:()=>shelterCard(),say:()=>''},
-  pack:{site:'camp',name:()=>'Your pack',spot:'pack',open:()=>packCard(),say:()=>''},
-  whittle:{site:'camp',name:()=>'Whittle by the fire',spot:'stump',can:()=>S.fire>0||'Needs a lit fire.',say:()=>'',night:true,
-    run(){S.will+=N.whittleWill+(has('knife')?2:0);S.whittled=(S.whittled||0)+1;return ['You carve a spoon. It is a bad spoon. You love it.','A little loon, out of birch. It sits on the woodpile now.','Tent pegs, a hook, a handle for the pot. Small jobs, calm hands.'][(S.whittled-1)%3]}},
-  tea:{site:'camp',name:()=>'Brew spruce tea',spot:'pot',can:()=>S.fire<=0?'Needs a lit fire.':S.flags.teaDay===S.day?'One pot a day.':true,say:()=>'',night:true,
-    run(){S.flags.teaDay=S.day;S.warmth+=N.teaWarm;S.will+=N.teaWill;return ['Needles in the pot, a little snow. It tastes like a Christmas tree and it is the best thing all day.','You hold the cup in both hands until it goes cold.','Steam, pine, quiet. The camera gets a long shot of you doing nothing at all.'][(S.day-1)%3]}},
-  rest:{site:'camp',hidden:true,name:()=>'Rest inside',spot:null,say:()=>'',night:true,
-    run(){S.body+=N.restBody;S.will+=N.restWill;return S.shelter>=2?'You lie in the boughs and listen to the wind go over the wall.':'You lie under the tarp and let your legs stop aching.'}},
-  sleep:{site:'camp',free:true,name:()=>dark()?'Go to sleep':'Turn in early',spot:null,say:()=>'',night:true,when:()=>S.hour>=dusk()-2.5,
-    run(){if(!dark())S.warmth+=N.earlyWarmth;S.flags.bed=true;return dark()?'You bank the fire and crawl into the bag.':'You crawl into the bag before dark.'}},
-  confess:{site:'camp',name:()=>'Talk to the camera',spot:'crate',say:()=>'',night:true,can:()=>S.flags.camDay!==S.day||'You did that today.',
-    run(){S.flags.camDay=S.day;S.will+=N.confessWill;const L=['You tell the camera what the lake sounded like this morning. It helps to say it out loud.','"Day '+S.day+'. Still here." You hold the lens a long time before you switch it off.','You talk about Mara, about the cabin, about nothing. The battery light blinks.','You film the fire for a while, saying nothing. That counts too.'];return L[(S.day-1)%L.length]}},
-  shelter:{site:'camp',hidden:true,name:()=>SHELTER[Math.min(S.shelter,2)],spot:null,
-    can:()=>S.shelter>=3?'The shelter is finished.':S.wood>=N.shelterCost[S.shelter]||`Needs ${N.shelterCost[S.shelter]} wood.`,
-    say:()=>S.shelter>=3?'':`Uses ${N.shelterCost[S.shelter]} wood. Every night is ${N.shelterNight} warmer, and days at camp a little warmer.`,
-    run(){S.wood-=N.shelterCost[S.shelter];S.shelter++;sfx('chop');return ['Spruce boughs, thick and springy. No more frozen ground under you.','A log wall behind the fire throws the heat back under the tarp, and two low walls keep the wind off your sides.','Log walls all round, snow packed on the roof, a stone hearth inside with a chimney. The fire lives indoors now.'][S.shelter-1]}},
-  pemmican:{site:'any',hidden:true,free:true,name:()=>`Eat pemmican (${3-S.pem} left)`,spot:null,when:()=>has('pemmican')&&S.pem<3,say:()=>`Free. Food +${N.pemmican}.`,
-    run(){S.pem++;S.food+=N.pemmican;return 'Fat, salt, dried meat. Your body wakes up.'}},
-  aid:{site:'any',hidden:true,free:true,name:()=>`Use the first aid kit (${2-S.aid} left)`,spot:null,when:()=>has('firstaid')&&S.aid<2,say:()=>`Free. Body +${N.firstAid}.`,
-    run(){S.aid++;S.body+=N.firstAid;if(S.ankle>0)S.ankle=Math.max(0,S.ankle-1);return 'Clean, wrap, tape. It hurts less already.'}},
-  letter:{site:'camp',hidden:true,free:true,name:()=>"Read Mara's letter",spot:null,when:()=>has('letter')&&!S.letter,
-    say:()=>`Free, once. Will +${N.letterWill}.`,
-    run(){S.letter=true;S.will+=N.letterWill;return '"Come home with stories, not frostbite. I love you, idiot." You read it twice.'}},
-  fish:{site:'shore',name:()=>iced()?'Fish through the ice':'Fish from the rocks',spot:'rock',
-    can:()=>wxNow()==='storm'?'Too rough to fish in a storm.':true,
-    say:()=>`About ${tens(fishChance())} in 10 chance of a fish.${iced()?' Cold work: Warmth −3 more.':''}`,
-    run(){sfx('splash');if(iced())S.warmth-=3;if(R()<fishChance()){const n=R()<.25?2:1;S.fish+=n;S.caughtFish+=n;if(iced())S.iceFish=(S.iceFish||0)+n;S.will+=6;
-      return n===2?'Two whitefish, one after the other. You grin at the camera.':iced()?'A lake trout through a hole no wider than your boot.':'A fat whitefish, cold and heavy in your hands.'}
-      S.will-=3;return R()<.5?'Nothing. The line just hangs there.':'One bite, then gone. You curse at the lake.'}},
-  sit:{site:'shore',name:()=>'Sit by the water',spot:'drift',can:()=>S.flags.sitDay!==S.day||'You did that today.',say:()=>'',
-    run(){S.flags.sitDay=S.day;S.will+=N.sitWill;return ['You sit on the driftwood and watch the light move on the lake. Nobody needs anything from you.','A loon calls twice. You answer it, badly.','You think about Mara at the landing, and it does not hurt. It helps.','Wind on the water, grey on grey. You breathe until your shoulders drop.'][(S.day-1)%4]}},
-  drift:{site:'shore',name:()=>'Haul driftwood',spot:'drift',can:()=>S.flags.driftDay!==S.day||'You picked the shore clean today.',
-    say:()=>'+3 wood, once a day. Wet work: Warmth −3 more.',
-    run(){S.flags.driftDay=S.day;S.wood+=3;S.warmth-=3;sfx('chop');return 'Grey, sun-bleached logs from the tideline, dragged up above the ice. +3 wood.'}},
-  forage:{site:'shore',name:()=>S.hips>0&&S.day<12?'Pick rose hips':'Scrape the shore for food',spot:'bush',
-    say:()=>S.hips>0&&S.day<12?`Food +${N.forageFood} now (${S.hips} pickings left). Maybe some driftwood.`:`Food +${N.scrapFood}. The good stuff is gone. Maybe some driftwood.`,
-    run(){const good=S.hips>0&&S.day<12;if(good){S.hips--;S.food+=N.forageFood}else S.food+=N.scrapFood;
-      if(R()<.45){S.wood+=2;return (good?'Sour, seedy, good.':'Frozen cattail roots, barely worth it.')+' And a bundle of dry driftwood. +2 wood.'}return good?'Sour, seedy, good. Your fingers are scratched to bits.':'Frozen cattail roots, barely worth it.'}},
-  setLine:{site:'shore',name:()=>`Set a night line at ${(S.lines.find(l=>!l.set)||S.lines[0]).n}`,spot:'line',when:()=>S.lines.some(l=>!l.set),
-    can:()=>wxNow()==='storm'?'Too rough today.':true,say:()=>'',
-    run(){const ln=S.lines.find(l=>!l.set);ln.set=true;return `A baited hook on a long line, tied off to a stake. That is ${ln.n} now.`}},
-  pullLines:{site:'shore',free:true,name:()=>'Pull in '+S.lines.filter(l=>l.fish).map(l=>l.n).join(' and '),spot:'linefish',when:()=>S.lines.some(l=>l.fish),say:()=>'',
-    run(){let n=0;const names=[];S.lines.forEach(l=>{if(l.fish){n+=l.fish;names.push(l.n);l.fish=0}});S.fish+=n;S.caughtFish+=n;if(iced())S.iceFish=(S.iceFish||0)+n;S.will+=5;
-      return n>1?`${names.join(' and ')} both have fish on. Good lines.`:`A fish on ${names[0]}. You knew that spot was good.`}},
-  fell:{site:'woods',name:()=>'Fell a spruce',spot:'tree',can:()=>standing().length?true:'Nothing left to fell nearby.',say:()=>'',
-    run(){const i=S.target!=null&&!S.felled.includes(S.target)?S.target:standing()[0];S.target=null;S.felled.push(i);const n=N.fellWood+(has('saw')?N.sawBonus:0);S.wood+=n;S.food-=woodsFood()+N.fellFood;S.cuts=(S.cuts||0)+1;sfx('chop');
-      return S.felled.length===1?`Axe, wedge, a long crack, and it comes down. +${n} wood.`:`Another spruce down. You limb it and drag it back. +${n} wood.`}},
-  pitch:{site:'woods',name:()=>'Scrape spruce pitch',spot:'snag',can:()=>(S.pitch||0)<N.pitchMax||'Your tin is full.',say:()=>'',
-    run(){S.pitch=(S.pitch||0)+1;return 'Amber pitch off the old snag, into the tin. It will light a fire with one less piece of wood.'}},
-  deadwood:{site:'woods',name:()=>S.deadfall>0?'Cut the deadfall':'The deadfall is used up',spot:'deadfall',can:()=>S.deadfall>0||'All cut up. Fell a tree instead.',
-    say:()=>`+${N.woodsWood+(has('saw')?N.sawBonus:0)} wood. Hard work: Food −${woodsFood()} more.`,
-    run(){const n=N.woodsWood+(has('saw')?N.sawBonus:0);S.deadfall--;S.wood+=n;S.food-=woodsFood();S.cuts=(S.cuts||0)+1;sfx('chop');return `You buck the fallen spruce into rounds and haul them back. +${n} wood.`}},
-  setSnares:{site:'woods',name:()=>S.snares<3?'Set snares on the trail':'Snares are set',spot:'snares',
-    can:()=>S.snares>=3?'All three snares are out.':true,
-    say:()=>`Set all three. Each night each one has about ${tens(snareChance())} in 10 chance of a hare.`,
-    run(){S.snares=3;return 'Three loops of wire on the hare run, low and open. Now you wait.'}},
-  ridge:{site:'woods',name:()=>'Climb the ridge',spot:'snag',can:()=>!S.flags.ridgeDay||S.day-S.flags.ridgeDay>=3||'You were up there lately.',
-    say:()=>'Look down the lake and count the other camps. Will +5.',
-    run(){S.flags.ridgeDay=S.day;S.will+=5;const n=S.rivals.length;return n>1?`From the top you count ${n} thin lines of smoke down the shore. ${n} people, just as cold as you.`:n===1?'One line of smoke left down the shore. One other person, just as stubborn as you.':'No smoke anywhere but yours.'}},
-  checkSnares:{site:'woods',name:()=>`Collect ${S.caught} ${S.caught===1?'hare':'hares'}`,spot:'catch',when:()=>S.caught>0,free:true,
-    say:()=>'Free. Bring them back before a fox does.',
-    run(){S.hares+=S.caught;S.caughtHares+=S.caught;S.will+=6;const n=S.caught;S.caught=0;return n>1?'Two snowshoe hares. You say thank you out loud.':'A snowshoe hare, already white for winter.'}}
-};
+// the actions on screen come from the run (rebuildActions below); this table is filled there
+const ACTIONS={};
 function standing(){if(TOP){const sc=ensureScene('woods');return sc.trees.map((t,i)=>i).filter(i=>{const t=sc.trees[i];return !felled(sc,i)&&t.x>30&&t.x<W-30&&t.y>30&&t.y<H-30}).sort((a,b)=>Math.hypot(sc.trees[a].x-GLADE.x,sc.trees[a].y-GLADE.y)-Math.hypot(sc.trees[b].x-GLADE.x,sc.trees[b].y-GLADE.y))}
   const f=sideScene('woods').fell;return f.map((t,i)=>i).filter(i=>!S.felled.includes(i)).sort((a,b)=>Math.abs(f[a].x-640)-Math.abs(f[b].x-640))}
 let TOP=false;

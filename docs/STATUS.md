@@ -45,8 +45,9 @@ clothes, travel, sleep and the sat phone. The side view, walk-in, drone flyover 
 what is really built (tarp on the ground, lean-to, framed hut, timber shelter, dugout, firepit, rack, cache). The
 page code for this lives in `src/full.js` and is put into game.html by `src/splice.mjs`. Kit: the standard ten on
 a first run, the seven others open by how a run went, each requirement shown from the start (bots: a casual run
-opens one, a careful one two, now and then three). Still to come: One Winter's own seasons, winter kinds, night
-cards and day events next to Sir's (Sir chose "Keep both"), and clearing out the old One Winter rules code.
+opens one, a careful one two, now and then three). One Winter's own night cards and day events run next to Sir's
+(Sir chose "Keep both"); seasons and winter kinds came in ow.19. The old One Winter action table, which the full
+game replaced, is gone from game.html (after ow.26).
 
 **One Winter (D-114 to D-127, 3.0.0-ow.14) is the game now.** Sir threw out everything before it on 2026-10-29. It is a single page,
 `apps/desktop/one-winter/game.html`, playable in the browser (https://claude.ai/artifact/Db6GhJvze7a9i4JKJdK31T) and,
