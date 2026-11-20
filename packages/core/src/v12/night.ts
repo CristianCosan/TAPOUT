@@ -4,6 +4,7 @@
 
 import { rand } from './runtime.ts';
 import { levelDawn } from './level.ts';
+import { nightMorning } from './nights.ts';
 import { checkAnkleSalvage } from './breakSequence.ts';
 import { breakdownDailyTick, checkVowDeadline } from './breakdown.ts';
 import { activeChainCount, teethTierForStreak } from './camp.ts';
@@ -12,7 +13,7 @@ import { healthCeiling, phaseOf, warmthDrainRate, weightLossPct } from './cost.t
 import { directorTick, markSetback } from './director.ts';
 import { endGame, showNightModal } from './endings.ts';
 import { addBerries, makeSick, meatCount, takeMeat } from './food.ts';
-import { clamp, hh, nowAbs, pick, roundDisplay } from './helpers.ts';
+import { clamp, dawnHour, hh, nowAbs, pick, roundDisplay } from './helpers.ts';
 import { hasTrait, pickDailyMonologue, pickDawnLine, pickDream } from './interior.ts';
 import { maybeEnvironmentalArc, medicalArcDailyTick } from './medical.ts';
 import { pruneExpiredModifiers } from './modifiers.ts';
@@ -30,6 +31,13 @@ import { GAME, WEATHER, LONELY_LINES, TUNING, computeMaxEnergy, contextualTapRea
 import { render, sfxFinalTwo, showModal } from './ui.ts';
 import { enforceMoraleCeiling, smokedShelfHours, triggerBearDread, worryLedgerDailyTick } from './worry.ts';
 // ============================== night / new day ==============================
+/** sirNights (Sir 2026-11-20): the midnight hard stop. Back to the shelter, no choice, a heavier morning. */
+export function forcedSleep(){
+  if (!RULES.sirNights || S.over) return;
+  S.dragged = true;
+  S.loc = 'camp';
+  actSleep();
+}
 export function actTurnInEarly(){
   if (S.over) return;
   actSleep(true);
@@ -393,7 +401,8 @@ export function finishNight(notes?){
   const intakeRatio = S.kcalBurn > 0 ? S.kcalIntake / S.kcalBurn : 1;
   S.day++;
   levelDawn();
-  S.hour = ((S._bedtimeHour||22) + 6) % 24;
+  // sirNights (Sir 2026-11-20): every morning starts at dawn.
+  S.hour = RULES.sirNights ? dawnHour() : ((S._bedtimeHour||22) + 6) % 24;
   S.mealsToday = 0; S.darkLogged = false; S.playedToday = false; S.restsToday = 0; S.confessedToday = false; S.sitsToday = 0;
   S.treeMarkedToday = false; S.washedToday = false;
   S.energyDebt = 0; S.kcalIntake = 0; S.kcalBurn = 0;
@@ -749,6 +758,7 @@ export function finishNight(notes?){
     S.energy = Math.max(0, S.energy - 15);
     notes.push('🚫 "I\'m not doing this today." You mean it, for a few hours - whatever gets done today, gets done late. −15 energy');
   }
+  nightMorning(notes);
 
   directorTick(notes);
   lateTick(notes);

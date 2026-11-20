@@ -41,13 +41,14 @@ import * as home from './v12/home.ts';
 import * as letters from './v12/letters.ts';
 import * as testMode from './v12/testMode.ts';
 import * as jobs from './v12/jobs.ts';
+import * as nights from './v12/nights.ts';
 
 export type { HomeThread } from './v12/home.ts';
 
 const MODULES = [
   breakSequence, breakdown, camp, cards, cost, director, endingSequences, endings, food, gear, ice, late, moreCards, helpers,
   interior, medical, modifiers, night, person, recorder, resolve, rules, setup, shore, tags, threads,
-  travel, tuning, woods, worry, panel, home, letters, testMode, jobs,
+  travel, tuning, woods, worry, panel, home, letters, testMode, jobs, nights,
 ];
 
 /** Every function v12 defines, by its v12 name. */

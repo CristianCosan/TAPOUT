@@ -70,6 +70,8 @@ export interface RuleSet {
   jobBuilds: boolean;
   /** rc.8 (Sir): his own times for fire, foraging, tinder, snares, tracks, carving, logs and travel. */
   sirTimes: boolean;
+  /** Sir 2026-11-20: a warning when it gets dark, dearer work after dark, a midnight hard stop, waking at dawn. */
+  sirNights: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -104,6 +106,7 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   wetRocks: false,
   jobBuilds: false,
   sirTimes: false,
+  sirNights: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

@@ -109,6 +109,16 @@ export const TUNING: any = {
     sightUselessMultiplier: 0.12,
     sleepHours: 6,
   },
+  // Sir 2026-11-20 (sirNights): dark comes about 1.5 h before v12's sunset (20:00 on day 1); from then each
+  // job costs more energy, more each hour; at midnight you drag yourself to bed; every morning starts at dawn.
+  sirNights: {
+    darkBeforeDusk: 1.5,
+    energyMulAtDark: 1.2,
+    energyMulPerHour: 0.15,
+    energyMulMax: 2,
+    hardStopHour: 24,
+    draggedEnergyFrac: 0.2,
+  },
   postSnow: {
     travelTimeMultiplier: 1.5,
     actionEnergyMultiplier: 1.25,

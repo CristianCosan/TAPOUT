@@ -1150,13 +1150,14 @@ const INTRO=[
   {sx:940,at:[660,470],stage:3,t:()=>'A ring of stones a metre and a half from the tarp. Close enough to feel the heat, far enough not to burn it.',dur:4.5},
   {sx:1200,at:[700,520],stage:4,t:()=>'A chopping stump, a rack for drying fish, the pot. Home, for as long as you can stand it.',dur:4}];
 function startCine(done){S.flags.introStage=0;P.site='camp';if(TOP){P.x=1010;P.y=660}else{P.x=1600;P.y=SP.camp.ground+10;P.face=-1}P.tx=P.x;P.ty=P.y;P.steps=[];S.site='camp';current=ensureScene('camp');
-  CINE={i:-1,done,b:0};refresh();cineEl.hidden=false;$('game').classList.add('cine');$('cineSkip').textContent=META.introSeen?'Skip':'Skip intro';nextCine()}
-function nextCine(){if(!CINE)return;CINE.i++;const st=INTRO[CINE.i];if(!st){endCine();return}CINE.b=performance.now()/1000;
+  CINE={i:-1,done,b:0};refresh();cineEl.hidden=false;$('game').classList.add('cine');$('cineSkip').hidden=false;$('cineSkip').textContent=META.introSeen?'Skip':'Skip intro';nextCine()}
+function nextCine(){if(!CINE)return;CINE.i++;const st=(CINE.steps||INTRO)[CINE.i];if(!st){endCine();return}CINE.b=performance.now()/1000;
+  if(st.site&&S.site!==st.site){S.site=st.site;current=ensureScene(st.site);P.site=st.site;P.x=P.tx=st.from;P.y=P.ty=SP[st.site].ground+10;P.steps=[];refresh()}
   if(TOP)walkToTop([st.at[0],st.at[1],10]);else{P.face=st.sx>P.x?1:-1;P.tx=st.sx;P.ty=SP.camp.ground+10}if(st.stage!=null){S.flags.introStage=st.stage;sfx(st.stage===2||st.stage===4?'chop':'step');refresh()}
   $('cineK').textContent=st.k||'';$('cineT').textContent=st.t()}
 function endCine(){if(!CINE)return;const d=CINE.done;CINE=null;S.flags.introStage=null;delete S.flags.introStage;META.introSeen=true;saveMeta(META);cineEl.hidden=true;$('game').classList.remove('cine');if(!TOP){P.site='camp';P.x=P.tx=760;P.y=P.ty=SP.camp.ground+10;P.face=1}refresh();save();if(d)d()}
-cineEl.addEventListener('click',e=>{if(e.target.id==='cineSkip'){endCine();return}nextCine()});
-function tickCine(){if(!CINE)return;const st=INTRO[CINE.i];if(st&&performance.now()/1000-CINE.b>st.dur)nextCine()}
+cineEl.addEventListener('click',e=>{if(CINE&&CINE.locked)return;if(e.target.id==='cineSkip'){endCine();return}nextCine()});
+function tickCine(){if(!CINE)return;const st=(CINE.steps||INTRO)[CINE.i];if(st&&performance.now()/1000-CINE.b>st.dur)nextCine()}
 // ---------- the drone shot: over camp, shore and woods as they are right now, only a few words ----------
 const flyEl=$('fly'),fgx=flyEl.getContext('2d');
 function topShot(kind){const sc=ensureScene(kind),c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(dayCanvas(sc,S.day),0,0);
@@ -1397,7 +1398,14 @@ function resume(){if(!SES.continueRun()){intro.skipSaved=true;newRun();intro();r
 function save(){if(OWX){if(V)OWX.day=V.day;saveX()}}
 // ---------- everything the run says, drawn ----------
 let OWCARD=false,NIGHTCH=0;
-function onView(){const before=S?S.day:0;syncS();if(!V)return;if(V.day>before&&before>0){PENDFLY=true;NIGHTCH=0}
+// sirNights (Sir 2026-11-20): at midnight there is no choice. Dan walks back to the shelter on his own, the words on
+// screen, and only then does the run go to sleep.
+function bedCine(){if(CINE)return;closeModal();V12M=false;const from=V.loc,txt='With the last bits of energy you drag your tired body back to the shelter and fall asleep.';
+  const steps=[];if(from!=='camp')steps.push({sx:-60,k:'Midnight',t:()=>txt,dur:3.5});
+  steps.push({site:'camp',from:from==='shore'?1500:from==='woods'?110:P.x,sx:SP.camp.shelter[0]+40,k:'Midnight',t:()=>txt,dur:5});
+  P.face=-1;CINE={i:-1,b:0,steps,locked:true,done:()=>SES.click('hideModal(); forcedSleep()')};music.mood('night');cineEl.hidden=false;$('game').classList.add('cine');$('cineSkip').hidden=true;nextCine()}
+function onView(){const before=S?S.day:0;syncS();if(!V)return;
+  if(VW.modal&&/forcedSleep\(\)/.test(VW.modal)){refresh();if(!CINE)bedCine();return}if(V.day>before&&before>0){PENDFLY=true;NIGHTCH=0}
   if(VW.modal&&PENDFLY&&(VW.modal.match(/onclick=/g)||[]).length>=2&&VW.modal!==onView.last)NIGHTCH++;onView.last=VW.modal;
   if(OWCARD&&!VW.modal){refresh();save();return}
   refresh();save();

@@ -227,6 +227,8 @@ export class Session {
       this.result = this.diff(this.baseline);
       this.baseline = null;
     }
+    // sirNights: with nothing left on screen, the run may say it is getting dark, or send you to bed.
+    if (!this.modal && this.run.rules.sirNights) this.run.call('nightCheck');
     this.afterChange();
   }
 

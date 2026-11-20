@@ -116,7 +116,14 @@ function resume(){if(!SES.continueRun()){intro.skipSaved=true;newRun();intro();r
 function save(){if(OWX){if(V)OWX.day=V.day;saveX()}}
 // ---------- everything the run says, drawn ----------
 let OWCARD=false,NIGHTCH=0;
-function onView(){const before=S?S.day:0;syncS();if(!V)return;if(V.day>before&&before>0){PENDFLY=true;NIGHTCH=0}
+// sirNights (Sir 2026-11-20): at midnight there is no choice. Dan walks back to the shelter on his own, the words on
+// screen, and only then does the run go to sleep.
+function bedCine(){if(CINE)return;closeModal();V12M=false;const from=V.loc,txt='With the last bits of energy you drag your tired body back to the shelter and fall asleep.';
+  const steps=[];if(from!=='camp')steps.push({sx:-60,k:'Midnight',t:()=>txt,dur:3.5});
+  steps.push({site:'camp',from:from==='shore'?1500:from==='woods'?110:P.x,sx:SP.camp.shelter[0]+40,k:'Midnight',t:()=>txt,dur:5});
+  P.face=-1;CINE={i:-1,b:0,steps,locked:true,done:()=>SES.click('hideModal(); forcedSleep()')};music.mood('night');cineEl.hidden=false;$('game').classList.add('cine');$('cineSkip').hidden=true;nextCine()}
+function onView(){const before=S?S.day:0;syncS();if(!V)return;
+  if(VW.modal&&/forcedSleep\(\)/.test(VW.modal)){refresh();if(!CINE)bedCine();return}if(V.day>before&&before>0){PENDFLY=true;NIGHTCH=0}
   if(VW.modal&&PENDFLY&&(VW.modal.match(/onclick=/g)||[]).length>=2&&VW.modal!==onView.last)NIGHTCH++;onView.last=VW.modal;
   if(OWCARD&&!VW.modal){refresh();save();return}
   refresh();save();
