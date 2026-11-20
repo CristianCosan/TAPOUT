@@ -63,3 +63,16 @@ describe('sirNights', () => {
     expect(v.state.hour).toBeGreaterThanOrEqual(23);
   });
 });
+
+describe('sirNights on old saves', () => {
+  it('a TAP / OUT run saved before the rule existed gets it; a v12 run does not', async () => {
+    const { restoreRun, snapshotRun } = await import('./game.ts');
+    const run = start(TAPOUT_RULES);
+    const snap = snapshotRun(run);
+    delete (snap.rules as Partial<RuleSet>).sirNights;
+    expect(restoreRun(snap).rules.sirNights).toBe(true);
+    const v = snapshotRun(start(V12_RULES));
+    delete (v.rules as Partial<RuleSet>).sirNights;
+    expect(restoreRun(v).rules.sirNights).toBe(false);
+  });
+});
