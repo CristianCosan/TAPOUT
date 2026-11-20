@@ -1139,7 +1139,7 @@ function openOpts(){const slider=(lab,src)=>{const l=document.createElement('lab
     btn('<b>Bigger text</b><small>Larger words in the lists and cards.</small>',()=>{document.body.classList.toggle('big');savePrefs();openOpts()},'choice'+(document.body.classList.contains('big')?' on':'')),
     btn(`<b>Tips</b><small>${META.tipsOff?'Off. Click to show them again from the start.':'On. Click to turn them off.'}</small>`,()=>{META.tipsOff=!META.tipsOff;if(!META.tipsOff)META.tipsSeen=[];else hideHint();saveMeta(META);openOpts()},'choice'+(META.tipsOff?'':' on')));
   optsC.appendChild(row);
-  const k=document.createElement('div');k.className='keys';k.innerHTML='<b>1 to 9</b><span>do an action, or pick a choice on a card</span><b>C · S · W</b><span>walk to Camp, Shore or Woods</span><b>M</b><span>sound on or off</span><b>O or Esc</b><span>open or close settings; Esc also closes a card with Back</span>'+(window.tapoutDesktop?'<b>F</b><span>full screen</span>':'');
+  const k=document.createElement('div');k.className='keys';k.innerHTML='<b>1 to 9</b><span>do an action, or pick a choice on a card</span><b>↑ ↓</b><span>open the next or previous group of actions</span><b>C · S · W</b><span>walk to Camp, Shore or Woods</span><b>M</b><span>sound on or off</span><b>O or Esc</b><span>open or close settings; Esc also closes a card with Back</span>'+(window.tapoutDesktop?'<b>F</b><span>full screen</span>':'');
   optsC.appendChild(k);
   const cr=document.createElement('p');cr.className='muted';cr.style.fontSize='13px';cr.textContent='TAP / OUT · One Winter, build '+VERSION+'. Fonts: Barlow Condensed and Atkinson Hyperlegible, SIL Open Font License. The pictures, music and sounds are all made in code.';optsC.appendChild(cr);
   const c=btn('Back to the game',closeOpts,'go');optsC.appendChild(c);optsM.hidden=false;c.focus()}
@@ -1154,6 +1154,7 @@ addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||e.repeat||/INP
   const n=/^[1-9]$/.test(key)?+key:0;
   if(!modalEl.hidden){if(key==='escape'){const bk=[...modalEl.querySelectorAll('button:not([disabled])')].find(b=>/^\s*(back|close|close the pack|done)\s*$/i.test(b.innerText.replace(/\d+\s*$/,'')));if(bk){e.preventDefault();bk.click()}return}if(n){const b=keyBtns()[n-1];if(b&&!b.disabled){e.preventDefault();b.click()}}return}
   if(n){const b=[...acts.querySelectorAll('.act')][n-1];if(b&&!b.disabled){e.preventDefault();b.click()}return}
+  if(key==='arrowdown'||key==='arrowup'){const hs=[...acts.querySelectorAll('.sec')];if(!hs.length)return;e.preventDefault();const i=hs.findIndex(h=>h.classList.contains('on'));const j=i<0?(key==='arrowdown'?0:hs.length-1):(i+(key==='arrowdown'?1:-1)+hs.length)%hs.length;hs[j].click();return}
   const site={c:'camp',s:'shore',w:'woods'}[key];if(site){e.preventDefault();travel(site)}});
 function build(){const ac=new (window.AudioContext||window.webkitAudioContext)();
   const comp=ac.createDynamicsCompressor();comp.threshold.value=-20;comp.ratio.value=3;comp.connect(ac.destination);
