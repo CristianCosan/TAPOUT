@@ -1,5 +1,9 @@
 # Status
 
+**3.0.0-ow.24 (2026-11-20): the end of a run could get stuck.** On the Last Look card (after a pull or a tap-out,
+and after a win), picking "Betty's snag" did nothing, because the apostrophe broke its button (a v12 bug). Fixed for both
+endings, with a test that every button on those cards is valid. Found by clicking through a whole ending.
+
 **3.0.0-ow.23 (2026-11-20): page fixes from a screenshot tour.** The pack card no longer crashes (ow.22 read a
 number as text) and shows its counts again. Escape closes a card that has a Back or Close button; must-choose cards
 still need a choice. A tall card keeps its last button stuck to the bottom, so Close is always on screen. A page bot
