@@ -11,7 +11,7 @@ function loadX(){try{return JSON.parse(localStorage.getItem('oneWinter.x')||'nul
 function saveX(){try{localStorage.setItem('oneWinter.x',JSON.stringify(OWX))}catch(e){}}
 const WXMAP={clear:'clear',overcast:'over',rain:'over',cold:'clear',snow:'snow',storm:'storm'};
 // Sir's v12 sections, in his order. Hunt chain and Recover & call show everywhere.
-const SECTIONS={camp:[['Fire & food',['a-fire','a-friction','a-firenoferro','a-boil','a-cook','a-smoke','a-smokeHuge','a-woodCamp','a-dropoff']],
+const SECTIONS={camp:[['Fire & food',['a-fire','a-friction','a-firenoferro','a-boil','a-cook','a-smoke','a-smokeHuge','a-woodCamp','a-wood','a-rocks','a-dropoff']],
     ['Build & craft',['a-shelter','a-dugout','a-insulate','a-firepit','a-rack','a-hugeRack','a-cache','a-jug','a-picker','a-campSnares','a-stove','a-reflector','a-shingles','a-snowWall']],
     ['Gear & repairs',['a-sharpenAxe','a-maintainFerro','a-haftAxe','a-repairBoots','a-patchRoof','a-poultice']],
     ['Comforts',['a-flute','a-chair','a-table','a-bed','a-confess','a-treemark','a-feedjay','a-wash','a-letterPartner','a-letterParents']]],
@@ -20,7 +20,7 @@ const SECTIONS={camp:[['Fire & food',['a-fire','a-friction','a-firenoferro','a-b
   all:[['Hunt chain',['a-follow','a-shot','a-trail','a-carve','a-haul','a-invest']],['Recover & call',['a-tinder','a-call','a-music','a-rest','a-sitwatch','a-poultice']]]};
 // Places in the picture, each holding the actions done there. Clicking one opens them.
 const SPOTS={camp:{fire:['a-fire','a-friction','a-firenoferro','a-boil','a-cook','a-firepit','a-stove','a-reflector','a-jug'],pot:['a-boil','a-cook'],
-    shelter:['a-shelter','a-dugout','a-insulate','a-bed','a-shingles','a-snowWall','a-patchRoof','sleep','early'],pile:['a-woodCamp','a-dropoff','a-sharpenAxe','a-haftAxe'],
+    shelter:['a-shelter','a-dugout','a-insulate','a-bed','a-shingles','a-snowWall','a-patchRoof','sleep','early'],pile:['a-woodCamp','a-wood','a-rocks','a-dropoff','a-sharpenAxe','a-haftAxe'],
     rack:['a-rack','a-hugeRack','a-smoke','a-smokeHuge','a-campSnares'],cache:['a-cache'],stump:['a-chair','a-table','a-flute','a-picker','a-maintainFerro','a-repairBoots','a-poultice','a-music'],
     crate:['a-confess','a-treemark','a-letterPartner','a-letterParents','a-feedjay','a-wash'],pack:['pack']},
   shore:{rock:['a-rocks','a-clay','a-iceFish','a-checkIce','a-iceCache'],line:['a-lines','a-iceLine','a-moveLine','a-net','a-deploynet','a-checkShore'],drift:['a-fetch','a-stream'],bush:['a-tinder']},

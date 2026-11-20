@@ -137,8 +137,12 @@ export function weaveNetSession(sp?){
   }
   afterAction('net');
 }
+/** The net shows on the check card: built, open water, and (netSpot) actually set at a spot. */
+export function netCheckable(): boolean {
+  return S.net.built && !S.winter && (!RULES.netSpot || S.shoreSpots.some(s=>s.id===S.net.spot));
+}
 export function actCheckShore(){
-  const netActive = S.net.built && !S.winter;
+  const netActive = netCheckable();
   if (!S.lineList.length && !netActive) return;
   openCheckShoreModal();
 }
@@ -150,7 +154,7 @@ export function openCheckShoreModal(){
       <button class="mbtn ghost" style="width:auto;padding:8px 12px;margin:0" onclick="checkOneLine(${i})">Check</button>
     </li>`;
   }).join('');
-  const netActive = S.net.built && !S.winter;
+  const netActive = netCheckable();
   if (netActive){
     rows += `<li id="netRow" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <span>Gill net${S.net.damaged?' (torn)':''}</span>
@@ -193,6 +197,7 @@ export function checkOneLine(i?){
 }
 export function checkNet(){
   if (!S.net.built || S.net.damaged || S.winter) return;
+  if (RULES.netSpot && !S.shoreSpots.some(s=>s.id===S.net.spot)) return;
   if (!spend(2,hoursFor('checkNet'),true,'o')) return;
   const sp = S.shoreSpots.find(s=>s.id===S.net.spot);
   const soaked = RULES.soakTime ? soakHours(S.net) : null;

@@ -1,5 +1,13 @@
 # Status
 
+**3.0.0-ow.28 (2026-11-20): a net crash fixed, camp pickups back.** A reachability bot (every action the rules
+offer at a place must have a button there) found two things. With the ready-made gill net, the net counted as built
+but sat in the pack with no spot, yet the "Lines & net" card still offered Check, which threw after taking the
+energy (a v12 bug). Under TAPOUT_RULES (`netSpot`, netSpot.test.ts) the net shows on that card only once it is set.
+And Sir's rc.3 camp pickups (campHarvest: fallen timber and loose stone lying about camp, a finite pile) had no
+button in One Winter; Fell & buck logs and Gather rocks are back at camp under Fire & food and on the woodpile.
+Parity 40/40 and 12/12.
+
 **3.0.0-ow.27 (2026-11-20): arrow keys for the action groups.** Up and down open the next or previous group of
 actions, so keyboard-only play can no longer get stuck in a group whose actions are all greyed out; the keys list in
 Settings says so. The old One Winter action table, which the full game replaced, is gone from the page. Checked:
