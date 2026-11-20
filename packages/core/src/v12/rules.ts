@@ -72,6 +72,8 @@ export interface RuleSet {
   sirTimes: boolean;
   /** Sir 2026-11-20: a warning when it gets dark, dearer work after dark, a midnight hard stop, waking at dawn. */
   sirNights: boolean;
+  /** Fix: a ready-made net still in the pack (never set at a spot) has nothing to check; v12 crashed on Check. */
+  netSpot: boolean;
 }
 
 export const V12_RULES: Readonly<RuleSet> = Object.freeze({
@@ -107,6 +109,7 @@ export const V12_RULES: Readonly<RuleSet> = Object.freeze({
   jobBuilds: false,
   sirTimes: false,
   sirNights: false,
+  netSpot: false,
 });
 
 export const TAPOUT_RULES: Readonly<RuleSet> = Object.freeze(

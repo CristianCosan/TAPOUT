@@ -14,7 +14,7 @@ import { berryCount, cookedMealSpoiled, meatCount, oldestBerriesSpoiled, oldestM
 import { TRAVEL_HOURS, campHarvesting, campLeft, clamp, hh, nowAbs, roundDisplay } from './helpers.ts';
 import { checkSmokingDone } from './person.ts';
 import { curfewCapForLoc, hasKit, waterCap } from './setup.ts';
-import { NET_SESSIONS, clayHours } from './shore.ts';
+import { NET_SESSIONS, clayHours, netCheckable } from './shore.ts';
 import { carveHours } from './woods.ts';
 import { S } from './state.ts';
 import { isNightNow } from './threads.ts';
@@ -907,7 +907,7 @@ function panelPass(){
     r = gate(1, ICE.checkHours, true, '', `−{c}⚡ · ${durTxt(ICE.checkHours)} · chop a test hole${known}`);
     setBtn('a-checkIce', r[0], r[1]);
   }
-  r = (lineCount<=0 && !(S.net.built && !S.winter)) ? [false,'nothing set yet'] : gate(3,0.1667,true,'',`−{c}⚡ · ${durTxt(0.1667)}`,'o');
+  r = (lineCount<=0 && !netCheckable()) ? [false,'nothing set yet'] : gate(3,0.1667,true,'',`−{c}⚡ · ${durTxt(0.1667)}`,'o');
   setBtn('a-checkShore', r[0], r[1]);
   r = !hasKit('pot') ? [false,'no pot - drink at the stream directly'] : S.rawWater>=4 ? [false,'pot is full'] : gate(TUNING.costs.fetchWaterE,hoursFor('fetchWater'),true,'',`−{c}⚡ · ${durTxt(hoursFor('fetchWater'))} · fills the pot`,'o');
   setBtn('a-fetch', r[0], r[1]);
