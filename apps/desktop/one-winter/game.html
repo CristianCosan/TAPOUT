@@ -111,6 +111,7 @@ body.app .stage{border:0}
 .card.wide .go{position:sticky;bottom:-22px;z-index:2;box-shadow:0 -10px 14px #1C2226}.card.wide .go:disabled{opacity:1;background:#5a3c1f;color:#cdbb9f}
 @media (max-height:860px){.card.wide{gap:8px;padding:14px 20px}.card.wide h2{font-size:24px}.kit{gap:6px}.kit .choice{padding:6px 10px}.kit .choice b{font-size:16px}.kit .choice small{font-size:12.5px;line-height:1.3}.kit .choice .ki{width:34px;height:34px}.kit .choice{grid-template-columns:34px 1fr}.bring{font-size:13px}.bring .ki{width:20px;height:20px}}
 .acts{max-height:41cqw;overflow-y:auto;scrollbar-width:thin}
+.acts .signs{font-size:clamp(11px,.9cqw,14px);line-height:1.35;color:#9AA092;margin:0 .3cqw .5cqw;font-style:italic}
 .acts .sec{display:flex;justify-content:space-between;align-items:baseline;width:100%;background:none;border:0;border-top:1px solid rgba(228,231,227,.12);color:#B9BEB0;font:500 clamp(11px,1cqw,16px)/1.2 var(--display);letter-spacing:.12em;text-transform:uppercase;padding:.5cqw .3cqw;cursor:pointer;text-align:left}
 .acts .sec span{font-size:.85em;color:#8E9486;letter-spacing:.05em}.acts .sec.on{color:var(--fg)}.acts .sec:hover{color:var(--fire)}
 .acts .night{display:grid;gap:.4cqw;border-top:1px solid rgba(228,231,227,.25);padding-top:.5cqw;margin-top:.2cqw}
@@ -1506,7 +1507,7 @@ function jobCard(key,name,e){const spec=T.BUILD_TASKS[key],plan=T.jobPlan(key);i
   const go=btn(`<b>${spec.jobs[done]}</b>`,()=>{const d0=V.day,a0=JSON.stringify(V.acts);P.work=1.3;sfx(spec.motion==='chop'?'chop':'step');SES.click(`actJob('${key}')`);
     if(VW.modal||VW.endScreen||V.day!==d0)return;const p2=T.jobPlan(key);if(p2&&p2.done>done&&p2.done<p2.of)jobCard(key,name,e);else if(JSON.stringify(V.acts)!==a0||!p2)closeModal();else jobCard(key,name,e)},'choice');
   go.disabled=!plan.open;cardEl.appendChild(go);cardEl.appendChild(btn('Stop for now',closeModal,'go'));openModal()}
-function packCard(){const h=VW.hud,ht=id=>h.get(id)?noEmo((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,'')):'';cardEl.classList.remove('wide');cardEl.dataset.v='';
+function packCard(){const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,''))):'';cardEl.classList.remove('wide');cardEl.dataset.v='';
   cardEl.innerHTML=`<p class="k">Your pack · ${clockStr()}</p><h2>What you have</h2>
    <div class="stats"><span>Logs<b>${ht('inv-wood')}</b></span><span>Firewood<b>${ht('inv-firewood')}</b></span><span>Moss<b>${ht('inv-moss')}</b></span><span>Tinder<b>${ht('inv-tinder')}</b></span>
    <span>Rocks<b>${ht('inv-rocks')}</b></span><span>Clay<b>${ht('inv-clay')}</b></span><span>Meat<b>${ht('inv-meat')}</b></span><span>Arrows<b>${ht('inv-arrows')}</b></span></div>
@@ -1522,10 +1523,13 @@ function shelterCard(){spotCard(ACTIONS['camp:shelter'])}
 const OPEN={};
 const BARS=[['energy','Energy','#E0B050'],['health','Health','#7F9DAD'],['hunger','Food','#A7AC98'],['thirst','Water','#6F9FC0'],['warmth','Warmth','#D07A2C'],['morale','Morale','#E4E7E3'],['stress','Stress','#9C6B8E']];
 function hintFor(){return null}
+// v12's carry chip names the load by emoji only; say it in words, as the rest of the screen does.
+const CARRYW={'\u{1FAB5}':'logs','\u{1FAA8}':'rocks','\u{1F33F}':'moss','\u{1F9F1}':'clay'};
+const carryWords=t=>t.replace(/(\u{1FAB5}|\u{1FAA8}|\u{1F33F}|\u{1F9F1})\s*(\d+\/\d+)/gu,(m,e,n)=>n+' '+CARRYW[e]).replace(/\u{1F33F}\u00D7(\d+)/gu,'insulated ×$1');
 function refresh(){if(!S)return;current=ensureScene(S.site);
   const gctx=$('ground').getContext('2d');gctx.drawImage(drawSideBg(S.site),0,0);drawSideProps(gctx);
   if(!V){$('cDay').textContent='DAY 1 · 6:00';$('cWx').textContent='';$('cFc').textContent='';$('rivals').innerHTML='';hud.innerHTML='';$('gear').innerHTML='';acts.innerHTML='';$('map').innerHTML='';return}
-  const h=VW.hud,ht=id=>h.get(id)?noEmo((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,'')):'';
+  const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords((h.get(id).html||h.get(id).text||'').replace(/<[^>]+>/g,''))):'';
   $('cDay').textContent=`DAY ${V.day} · ${hhmm(V.hour)}`;$('cWx').textContent=WXL();$('cFc').textContent=ht('chip-wet')+' · '+ht('pillWeight');
   {const a=T.dawnHour(),b=vDusk()+1.5,el=$('cSlots');el.innerHTML=`<b style="width:${clamp((V.hour-a)/(b-a),0,1)*100}%"></b><u style="left:${(vDusk()-a)/(b-a)*100}%"></u>`}
   $('rivals').innerHTML=`<b>${V.rivals}</b> ${V.rivals===1?'rival':'rivals'} left`;$('rivals').hidden=false; // Sir 11-19: "show"
@@ -1533,7 +1537,7 @@ function refresh(){if(!S)return;current=ensureScene(S.site);
     const tb=h.get('tab-'+k);b.disabled=k===V.loc||!!(tb&&tb.disabled)||V.over;b.title=ht('tt-'+k)+` (${k[0].toUpperCase()})`;b.onclick=()=>travel(k);mp.appendChild(b)});
   const bar=(k,n,c)=>{const v=k==='energy'?V.energy/V.maxEnergy*100:V[k],val=k==='energy'?ht('val-energy'):Math.round(V[k]),low=k==='stress'?v>75:v<25;
     return `<div class="row${low?' low':''}"><span>${n}</span><div class="bar"><span style="width:${clamp(v,0,100)}%;--c:${c}"></span></div><b>${val}</b></div>`};
-  const chips=[ht('chip-fire'),ht('chip-shelter'),!(h.get('chip-injury')||{}).hidden?ht('chip-injury'):'',!(h.get('chip-wolf')||{}).hidden?ht('chip-wolf'):'',ht('conditionChips')].filter(Boolean);
+  const chips=[ht('chip-fire'),ht('chip-shelter'),!(h.get('chip-injury')||{}).hidden?ht('chip-injury'):'',!(h.get('chip-wolf')||{}).hidden?ht('chip-wolf'):'',ht('conditionChips'),ht('carryChips'),ht('gearChips')].filter(Boolean);
   hud.innerHTML=BARS.map(([k,n,c])=>bar(k,n,c)).join('')+`<p class="chips">${chips.join(' · ')}</p>`;
   const ic=(k,n,title,off)=>`<span class="${off?'off':''}" title="${title}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${n?`<i>${n}</i>`:''}</span>`;
   const food=[['eatBerriesBtn','eatBerries()','Berries'],['eatCookedBtn','eatCooked()','Meal'],['eatSmokedBtn','eatSmoked()','Smoked'],['drinkBtn','actDrink()','Water']];
@@ -1544,7 +1548,7 @@ function refresh(){if(!S)return;current=ensureScene(S.site);
   const m=entryMap(),loc=V.loc,secs=[...(SECTIONS[loc]||[]),...SECTIONS.all].map(([t,ids])=>[t,ids.map(i=>m.get(i)).filter(e=>e&&e.visible)]).filter(([,es])=>es.length);
   const hunt=secs.find(([t])=>t==='Hunt chain');if(hunt)OPEN[loc]='Hunt chain';
   if(!secs.some(([t])=>t===OPEN[loc]))OPEN[loc]=(secs.find(([,es])=>es.some(e=>e.enabled))||secs[0]||[''])[0];
-  acts.innerHTML=`<h3>${SCENES[loc].name} · ${hhmm(V.hour)}</h3>`;
+  acts.innerHTML=`<h3>${SCENES[loc].name} · ${hhmm(V.hour)}</h3>${ht('signsLine')&&loc!=='camp'?`<p class="signs">${ht('signsLine')}</p>`:''}`;
   secs.forEach(([t,es])=>{const hd=document.createElement('button');hd.type='button';hd.className='sec'+(OPEN[loc]===t?' on':'');hd.innerHTML=`${t}<span>${es.filter(e=>e.enabled).length}/${es.length}</span>`;hd.onclick=()=>{OPEN[loc]=OPEN[loc]===t?'':t;refresh()};acts.appendChild(hd);
     if(OPEN[loc]!==t)return;es.forEach(e=>{const b=document.createElement('button');b.type='button';b.className='act';b.dataset.id=e.id;b.innerHTML=`<b>${noEmo(e.label)}</b>${e.detail?`<small>${noEmo(e.detail)}</small>`:''}`;b.disabled=!e.enabled||V.over;b.onclick=()=>{if(!modalEl.hidden||FLY||CINE)return;runEntry(e)};acts.appendChild(b)})});
   const night=document.createElement('div');night.className='night';[['sleep','Sleep'],['early','Turn in early']].forEach(([id,t])=>{const e=m.get(id);if(!e||!e.visible)return;const b=document.createElement('button');b.type='button';b.className='act';b.innerHTML=`<b>${t}</b><small>${noEmo(e.detail)}</small>`;b.disabled=!e.enabled;b.onclick=()=>{if(!modalEl.hidden||FLY||CINE)return;runEntry(e)};night.appendChild(b)});
