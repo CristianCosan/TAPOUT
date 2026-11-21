@@ -1,5 +1,11 @@
 # Status
 
+**3.0.0-ow.31 (2026-11-21): build paths and kit condition back.** Two more of Sir's asks that One Winter had
+dropped. Opening a build (shelter, dugout, firepit, rack, cache) lists its whole path again, every step with its
+materials, energy and time (D-077), and a build you cannot start yet still opens to show it (its Start stays
+off). The pack names each kit item's condition (good, worn, nearly done, broken) as the rc.5 backpack did (D-096).
+Presentation only.
+
 **3.0.0-ow.30 (2026-11-20): test mode and "Raw chill" back.** Two of Sir's earlier asks that One Winter had
 lost: the Test mode in Settings during a run (D-086: infinite energy, +20 of every material, fed/watered/warm/rested,
 traps ready, win at the next med check; each button presses the core's own test function), and the weather line
