@@ -28,7 +28,7 @@ export function openLineModal(){
       <span>${sp.name}${dead?' · dead for days':''}</span>
       <span style="display:flex;gap:6px">
       <button class="mbtn ghost" style="width:auto;padding:8px 12px;margin:0" ${countHere>=1?'disabled':''} onclick="placeLineAt('${sp.id}')">Set here</button>
-      ${dead?`<button class="mbtn ghost" style="width:auto;padding:8px 12px;margin:0" onclick="exploreNewGrounds('shore','${sp.id}')">Explore new grounds</button>`:''}
+      ${dead?`<button class="mbtn ghost" style="width:auto;padding:8px 12px;margin:0" onclick="exploreNewGrounds('shore','${sp.id}')">Explore new grounds${RULES.content ? ` · −3⚡ · ${durTxt(0.25)}` : ''}</button>`:''}
       </span>
     </li>`;
   }).join('');
