@@ -1,5 +1,7 @@
 # Status
 
+**3.0.0-ow.39 (2026-11-21): fishing cards name the extra cost.** Buttons have always added "night +30% time", "post-snow +25% energy" or "Shivering: 1.5x time, 2x energy" when those apply; the fishing-line, gill-net and ice-fishing cards did not, so a line set at night quietly took longer. gate()'s note is now a shared condNote(), and with content on those cards append it too. Buttons and v12 mode unchanged. Also checked on ow.38: a 3,000-step play-bot session (11 runs) and 2,000 real mouse clicks, no errors or stuck screens.
+
 **3.0.0-ow.38 (2026-11-21): Explore new grounds shows its cost.** The button on a dead line or snare spot cost 3 energy and 15 min without saying so; with content on it now reads "Explore new grounds · −3⚡ · 15min". v12 mode unchanged. Also checked on ow.37: a 3,000-step play-bot session through the real screen (12 runs ending and restarting) with no page errors or stuck screens; saves peak around 36 KB a copy by day 26.
 
 **3.0.0-ow.37 (2026-11-21): cards give the real time too.** The same check on the choices inside cards found more stale times: setting a fishing line said 15 min (takes 20), moving the gill net said 15 min (takes 30), the ice line and ice fishing ignored thin ice, and the Lines & net and trapline cards said "1min each" (lines take 5, the net 10 and 2 energy, snares 2). The cards and buttons now take their times from the same numbers the actions spend; in v12 mode those numbers are v12's, so its text is unchanged. The actions are unchanged. Intended-difference test in rules.test.ts.
