@@ -51,7 +51,7 @@ p{margin:0}
 .seasons{display:flex;flex-wrap:wrap;gap:6px}
 .seasons .choice{padding:7px 12px}.seasons .choice b{font-size:16px}
 .locked{font-size:14px;color:#8E9486;line-height:1.45}
-body.app{overflow:hidden}
+body.app{overflow:hidden;margin:0}
 body.app .wrap{max-width:none;padding:0;gap:0;height:100vh;place-content:center}
 body.app .wrap>header,body.app .controls,body.app .cols{display:none}
 body.app .game{width:min(100vw,calc(100vh*16/9))}
@@ -229,7 +229,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 <script>
 (function(){
 "use strict";
-const VERSION='3.0.0-ow.31';
+const VERSION='3.0.0-ow.32';
 const W=1600,H=900;
 const C={snow:[228,231,227],grass:[138,143,126],pine:[47,74,67],lake:[60,90,107],fire:[208,122,44],ink:[28,34,38]};
 const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
