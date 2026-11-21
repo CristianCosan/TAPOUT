@@ -1122,6 +1122,12 @@ sndBtn.onclick=()=>{soundOn=!soundOn;sndBtn.textContent=soundOn?'Sound off':'Sou
 const muteBtn=$('mute'),_snd=sndBtn.onclick;sndBtn.onclick=()=>{_snd();muteBtn.textContent=soundOn?'Sound off':'Sound on'};muteBtn.onclick=()=>sndBtn.onclick();
 if(window.tapoutDesktop||/[?&]app\b/.test(location.search)){document.body.classList.add('app');
   addEventListener('keydown',e=>{if((e.key==='F11'||e.key==='f')&&window.tapoutDesktop){e.preventDefault();window.tapoutDesktop.fullscreen(!document.fullscreenElement&&!window.__fs);window.__fs=!window.__fs}})}
+// Desktop crash log (crash.log in the save folder): any page error is written there with the day and hour, so a
+// friend's crash can be read afterwards. At most 50 lines a session.
+if(window.tapoutDesktop&&window.tapoutDesktop.logError){let n=0;const where=()=>{try{const V=window.TAPOUT.session.getView().state;return V?` [day ${V.day} ${V.hour.toFixed(2)} ${V.loc}]`:''}catch(_){return ''}};
+  const put=t=>{if(n++<50)try{window.tapoutDesktop.logError(t+where())}catch(_){}};
+  addEventListener('error',e=>put((e.error&&e.error.stack)||e.message||'error'));
+  addEventListener('unhandledrejection',e=>put('unhandled: '+((e.reason&&e.reason.stack)||e.reason)))}
 // ---------- settings: kept in this browser, never part of a run ----------
 let PREFS={};try{PREFS=JSON.parse(localStorage.getItem('oneWinter.prefs')||'{}')||{}}catch(e){}
 function savePrefs(){PREFS={music:+vm.value,amb:+va.value,sound:soundOn,big:document.body.classList.contains('big')};try{localStorage.setItem('oneWinter.prefs',JSON.stringify(PREFS))}catch(e){}}
