@@ -618,5 +618,15 @@ describe('honest buttons: moss, boot repair, wood and cooking say what the actio
       expect((modal ?? '').includes('Explore new grounds · −3⚡ · 15min')).toBe(shown);
     }
   });
+  it('fishing cards name the night surcharge, as the buttons do', () => {
+    for (const [rules, shown] of [[V12_RULES, false], [TAPOUT_RULES, true]] as const) {
+      const run = start(rules);
+      const S = run.state;
+      S.loc = 'shore';
+      S.hour = 21;
+      run.call('openLineModal');
+      expect((modal ?? '').includes('· night +')).toBe(shown);
+    }
+  });
 });
 

@@ -13,7 +13,7 @@ import { S } from './state.ts';
 import { afterAction, spend } from './threads.ts';
 import { CARRY_CAP, MAX_LINES_TOTAL, TUNING, carryBlocked, hoursFor, rollFish } from './tuning.ts';
 import { $, hideModal, showModal } from './ui.ts';
-import { durTxt } from './panel.ts';
+import { condNote, durTxt } from './panel.ts';
 import { pityMultiplier } from './woods.ts';
 import { levelCatch } from './level.ts';
 // ============================== actions: shore ==============================
@@ -32,7 +32,7 @@ export function openLineModal(){
       </span>
     </li>`;
   }).join('');
-  const sub = S.winter ? `Cut a hole through the ice and drop a line. −6⚡ · ${durTxt(hoursFor('setIceLine')*iceSlow())} · ${S.lineStock} line left` : `Pick a spot off the shore. −4⚡ · ${durTxt(hoursFor('setLine'))} · ${S.lineStock} line left`;
+  const sub = S.winter ? `Cut a hole through the ice and drop a line. −6⚡ · ${durTxt(hoursFor('setIceLine')*iceSlow())} · ${S.lineStock} line left${RULES.content ? condNote(1,'oh') : ''}` : `Pick a spot off the shore. −4⚡ · ${durTxt(hoursFor('setLine'))} · ${S.lineStock} line left${RULES.content ? condNote(1,'oh') : ''}`;
   showModal(`<h3>${S.winter?'Cut a hole & set a line':'Set a fishing line'}</h3><div class="wsub">${sub}</div><ul>${rows}</ul><button class="mbtn ghost" onclick="hideModal()">Cancel</button>`);
 }
 export function placeLineAt(id?){
@@ -103,7 +103,7 @@ export function openNetModal(){
       <button class="mbtn ghost" style="width:auto;padding:8px 12px;margin:0" ${here?'disabled':''} onclick="placeNetAt('${sp.id}')">${S.net.built ? (here?'Set':'Move here') : 'Start weaving here'}</button>
     </li>`;
   }).join('');
-  showModal(`<h3>${S.net.built?'Move the gill net':'Weave a gill net'}</h3><div class="wsub">${S.net.built?`−4⚡ · ${durTxt(hoursFor('setNet'))} to relocate`:'−8⚡ · 2h × 5 sessions (10h total, labor only) - the first big specialization commitment'}</div><ul>${rows}</ul><button class="mbtn ghost" onclick="hideModal()">Cancel</button>`);
+  showModal(`<h3>${S.net.built?'Move the gill net':'Weave a gill net'}</h3><div class="wsub">${S.net.built?`−4⚡ · ${durTxt(hoursFor('setNet'))} to relocate${RULES.content ? condNote(1,'oh') : ''}`:'−8⚡ · 2h × 5 sessions (10h total, labor only) - the first big specialization commitment'}</div><ul>${rows}</ul><button class="mbtn ghost" onclick="hideModal()">Cancel</button>`);
 }
 export function openDeployNetModal(){ openNetModal(); } // kit-draft §3.1: a ready-made net skips the weave, deploy via the same spot-picker
 export function placeNetAt(id?){
@@ -229,7 +229,7 @@ export function actIceFish(){
       <span>${sp.name}</span>
       <button class="mbtn ghost" style="width:auto;padding:8px 12px;margin:0" onclick="iceFishAt('${sp.id}')">Fish here</button>
     </li>`).join('');
-  showModal(`<h3>Fish the ice</h3><div class="wsub">Cut a hole and jig actively for 2 hours - better odds than a line, no return trip needed. −10⚡ · ${durTxt(2*iceSlow())}</div><ul>${rows}</ul><button class="mbtn ghost" onclick="hideModal()">Cancel</button>`);
+  showModal(`<h3>Fish the ice</h3><div class="wsub">Cut a hole and jig actively for 2 hours - better odds than a line, no return trip needed. −10⚡ · ${durTxt(2*iceSlow())}${RULES.content ? condNote(1,'oh') : ''}</div><ul>${rows}</ul><button class="mbtn ghost" onclick="hideModal()">Cancel</button>`);
 }
 export function iceFishAt(id?){
   const sp = S.shoreSpots.find(s=>s.id===id);

@@ -598,11 +598,16 @@ export function gate(cost?, hrs?, ok?, msg?, sub?, tags='', cap?){
   let effHrs = nightMod ? eTime(hrs,tags) * TUNING.night.timeMultiplier : eTime(hrs,tags);
   if (S.hour + effHrs > cap) return [false, "too late - you'd be finishing that in the dark past any sense"];
   if (S.energy < c) return [false, "too exhausted - you don't have the energy for that right now"];
-  let text = sub.replace('{c}', roundDisplay(c));
-  if (nightMod) text += ` · night +${Math.round((TUNING.night.timeMultiplier-1)*100)}% time, +stress`;
+  return [true, sub.replace('{c}', roundDisplay(c)) + condNote(hrs, tags)];
+}
+/** What night, snow and shivering add to an action's cost, as gate() writes it under a button. */
+export function condNote(hrs?, tags=''){
+  const physical = (tags.includes('o') || tags.includes('w')) && hrs > 0;
+  let text = '';
+  if (isNightNow() && physical) text += ` · night +${Math.round((TUNING.night.timeMultiplier-1)*100)}% time, +stress`;
   if (S.winter && physical) text += ' · post-snow +25% energy';
   if (shiveringActive() && (tags.includes('o')||tags.includes('w')||tags.includes('h'))) text += ' · Shivering: 1.5x time, 2x energy';
-  return [true, text];
+  return text;
 }
 export const comfortLvl = () => (S.chair?1:0)+(S.table?1:0)+(S.bed?1:0);
 
