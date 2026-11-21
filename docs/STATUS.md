@@ -1,5 +1,7 @@
 # Status
 
+**3.0.0-ow.35 (2026-11-21): flyover names stay whole.** The day flyover zooms the map up to 1.32x and pans it, so a long lake name such as TAMARACK LAKE near the right edge was cut off. Map labels now keep their centre far enough inside the frame for the whole name to show at any zoom. Also checked on ow.34: 1,500 real mouse clicks (run to day 18) and 1,500 keyboard-only presses, no errors and no stuck spots.
+
 **3.0.0-ow.34 (2026-11-21): Save folder button.** Settings in the desktop app has a Save folder tile that opens the folder holding the saves and crash.log, so a friend can send the log if something goes wrong. Desktop only; the browser page does not show it. Also checked in the desktop shell: a won run and its unlocks survive quitting and reopening, and the harder-season picker shows on the next start card.
 
 **3.0.0-ow.33 (2026-11-21): crash log and the pack key.** In the desktop app any page error is now written to crash.log in the save folder, with the day, hour and place (One Winter had never wired the shell's crash log up). The I key opens the pack again (Sir's D-096), at camp where One Winter keeps the pack; the keys help lists it, and F or F11 for full screen in the desktop app. D-096's 1-to-5 tool keys stay out: 1 to 9 pick actions in One Winter.
