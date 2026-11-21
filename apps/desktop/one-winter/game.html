@@ -314,8 +314,11 @@ function buildScene(kind,ms){
     sc.bush=(function(){let x=250,y=760;for(let i=0;i<900;i++){if(sc.LAt(x,y)>.475)return[x,y];x+=n[0];y+=n[1]}return[x,y]})()}
   // the lake's name sits on open water, wherever the water is this time
   const lake=LAKES[ms%LAKES.length];
-  sc.labels=cfg.labels.map(l=>{if(l[4]!=='water')return l;let bx=l[1],by=l[2],bd=-1;
-    for(let j=0;j<60;j++){const a=j*2.4,q=j*14,x=clamp(l[1]+Math.cos(a)*q,170,W-170),y=clamp(l[2]+Math.sin(a)*q*.6,60,H-60),v=Math.min(sc.LAt(x-130,y),sc.LAt(x+130,y),sc.LAt(x,y));
+  // The flyover shows these maps zoomed up to 1.32x and panned, so a label must sit in the middle of the frame
+  // to stay whole: keep its centre at least half its width (about half a letter per letter) inside x 300..W-300.
+  const keep=(t,x,sz)=>{const hw=String(t).length*sz*.5+10;return clamp(x,Math.min(W/2,300+hw),Math.max(W/2,W-300-hw))};
+  sc.labels=cfg.labels.map(l=>{if(l[4]!=='water')return [l[0],keep(l[0],l[1],l[3]),clamp(l[2],190,H-190),l[3],l[4]];let bx=l[1],by=l[2],bd=-1;
+    for(let j=0;j<60;j++){const a=j*2.4,q=j*14,x=keep(lake,l[1]+Math.cos(a)*q,l[3]),y=clamp(l[2]+Math.sin(a)*q*.6,190,H-190),v=Math.min(sc.LAt(x-130,y),sc.LAt(x+130,y),sc.LAt(x,y));
       if(v>cfg.deep+.03){bx=x;by=y;break}if(v>bd){bd=v;bx=x;by=y}}
     return [lake,bx,by,l[3],l[4]]});
   return sc}
