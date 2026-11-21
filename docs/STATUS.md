@@ -1,5 +1,7 @@
 # Status
 
+**3.0.0-ow.32 (2026-11-21): the desktop window shows the whole picture.** In the Windows app the page kept the browser's 8 px body margin, so the stage sat 8 px low and its bottom edge was cut off at every window size. App mode now has no margin; checked at 960x540, 1366x768, 1600x900 and 1280x1024. Overnight checks on ow.31 were clean: reachability (30 runs), hardest season with each winter kind, 3 whole runs through the real screen, closing mid dusk card, midnight walk or flyover, a screen-text scan over 12 runs, and the real desktop shell saving and continuing.
+
 **3.0.0-ow.31 (2026-11-21): build paths and kit condition back.** Two more of Sir's asks that One Winter had
 dropped. Opening a build (shelter, dugout, firepit, rack, cache) lists its whole path again, every step with its
 materials, energy and time (D-077), and a build you cannot start yet still opens to show it (its Start stays
