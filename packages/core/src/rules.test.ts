@@ -594,4 +594,17 @@ describe('honest buttons: moss, boot repair, wood and cooking say what the actio
       expect(detail('a-cook')).toContain(said);
     }
   });
+  it('fishing: the line and net cards give the times the choices take', () => {
+    for (const [rules, line, net] of [[V12_RULES, '15min', '15min'], [TAPOUT_RULES, '20min', '30min']] as const) {
+      const run = start(rules);
+      const S = run.state;
+      S.loc = 'shore';
+      S.hour = 9;
+      run.call('openLineModal');
+      expect(modal).toContain('−4⚡ · ' + line);
+      S.net.built = true;
+      expect(actionPanel().find((e) => e.id === 'a-net')?.detail).toContain(net + ' to relocate');
+    }
+  });
 });
+
