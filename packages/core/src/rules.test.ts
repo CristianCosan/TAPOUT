@@ -2,7 +2,7 @@
 // The parity tests prove everything else is still identical (they run with V12_RULES).
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { hudRecord, setPresenter, startRun, TAPOUT_RULES, V12_RULES, type RuleSet, type Run } from './game.ts';
+import { actionPanel, hudRecord, setPresenter, startRun, TAPOUT_RULES, V12_RULES, type RuleSet, type Run } from './game.ts';
 
 const CAST = {
   partner: 'Mara',
@@ -545,5 +545,53 @@ describe('rc.6 winter ice and wet rocks', () => {
     }
     expect(fell).toBeGreaterThan(6);
     expect(fell).toBeLessThan(30);
+  });
+});
+
+describe('honest buttons: moss, boot repair, wood and cooking say what the action costs', () => {
+  const detail = (id: string) => actionPanel().find((e) => e.id === id)?.detail ?? '';
+  it('moss: v12 said 15 min for a 30 min job; TAP / OUT says 30', () => {
+    for (const [rules, said] of [[V12_RULES, '15'], [TAPOUT_RULES, '30']] as const) {
+      const run = start(rules);
+      run.state.loc = 'woods';
+      run.state.hour = 9;
+      expect(detail('a-moss')).toContain(said + 'min');
+      const h = run.state.hour;
+      run.call('actMoss');
+      expect(Math.round((run.state.hour - h) * 60)).toBe(30);
+    }
+  });
+  it('boots: the button gives the repair time the action takes', () => {
+    for (const [rules, said, took] of [[V12_RULES, '1h30m', 90], [TAPOUT_RULES, '3h', 180]] as const) {
+      const run = start(rules);
+      const S = run.state;
+      S.hour = 9;
+      S.chains.boot = { day: 1 };
+      S.hide = 2;
+      expect(detail('a-repairBoots')).toContain(said);
+      run.call('actRepairBoots');
+      expect(Math.round((S.hour - 9) * 60)).toBe(took);
+    }
+  });
+  it('wood: with axe and saw the button gives the faster time; v12 gave the plain one', () => {
+    for (const [rules, said, took] of [[V12_RULES, '1h', 48], [TAPOUT_RULES, '32min', 32]] as const) {
+      const run = start(rules);
+      run.state.loc = 'woods';
+      run.state.hour = 9;
+      expect(detail('a-wood')).toContain(said);
+      run.call('actWood');
+      expect(Math.round((run.state.hour - 9) * 60)).toBe(took);
+    }
+  });
+  it('cook: with the knife the button gives the faster time', () => {
+    for (const [rules, said] of [[V12_RULES, '15min'], [TAPOUT_RULES, '11min']] as const) {
+      const run = start(rules);
+      const S = run.state;
+      S.hour = 9;
+      S.fireH = 3;
+      S.water = 4;
+      S.meatQ.push({ n: 2, abs: 8 * 60 });
+      expect(detail('a-cook')).toContain(said);
+    }
   });
 });

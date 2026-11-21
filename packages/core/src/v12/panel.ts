@@ -726,7 +726,8 @@ function panelPass(){
   setBtn('a-fire', r[0], r[1]);
   r = !hasKit('pot') ? [false,'no pot drafted - no boiling this run'] : S.fireH <= 0 ? [false,'fire needed'] : (S.rawWater<=0 ? [false,'need raw water - fetch some at the shore'] : (S.water >= waterCap() ? [false,'storage full'] : [true, S.energy<3 ? `${durTxt(0.25)} · up to +3 safe water · running on empty - borrows energy` : `−3⚡ · ${durTxt(0.25)} · up to +3 safe water`]));
   setBtn('a-boil', r[0], r[1]);
-  r = !hasKit('pot') ? [false,'no pot drafted - no real meals this run'] : S.cookedMeal ? [false,'eat your meal first'] : (S.fireH<=0 ? [false,'fire needed'] : (meatCount()<2 ? [false,'need 2 raw meat'] : (S.water<2 ? [false,'need 2 safe water'] : [true, S.energy<4 ? `${durTxt(0.25)} · 2 meat + 2 water → 1 meal · running on empty - borrows energy` : `−4⚡ · ${durTxt(0.25)} · 2 meat + 2 water → 1 meal`])));
+  const cookH = 0.25 * (RULES.content && hasKit('knife') ? 0.75 : 1); // the knife's speed-up, which v12's button left out
+  r = !hasKit('pot') ? [false,'no pot drafted - no real meals this run'] : S.cookedMeal ? [false,'eat your meal first'] : (S.fireH<=0 ? [false,'fire needed'] : (meatCount()<2 ? [false,'need 2 raw meat'] : (S.water<2 ? [false,'need 2 safe water'] : [true, S.energy<4 ? `${durTxt(cookH)} · 2 meat + 2 water → 1 meal · running on empty - borrows energy` : `−4⚡ · ${durTxt(cookH)} · 2 meat + 2 water → 1 meal`])));
   setBtn('a-cook', r[0], r[1]);
   r = S.smokingSession ? [false,`smoking - ready in ${roundDisplay(Math.max(0,S.smokingSession.doneAbs-nowAbs()))}h`] : (S.rackTier<=0 ? [false,'build a smoking rack'] : (S.fireH <= 0 ? [false,'fire needed'] : (meatCount() <= 0 ? [false,'no raw meat'] : (S.stock.firewood<1||S.tinder<1) ? [false,'need 1 firewood + 1 tinder'] : gate(5,hoursFor('smoke')*(hasKit('knife')?0.75:1),true,'',`−{c}⚡ · ${durTxt(hoursFor('smoke')*(hasKit('knife')?0.75:1))} · 1 firewood + 1 tinder · preserves up to ${RACK_CAP[S.rackTier]}, ready in 12h${S.hour>=22?' · night work: +stress':''}`,''))));
   setBtn('a-smoke', r[0], r[1]);
@@ -814,7 +815,7 @@ function panelPass(){
   r = (hasKit('axe') && S.chains.axeHandle) ? gate(10,hoursFor('haftAxe'), S.stock.wood>=2, 'need 2 logs', `−{c}⚡ · ${durTxt(hoursFor('haftAxe'))} · 2 logs`,'h') : [false,'-'];
   setBtn('a-haftAxe', r[0], r[1]);
   $('a-repairBoots').classList.toggle('hidden', !S.chains.boot);
-  r = S.chains.boot ? gate(10,1.5, S.hide>=2, `need 2 hide (have ${S.hide})`, `−{c}⚡ · ${durTxt(1.5)} · 2 hide`,'h') : [false,'-'];
+  r = S.chains.boot ? gate(10,hoursFor('haftAxe'), S.hide>=2, `need 2 hide (have ${S.hide})`, `−{c}⚡ · ${durTxt(hoursFor('haftAxe'))} · 2 hide`,'h') /* the repair takes the haft's time (realTimes), so the button says so */ : [false,'-'];
   setBtn('a-repairBoots', r[0], r[1]);
   $('a-patchRoof').classList.toggle('hidden', !S.chains.roof);
   r = S.chains.roof ? gate(10,1.5, S.stock.wood>=3 && S.stock.moss>=3, 'need 3 logs + 3 moss', `−{c}⚡ · ${durTxt(1.5)} · 3 logs + 3 moss`,'oh') : [false,'-'];
@@ -918,7 +919,11 @@ function panelPass(){
 
   const snareTotal = S.snareList.length;
   const depNote = S.forageDep >= 4 ? ' · picked over' : '';
-  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(6,hoursFor('wood'),true,'',`−{c}⚡ · ${durTxt(hoursFor('wood'))} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : gate(TUNING.costs.forageE,(S.berryPicker?0.8:1)*hoursFor('forage'),true,'', `−{c}⚡ · ${durTxt((S.berryPicker?0.8:1)*hoursFor('forage'))}${depNote}`,'o'); setBtn('a-forage', r[0], r[1]);
+  // v12's wood button ignored the saw, the shovel and a dull axe; with content on it gives what actWood spends.
+  const woodMul = !RULES.content ? 1 : (hasKit('axe') && hasKit('saw')) ? 0.8 : (hasKit('shovel') && !hasKit('axe') && !hasKit('saw')) ? 1.3 : 1;
+  const woodWeak = RULES.content && hasKit('axe') && S.gear.axe < 30;
+  const woodE = RULES.content ? Math.round((woodWeak?9:6)*woodMul) : 6, woodH = (woodWeak?1.3:1)*hoursFor('wood')*woodMul;
+  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(woodE,woodH,true,'',`−{c}⚡ · ${durTxt(woodH)} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : gate(TUNING.costs.forageE,(S.berryPicker?0.8:1)*hoursFor('forage'),true,'', `−{c}⚡ · ${durTxt((S.berryPicker?0.8:1)*hoursFor('forage'))}${depNote}`,'o'); setBtn('a-forage', r[0], r[1]);
   if (hasKit('wire')){
     r = S.wireStock<=0 ? [false,'out of wire'] : snareTotal>=MAX_SNARES_TOTAL ? [false,'trapline full (10/10)'] : gate(2,hoursFor('setSnare'),true,'',`−{c}⚡ · ${durTxt(hoursFor('setSnare'))} · pick a spot · ${S.wireStock} left`,'oh'); setBtn('a-snare', r[0], r[1]);
     r = snareTotal<=0 ? [false,'no snares set'] : gate(2,0.0833,true,'',`−{c}⚡ · ${durTxt(0.0833)}`,'o'); setBtn('a-moveSnare', r[0], r[1]);
@@ -956,8 +961,8 @@ function panelPass(){
   setBtn('a-haul', r[0], r[1]);
   $('a-invest').classList.toggle('hidden', !S.soundsWoods);
   r = gate(6,0.5,true,'',`−{c}⚡ · ${durTxt(0.5)} · could be anything`,'o'); setBtn('a-invest', r[0], r[1]);
-  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(6,hoursFor('wood'),true,'',`−{c}⚡ · ${durTxt(hoursFor('wood'))} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : carryBlocked('wood') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(6,hoursFor('wood'),true,'',`−{c}⚡ · ${durTxt(hoursFor('wood'))} · +3-5 logs`,'ohw wood'); setBtn('a-wood', r[0], r[1]);
-  r = S.carry.moss>=CARRY_CAP.moss ? [false,'pack full - drop off at camp'] : carryBlocked('moss') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(TUNING.costs.mossE,TUNING.costs.mossMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.mossMin/60)} · +3-4 moss`,'oh'); setBtn('a-moss', r[0], r[1]);
+  r = campHarvesting() ? (campLeft('logs')<=0 ? [false,'camp timber used up - try the woods'] : gate(woodE,woodH,true,'',`−{c}⚡ · ${durTxt(woodH)} · +3-5 logs to camp stock · ${campLeft('logs')} left here`,'ohw wood')) : S.carry.wood>=CARRY_CAP.wood ? [false,'pack full - drop off at camp'] : carryBlocked('wood') ? [false,`hands full of ${carryType()} - drop off at camp first`] : gate(woodE,woodH,true,'',`−{c}⚡ · ${durTxt(woodH)} · +3-5 logs`,'ohw wood'); setBtn('a-wood', r[0], r[1]);
+  r = S.carry.moss>=CARRY_CAP.moss ? [false,'pack full - drop off at camp'] : carryBlocked('moss') ? [false,`hands full of ${carryType()} - drop off at camp first`] : (RULES.content ? gate(5,0.5,true,'',`−{c}⚡ · ${durTxt(0.5)} · +3-4 moss`,'oh') /* v12's button said 6 energy and 15 min; the action has always taken 5 and 30 */ : gate(TUNING.costs.mossE,TUNING.costs.mossMin/60,true,'',`−{c}⚡ · ${durTxt(TUNING.costs.mossMin/60)} · +3-4 moss`,'oh')); setBtn('a-moss', r[0], r[1]);
 
   r = gate(2,hoursFor('tinder'),true,'',`−{c}⚡ · ${durTxt(hoursFor('tinder'))} · +${TUNING.costs.tinderYieldLo}-${TUNING.costs.tinderYieldHi} tinder`,'o'); setBtn('a-tinder', r[0], r[1]);
   r = !S.instrument ? [false,'carve a flute first'] : (S.playedToday ? [false,'played today - the quiet holds'] : gate(4,0.5,true,'',`−{c}⚡ · ${durTxt(0.5)} · +morale, −stress`));
