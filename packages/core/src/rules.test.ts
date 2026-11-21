@@ -606,5 +606,17 @@ describe('honest buttons: moss, boot repair, wood and cooking say what the actio
       expect(actionPanel().find((e) => e.id === 'a-net')?.detail).toContain(net + ' to relocate');
     }
   });
+  it('explore new grounds: TAP / OUT shows its cost on the button', () => {
+    for (const [rules, shown] of [[V12_RULES, false], [TAPOUT_RULES, true]] as const) {
+      const run = start(rules);
+      const S = run.state;
+      S.loc = 'shore';
+      S.hour = 9;
+      S.shoreSpots[0].noLuck = 3;
+      run.call('openLineModal');
+      expect(modal).toContain('Explore new grounds');
+      expect((modal ?? '').includes('Explore new grounds · −3⚡ · 15min')).toBe(shown);
+    }
+  });
 });
 
