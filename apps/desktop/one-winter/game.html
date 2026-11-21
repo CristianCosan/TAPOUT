@@ -229,7 +229,7 @@ ol,ul{margin:0;padding-left:1.3em;display:grid;gap:6px}
 <script>
 (function(){
 "use strict";
-const VERSION='3.0.0-ow.30';
+const VERSION='3.0.0-ow.31';
 const W=1600,H=900;
 const C={snow:[228,231,227],grass:[138,143,126],pine:[47,74,67],lake:[60,90,107],fire:[208,122,44],ink:[28,34,38]};
 const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
@@ -1427,13 +1427,13 @@ function treeClick(i){if(!S||!V||S.over||!modalEl.hidden||FLY||CINE)return;
     if(VW&&VW.state.stock.wood+VW.state.carry.wood>w0&&!OWX.felled.includes(i)){OWX.felled.push(i);saveX();refresh()}return}
   const t=sideScene(S.site).mid[i];if(t)walkTo([t.x,t.b,40]);log(S.site==='camp'?'You leave it standing. The trees around camp keep the wind off you.':'Spruce, too far from camp to drag.')}
 function log(t){logEl.innerHTML=`<p>${noEmo(t)}</p>`}
-function runEntry(e){if(!e||!V||V.over)return;if(!e.enabled){log(noEmo(e.detail));return}
+function runEntry(e){if(!e||!V||V.over)return;if(!e.enabled){if(PATHS[e.id]&&T.upgradePath(PATHS[e.id])){buildCard(PATHS[e.id],e);return}log(noEmo(e.detail));return}
   if(e.id==='pack'){packCard();return}
   const path=PATHS[e.id],plan=path&&T.upgradePath(path);if(plan&&T.jobPlan){const nx=plan.steps.find(s=>s.state==='next');if(nx&&T.jobPlan(`${path}.${nx.step}`)){buildCard(path,e);return}}
   if(e.id==='a-insulate'&&T.jobPlan(`a-insulate.${(V.insulation|0)+1}`)){jobCard(`a-insulate.${(V.insulation|0)+1}`,noEmo(e.label),e);return}
   if(T.jobPlan&&T.jobPlan(e.id)){jobCard(e.id,noEmo(e.label),e);return}
   P.work=1.3;sfx(/wood|fell|firewood/i.test(e.onclick)?'chop':'step');closeModal();SES.click(e.onclick)}
-function entryBtn(e){const b=btn(`<b>${noEmo(e.label)}</b>${e.detail?`<small>${noEmo(e.detail)}</small>`:''}`,()=>{closeModal();runEntry(e)},'choice');b.disabled=!e.enabled;return b}
+function entryBtn(e){const b=btn(`<b>${noEmo(e.label)}</b>${e.detail?`<small>${noEmo(e.detail)}</small>`:''}`,()=>{closeModal();runEntry(e)},'choice');b.disabled=!e.enabled&&!PATHS[e.id];if(!e.enabled&&PATHS[e.id])b.style.opacity='.6';return b}
 function spotCard(a){const m=entryMap(),es=a.ids.map(i=>m.get(i)).filter(e=>e&&e.visible);if(!es.length)return;
   if(es.length===1&&es[0].id!=='pack'&&!PATHS[es[0].id]){runEntry(es[0]);return}if(es[0].id==='pack'){packCard();return}
   cardEl.classList.remove('wide');cardEl.dataset.v='';cardEl.innerHTML=`<p class="k">${SCENES[S.site].name} · ${clockStr()}</p><h2>${a.name()}</h2>`;
@@ -1442,10 +1442,10 @@ function spotCard(a){const m=entryMap(),es=a.ids.map(i=>m.get(i)).filter(e=>e&&e
 function buildCard(path,e){const U=T.UPGRADE_TEXT,p=T.upgradePath(path),nx=p.steps.find(s=>s.state==='next');cardEl.classList.remove('wide');cardEl.dataset.v='';
   const names=U.names[path],steps=U.steps[path];
   cardEl.innerHTML=`<p class="k">${U.routes[path].title} · ${clockStr()}</p><h2>${names[p.current]}</h2><p>${U.about[path][p.current]}</p>
-   <p class="night">${p.steps.map(s=>s.state==='built'?'■':s.state==='next'?'▣':'□').join(' ')}</p>
-   ${nx?`<p><b>${U.stepOf(nx.step,p.steps.length,steps[nx.step-1]||'')}</b><br><span class="muted">${Object.entries(nx.needs).map(([m,n])=>`${n} ${m}`).join(', ')||'no materials'} · ${nx.energy} energy · ${durStr(nx.hours)}</span></p>`:`<p>${U.done}</p>`}
+   <ol class="story">${p.steps.map(s=>`<li style="opacity:${s.state==='built'?.45:s.state==='next'?1:.75}">${s.state==='built'?'Done: ':''}${s.state==='next'?'<b>':''}${steps[s.step-1]||''}${s.state==='next'?'</b>':''} <span class="muted">· ${Object.entries(s.needs).map(([m,n])=>`${n} ${m}`).join(', ')||'no materials'} · ${s.energy} energy · ${durStr(s.hours)}</span></li>`).join('')}</ol>
+   ${nx?'':`<p>${U.done}</p>`}
    ${p.settling?`<p class="muted">${U.settling}</p>`:''}`;
-  if(nx){const key=`${path}.${nx.step}`;const b=btn(`<b>${(T.jobPlan(key)||{}).done>0?U.resume(steps[nx.step-1]):U.go(steps[nx.step-1])}</b>`,()=>jobCard(key,steps[nx.step-1],e),'choice');b.disabled=!(T.jobPlan(key)||{}).open;if(b.disabled&&e.detail)b.innerHTML+=`<small>${noEmo(e.detail)}</small>`;cardEl.appendChild(b)}
+  if(nx){const key=`${path}.${nx.step}`;const b=btn(`<b>${(T.jobPlan(key)||{}).done>0?U.resume(steps[nx.step-1]):U.go(steps[nx.step-1])}</b>`,()=>jobCard(key,steps[nx.step-1],e),'choice');b.disabled=!(T.jobPlan(key)||{}).open||!e.enabled;if(b.disabled&&e.detail)b.innerHTML+=`<small>${noEmo(e.detail)}</small>`;cardEl.appendChild(b)}
   cardEl.appendChild(btn('Back',closeModal,'go'));openModal()}
 function jobCard(key,name,e){const spec=T.BUILD_TASKS[key],plan=T.jobPlan(key);if(!spec||!plan){closeModal();SES.click(e.onclick);return}
   const done=plan.done,job=plan.jobs[done];cardEl.classList.remove('wide');cardEl.dataset.v='';
@@ -1457,7 +1457,7 @@ function packCard(){const h=VW.hud,ht=id=>h.get(id)?noEmo(carryWords(String(h.ge
   cardEl.innerHTML=`<p class="k">Your pack · ${clockStr()}</p><h2>What you have</h2>
    <div class="stats"><span>Logs<b>${ht('inv-wood')}</b></span><span>Firewood<b>${ht('inv-firewood')}</b></span><span>Moss<b>${ht('inv-moss')}</b></span><span>Tinder<b>${ht('inv-tinder')}</b></span>
    <span>Rocks<b>${ht('inv-rocks')}</b></span><span>Clay<b>${ht('inv-clay')}</b></span><span>Meat<b>${ht('inv-meat')}</b></span><span>Arrows<b>${ht('inv-arrows')}</b></span></div>
-   <p class="muted">Kit: ${T.KIT_POOL.filter(k=>hasKit(k.id)).map(k=>k.label).join(', ')}</p>`;
+   <p class="muted">Kit: ${T.KIT_POOL.filter(k=>hasKit(k.id)).map(k=>{const w=(V.gear||{})[k.id],I=T.INVENTORY_TEXT;return k.label+(w!==undefined&&I?` (${I.condition(w)})`:'')}).join(', ')}</p>`;
   const eat=[['eatBerriesBtn','eatBerries()','Eat berries'],['eatCookedBtn','eatCooked()','Eat a cooked meal'],['eatSmokedBtn','eatSmoked()','Eat smoked meat'],['drinkBtn','actDrink()','Drink clean water']];
   eat.forEach(([id,on,t])=>{const x=h.get(id);if(!x||x.hidden)return;const b=btn(`<b>${t}</b><small>${ht(id)}</small>`,()=>{closeModal();sfx('step');SES.click(on)},'choice');b.disabled=x.disabled||V.over;cardEl.appendChild(b)});
   const r=T.rationsLeft?T.rationsLeft():0;if(r>0)cardEl.appendChild(btn(`<b>Eat a ration</b><small>${r} left · +20 food</small>`,()=>{closeModal();SES.click('eatRation()')},'choice'));
@@ -1509,7 +1509,7 @@ function refresh(){if(!S)return;current=ensureScene(S.site);
   if(!secs.some(([t])=>t===OPEN[loc]))OPEN[loc]=(secs.find(([,es])=>es.some(e=>e.enabled))||secs[0]||[''])[0];
   acts.innerHTML=`<h3>${SCENES[loc].name} · ${hhmm(V.hour)}</h3>${ht('signsLine')&&loc!=='camp'?`<p class="signs">${ht('signsLine')}</p>`:''}`;
   secs.forEach(([t,es])=>{const hd=document.createElement('button');hd.type='button';hd.className='sec'+(OPEN[loc]===t?' on':'');hd.innerHTML=`${t}<span>${es.filter(e=>e.enabled).length}/${es.length}</span>`;hd.onclick=()=>{OPEN[loc]=OPEN[loc]===t?'':t;refresh()};acts.appendChild(hd);
-    if(OPEN[loc]!==t)return;es.forEach(e=>{const b=document.createElement('button');b.type='button';b.className='act';b.dataset.id=e.id;b.innerHTML=`<b>${noEmo(e.label)}</b>${e.detail?`<small>${noEmo(e.detail)}</small>`:''}`;b.disabled=!e.enabled||V.over;b.onclick=()=>{if(!modalEl.hidden||FLY||CINE)return;runEntry(e)};acts.appendChild(b)})});
+    if(OPEN[loc]!==t)return;es.forEach(e=>{const b=document.createElement('button');b.type='button';b.className='act';b.dataset.id=e.id;b.innerHTML=`<b>${noEmo(e.label)}</b>${e.detail?`<small>${noEmo(e.detail)}</small>`:''}`;b.disabled=(!e.enabled&&!PATHS[e.id])||V.over;if(!e.enabled&&PATHS[e.id])b.style.opacity='.6';b.onclick=()=>{if(!modalEl.hidden||FLY||CINE)return;runEntry(e)};acts.appendChild(b)})});
   const night=document.createElement('div');night.className='night';[['sleep','Sleep'],['early','Turn in early']].forEach(([id,t])=>{const e=m.get(id);if(!e||!e.visible)return;const b=document.createElement('button');b.type='button';b.className='act';b.innerHTML=`<b>${t}</b><small>${noEmo(e.detail)}</small>`;b.disabled=!e.enabled;b.onclick=()=>{if(!modalEl.hidden||FLY||CINE)return;runEntry(e)};night.appendChild(b)});
   const tp=document.createElement('button');tp.type='button';tp.className='act phone';tp.innerHTML='<b>Sat phone</b>';tp.disabled=!!(h.get('tapBtn')||{}).disabled||V.over;tp.onclick=()=>{if(!modalEl.hidden||FLY||CINE)return;SES.click('confirmTapOut()')};night.appendChild(tp);acts.appendChild(night);
   [...acts.querySelectorAll('.act')].slice(0,9).forEach((b,i)=>b.dataset.k=i+1);
