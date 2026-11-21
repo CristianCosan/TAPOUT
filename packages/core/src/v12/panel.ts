@@ -5,7 +5,7 @@
 import { letterPanel } from './letters.ts';
 import { RULES } from './rules.ts';
 import { lateBuilt, lateKnown } from './late.ts';
-import { iceCm, thinIce } from './ice.ts';
+import { iceCm, iceSlow, thinIce } from './ice.ts';
 import { builtToday, fireCap, fireMinutes, routeClosed, stoveReady } from './camp.ts';
 import { travelHours } from './travel.ts';
 import { buildState, dugoutAt, dugoutTotal, stepCost, tierSteps } from './builds.ts';
@@ -870,7 +870,7 @@ function panelPass(){
   $('a-iceLine').classList.toggle('hidden', !S.winter || !hasKit('line'));
   $('a-iceFish').classList.toggle('hidden', !S.winter);
   const lineCount = S.lineList.length;
-  const lineE = S.winter?6:4, lineH = S.winter?0.5:0.25;
+  const lineE = S.winter?6:4, lineH = S.winter?hoursFor('setIceLine')*iceSlow():hoursFor('setLine'); // the times placeLineAt spends (v12: 30 and 15 min)
   if (hasKit('line')){
     r = S.lineStock<=0 ? [false,'out of line'] : lineCount>=MAX_LINES_TOTAL ? [false,'all lines out'] : gate(lineE,lineH,true,'',`−{c}⚡ · ${durTxt(lineH)} · pick a spot · ${S.lineStock} left`,'oh');
     setBtn('a-lines', r[0], r[1]);
@@ -880,7 +880,7 @@ function panelPass(){
   setBtn('a-moveLine', r[0], r[1]);
   if (!S.winter && !hasKit('net')){
     if (S.net.damaged){ $('a-net-name').textContent = '🕸 Repair gill net'; r = gate(4,0.25,true,'',`−{c}⚡ · ${durTxt(0.25)}`,'oh'); }
-    else if (S.net.built){ $('a-net-name').textContent = '🕸 Move gill net'; r = gate(4,0.25,true,'',`−{c}⚡ · ${durTxt(0.25)} to relocate`,'oh'); }
+    else if (S.net.built){ $('a-net-name').textContent = '🕸 Move gill net'; r = gate(4,hoursFor('setNet'),true,'',`−{c}⚡ · ${durTxt(hoursFor('setNet'))} to relocate`,'oh'); }
     else if (S.netProg > 0){ $('a-net-name').textContent = '🕸 Keep weaving net'; r = gate(8,2,true,'',`−{c}⚡ · ${durTxt(2)} · ${S.netProg}/${NET_SESSIONS} done`,'ohw'); }
     else { $('a-net-name').textContent = '🕸 Weave gill net'; r = gate(8,2,true,'',`−{c}⚡ · ${durTxt(2)} · pick a spot · 5 sessions`,'ohw'); }
     setBtn('a-net', r[0], r[1]);
@@ -891,11 +891,11 @@ function panelPass(){
     setBtn('a-net', r[0], r[1]);
   } else if (!S.winter && hasKit('net')){
     $('a-net-name').textContent = '🕸 Move gill net (ready-made)';
-    r = gate(4,0.25,true,'',`−{c}⚡ · ${durTxt(0.25)} to relocate`,'oh');
+    r = gate(4,hoursFor('setNet'),true,'',`−{c}⚡ · ${durTxt(hoursFor('setNet'))} to relocate`,'oh');
     $('a-net').classList.remove('hidden');
     setBtn('a-net', r[0], r[1]);
   }
-  r = S.winter ? gate(10,2,true,'',`−{c}⚡ · ${durTxt(2)} · pick a hole`,'oh') : [false,'-'];
+  r = S.winter ? gate(10,2*iceSlow(),true,'',`−{c}⚡ · ${durTxt(2*iceSlow())} · pick a hole`,'oh') : [false,'-'];
   setBtn('a-iceFish', r[0], r[1]);
   $('a-iceCache').classList.toggle('hidden', !S.winter || S.iceCache);
   if (S.winter && !S.iceCache){

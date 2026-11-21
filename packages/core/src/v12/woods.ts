@@ -16,6 +16,7 @@ import { afterAction, isNightNow, spend } from './threads.ts';
 import { CARRY_CAP, GAME, SIR_TIMES, hoursFor, HUGE_RACK_CAP, MAX_SNARES_PER_SPOT, MAX_SNARES_TOTAL, MEAT_HAUL_CAP, RACK_CAP, SHOT_HIT_RECOVERED, SHOT_MISS_LOST, SHOT_MISS_RECOVERED, TUNING, carryBlocked, rollHuntSpecies, rollSmallGame } from './tuning.ts';
 import { $, hideModal, sfxMooseCall, showModal, typewriterInto } from './ui.ts';
 import { levelCatch } from './level.ts';
+import { durTxt } from './panel.ts';
 // ============================== actions: woods ==============================
 export function actForage(){
   const hrs = (S.berryPicker ? 0.8 : 1) * hoursFor('forage');
@@ -127,7 +128,7 @@ export function openCheckTrapsModal(){
       <button class="mbtn ghost" style="width:auto;padding:8px 12px;margin:0" onclick="checkOneSnare(${i})">Check</button>
     </li>`;
   }).join('');
-  showModal(`<h3>The trapline</h3><div class="wsub">Check each snare - 1min · 1⚡ each</div><ul id="trapRows">${rows}</ul><button class="mbtn ghost" onclick="hideModal()">Done</button>`);
+  showModal(`<h3>The trapline</h3><div class="wsub">Check each snare - ${durTxt(hoursFor('checkSnare'))} · 1⚡ each</div><ul id="trapRows">${rows}</ul><button class="mbtn ghost" onclick="hideModal()">Done</button>`);
 }
 export function pityMultiplier(){
   const t = TUNING.catchRates;
